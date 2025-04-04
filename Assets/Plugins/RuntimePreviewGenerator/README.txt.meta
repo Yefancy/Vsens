@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dad2c073f7ca2a14dbb025e9cb3bf335
+timeCreated: 1563638903
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 112860
+  packageName: Runtime Preview Generator
+  packageVersion: 1.1.3
+  assetPath: Assets/Plugins/RuntimePreviewGenerator/README.txt
+  uploadId: 584992

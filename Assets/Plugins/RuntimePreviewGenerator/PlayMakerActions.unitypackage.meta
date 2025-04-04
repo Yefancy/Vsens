@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 862ba45603384f047aebab9c780c8439
+timeCreated: 1570287134
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 112860
+  packageName: Runtime Preview Generator
+  packageVersion: 1.1.3
+  assetPath: Assets/Plugins/RuntimePreviewGenerator/PlayMakerActions.unitypackage
+  uploadId: 584992

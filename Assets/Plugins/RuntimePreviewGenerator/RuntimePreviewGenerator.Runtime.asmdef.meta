@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 36ae44cc1707a0f42a2fcd5898aa569b
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 112860
+  packageName: Runtime Preview Generator
+  packageVersion: 1.1.3
+  assetPath: Assets/Plugins/RuntimePreviewGenerator/RuntimePreviewGenerator.Runtime.asmdef
+  uploadId: 584992
