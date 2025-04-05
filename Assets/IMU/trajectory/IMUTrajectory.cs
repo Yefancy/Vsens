@@ -183,7 +183,7 @@ namespace IMU.trajectory
             return new Vector3(Logistic(v.x), Logistic(v.y), Logistic(v.z));
         }
     }
-
+#if UNITY_EDITOR
     [UnityEditor.CustomEditor(typeof(IMUTrajectory))]
     public class IMUTrajectoryEditor : UnityEditor.Editor
     {
@@ -204,4 +204,5 @@ namespace IMU.trajectory
             }
         }
     }
+#endif
 }

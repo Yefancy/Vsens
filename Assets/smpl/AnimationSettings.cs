@@ -1,4 +1,4 @@
-    using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -56,7 +56,6 @@ namespace smpl
                 copiedToggle.prefabName.text = animationName;
                 if (previewModel != null)
                 {
-                    Texture2D preview = null;
                     var animationController = previewModel.GetComponent<BodyAnimationController>();
                     if (animationController != null)
                     {

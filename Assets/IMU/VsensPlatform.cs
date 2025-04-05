@@ -255,7 +255,7 @@ namespace IMU
             virtualIMUChart.updateIMUData(synthesisIMUData);
         }
     }
-    
+#if UNITY_EDITOR
     [UnityEditor.CustomEditor(typeof(VsensPlatform))]
     public class VsensPlatformEditor : UnityEditor.Editor
     {
@@ -282,4 +282,5 @@ namespace IMU
             platform.PreviewRange = EditorGUILayout.Slider("Preview Range", platform.PreviewRange, 0, 1f);
         }
     }
+#endif
 }

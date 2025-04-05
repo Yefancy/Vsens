@@ -87,7 +87,6 @@ public class SMPLModifyBones {
 		if (targetRenderer == null)
 		{
 			throw new System.ArgumentNullException("ERROR: The script should be added to the 'SkinnedMeshRenderer Object");
-			return false;
 		}
 
 		_bones = targetRenderer.bones;

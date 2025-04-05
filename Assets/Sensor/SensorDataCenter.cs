@@ -18,7 +18,6 @@ namespace Sensor
     
         [SerializeField] public int samplingRate = 20; // 20Hz 
         [SerializeField] public float smoothWindowSize = 0.2f;
-        [SerializeField] private int cacheTime = 4;
         [SerializeField] public bool alwaysUpdateBoneMeshAttachment = true;
 
         public float SamplingInterval => 1.0f / samplingRate;
