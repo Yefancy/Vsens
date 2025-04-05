@@ -1,7 +1,7 @@
 using Sensor;
 using UnityEngine;
 
-namespace IMU
+namespace Vsens
 {
     public class IMUMarkerRendering : MonoBehaviour
     {

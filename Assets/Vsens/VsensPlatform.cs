@@ -3,15 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Animations;
-using IMU.data;
-using IMU.timeline;
-using IMU.trajectory;
 using Sensor;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using Vsens.data;
+using Vsens.timeline;
+using Vsens.trajectory;
 
-namespace IMU
+namespace Vsens
 {
     public class VsensPlatform : MonoBehaviour
     {
@@ -183,9 +183,7 @@ namespace IMU
 
         public VirtualIMUSensor[] FindIMUsOnTheTarget()
         {
-            var sensors = new List<VirtualIMUSensor>();
-            var imus = target.GetComponentsInChildren<VirtualIMUSensor>();
-            return imus;
+            return target.GetComponentsInChildren<VirtualIMUSensor>();
         }
         
         public void SelectedIMU(VirtualIMUSensor sensor)
@@ -255,9 +253,10 @@ namespace IMU
             virtualIMUChart.updateIMUData(synthesisIMUData);
         }
     }
-#if UNITY_EDITOR
-    [UnityEditor.CustomEditor(typeof(VsensPlatform))]
-    public class VsensPlatformEditor : UnityEditor.Editor
+    
+    #if UNITY_EDITOR
+    [CustomEditor(typeof(VsensPlatform))]
+    public class VsensPlatformEditor : Editor
     {
         public override void OnInspectorGUI()
         {
@@ -282,5 +281,5 @@ namespace IMU
             platform.PreviewRange = EditorGUILayout.Slider("Preview Range", platform.PreviewRange, 0, 1f);
         }
     }
-#endif
+    #endif
 }

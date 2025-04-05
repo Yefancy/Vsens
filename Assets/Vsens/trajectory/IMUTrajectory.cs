@@ -3,7 +3,7 @@ using Oculus.Interaction;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace IMU.trajectory
+namespace Vsens.trajectory
 {
     [RequireComponent(typeof(TrajectoryRenderer))]
     public class IMUTrajectory : MonoBehaviour

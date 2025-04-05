@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace IMU.trajectory
+namespace Vsens.trajectory
 {
     [ExecuteAlways]
 	[RequireComponent(typeof(LineRenderer))]
@@ -101,7 +100,7 @@ namespace IMU.trajectory
         }
     }
 
-
+#if UNITY_EDITOR
     [CustomEditor(typeof(TrajectoryRenderer))]
     public class PathRendererEditor : Editor
     {
@@ -114,4 +113,5 @@ namespace IMU.trajectory
             }
         }
     }
+#endif
 }

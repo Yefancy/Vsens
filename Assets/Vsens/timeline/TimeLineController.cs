@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace IMU.timeline
+namespace Vsens.timeline
 {
     public class TimeLineController : MonoBehaviour
     {

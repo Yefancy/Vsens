@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace IMU.timeline
+namespace Vsens.timeline
 {
     public class TimelineGraphic : Graphic
     {

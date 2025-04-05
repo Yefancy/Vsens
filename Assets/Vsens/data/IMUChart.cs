@@ -4,7 +4,7 @@ using Sensor;
 using UnityEngine;
 using XCharts.Runtime;
 
-namespace IMU.data
+namespace Vsens.data
 {
     [RequireComponent(typeof(LineChart))]
     public class IMUChart : MonoBehaviour

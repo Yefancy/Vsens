@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace IMU.data
+namespace Vsens.data
 {
     /// <summary>
     /// 单个IMU的数据序列，内部保存多个数据记录，并保证按时间戳排序

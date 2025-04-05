@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace IMU.data
+namespace Vsens.data
 {
     /// <summary>
 /// 抽象类，定义了IMU数据处理的基本接口
