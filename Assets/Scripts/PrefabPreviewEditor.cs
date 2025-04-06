@@ -1,6 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
+#if UNITY_EDITOR
 [CustomEditor(typeof(PrefabPreview))]
 public class PrefabPreviewEditor : Editor
 {
@@ -42,3 +43,4 @@ public class PrefabPreviewEditor : Editor
         }
     }
 }
+#endif

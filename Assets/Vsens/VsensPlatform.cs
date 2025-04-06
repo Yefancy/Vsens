@@ -20,11 +20,13 @@ namespace Vsens
         public IMUChart virtualIMUChart;
         public IMUTrajectory imuTrajectory;
         public TimeLineController timeLineController;
+        public SMPLX avatar;
         public bool globalTranslation;
         private float previewRange = 0.2f;
         private bool isAccMode = true;
             
-        protected internal Dictionary<VirtualIMUSensor, VirtualIMUSensor[]> availableIMUs = new();
+        protected internal readonly Dictionary<VirtualIMUSensor, VirtualIMUSensor[]> actorIMUs = new();
+        protected internal readonly Dictionary<VirtualIMUSensor, VirtualIMUSensor> avatarIMUs = new();
         private VirtualIMUSensor selectedSensor;
         private List<SensorData> synthesisIMUData = new();
         
@@ -118,7 +120,18 @@ namespace Vsens
 
         public void LoadTarget()
         {
-            availableIMUs.Clear();
+            // clear up
+            foreach (var imuSensor in actorIMUs.Values.SelectMany(virtualIMUs => virtualIMUs))
+            {
+                Destroy(imuSensor);
+            }
+            foreach (var imuSensor in avatarIMUs.Values)
+            {
+                Destroy(imuSensor);
+            }
+            actorIMUs.Clear();
+            avatarIMUs.Clear();
+            
             if (target == null) return;
             // apply the same animation to all actors.
             var rawAnimation = target.getAnimation();
@@ -127,7 +140,7 @@ namespace Vsens
                 ApplyToAllActor(actor => actor.setAnimation(rawAnimation));
             }
 
-            // place the same imus on all actors
+            // place the same imus on all actors and avatar
             var imus = FindIMUsOnTheTarget();
             foreach (var imu in imus)
             {
@@ -143,25 +156,63 @@ namespace Vsens
                 ApplyToAllActor(actor =>
                 {
                     var actorParent = actor.Bones[boneIndex];
-                    var newImu = Instantiate(imu.prefab == null ? imu.gameObject : imu.prefab, actorParent);
-                    newImu.gameObject.SetActive(true);
-                    newImu.name = imu.name;
-                    newImu.transform.localPosition = imu.transform.localPosition;
-                    newImu.transform.localRotation = imu.transform.localRotation;
-                    var imuComponent = newImu.GetComponent<VirtualIMUSensor>();
-                    imuComponent.registerOnStart = false;
-                    Destroy(imuComponent.inActiveVisualization);
-                    imuComponent.inActiveVisualization = null;
-                    imuComponent.IsActive = false;
+                    var imuComponent = CopyShadowIMU(imu, actorParent);
                     copied[index] = imuComponent;
                     index++;
                 });
-                availableIMUs.Add(imu, copied);
+                actorIMUs.Add(imu, copied);
+                
+                // on avatar
+                var avatarParent = avatar.TransformFromName[imu.transform.parent.name];
+                if (avatarParent == null)
+                {
+                    Debug.LogError($"imu {imu.name} not found in avatar");
+                    continue;
+                }
+                var newImu = CopyShadowIMU(imu, avatarParent);
+                newImu.showSelectedVisualization = false;
+                avatarIMUs.Add(imu, newImu);
             }
-            if (availableIMUs.Count > 0)
+            if (actorIMUs.Count > 0)
             {
-                var first = availableIMUs.First();
+                var first = actorIMUs.First();
                SelectedIMU(first.Key);
+            }
+        }
+
+        private static VirtualIMUSensor CopyShadowIMU(VirtualIMUSensor imu, Transform parent)
+        {
+            var newImu = Instantiate(imu.prefab == null ? imu.gameObject : imu.prefab, parent);
+            newImu.gameObject.SetActive(true);
+            newImu.name = imu.name;
+            newImu.transform.localPosition = imu.transform.localPosition;
+            newImu.transform.localRotation = imu.transform.localRotation;
+            var imuComponent = newImu.GetComponent<VirtualIMUSensor>();
+            imuComponent.registerOnStart = false;
+            if (imuComponent.inActiveVisualization != null)
+            {
+                Destroy(imuComponent.inActiveVisualization);
+                imuComponent.inActiveVisualization = null;
+            }
+            imuComponent.IsActive = false;
+            return imuComponent;
+        }
+
+        public float[] GetBodyShape()
+        {
+            if (target == null) return new float[SMPLX.NUM_BETAS];
+            var smplx = target.GetComponent<SMPLX>();
+            return smplx == null ? new float[SMPLX.NUM_BETAS] : smplx.betas;
+        }
+        
+        public void SetBodyShape(float[] betas)
+        {
+            if (target == null) return;
+            var smplx = target.GetComponent<SMPLX>();
+            if (smplx != null)
+            {
+                smplx.betas = betas;
+                smplx.SetBetaShapes();
             }
         }
 
@@ -188,9 +239,12 @@ namespace Vsens
         
         public void SelectedIMU(VirtualIMUSensor sensor)
         {
-            if (!availableIMUs.ContainsKey(sensor)) return;
             selectedSensor = sensor;
-            var actorSensors = availableIMUs[sensor];
+            // avatar
+            avatarIMUs[sensor].isSelected = true;
+            
+            // actors
+            var actorSensors = actorIMUs[sensor];
             for (var i = 0; i < actors.Length; i++)
             {
                 var actorSensor = actorSensors[i];
@@ -230,7 +284,7 @@ namespace Vsens
             if (virtualIMUChart == null) return;
             if (selectedSensor == null) return;
             if (target == null || !target.hasAnimation) return;
-            
+            var smplx = target.GetComponent<SMPLX>();
             // simulate the virtual imu
             target.PlayAnimationTo(0);
             selectedSensor.ClearData();
@@ -242,6 +296,10 @@ namespace Vsens
             while (time < animationTime)
             {
                 target.PlayAnimationTo(time);
+                if (smplx.usePoseCorrectives)
+                {
+                    smplx.UpdatePoseCorrectives();
+                }
                 selectedSensor.UpdateWorking(time, deltaTime);
                 time += deltaTime;
             }
@@ -266,9 +324,9 @@ namespace Vsens
             {
                 platform.LoadTarget();
             }
-            if (platform.availableIMUs.Count > 0)
+            if (platform.actorIMUs.Count > 0)
             {
-                foreach (var entry in platform.availableIMUs)
+                foreach (var entry in platform.actorIMUs)
                 {
                     var imu = entry.Key;
                     if (GUILayout.Button($"Select IMU {imu.transform.parent.name}"))

@@ -33,19 +33,19 @@ namespace smplx
             if (smplx != null)
             {
                 // store current transform
-                var globalTranslation = _root.localPosition;
+                // var globalTranslation = _root.localPosition;
 
-                _root.localPosition = Vector3.zero;
-                _root.parent.localEulerAngles = Vector3.zero;
-                _root.parent.localPosition = Vector3.zero;
+                // _root.localPosition = Vector3.zero;
+                // _root.parent.localEulerAngles = Vector3.zero;
+                // _root.parent.localPosition = Vector3.zero;
                 
                 smplx.betas = betas;
                 smplx.SetBetaShapes();
                 
                 // restore transform
-                _root.localPosition = globalTranslation;
-                _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
-                _root.parent.localPosition = new Vector3(0, -0.4f, -0.4f);
+                // _root.localPosition = globalTranslation;
+                // _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
+                // _root.parent.localPosition = new Vector3(0, -0.4f, -0.4f);
             }
         }
         

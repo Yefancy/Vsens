@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Sensor
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(VirtualSensor), true)]
     public class VirtualSensorEditor : Editor
     {
@@ -15,4 +16,5 @@ namespace Sensor
             sensor.ShowGraph = GUILayout.Toggle(sensor.ShowGraph, "Show Graph");
         }
     }
+#endif
 }

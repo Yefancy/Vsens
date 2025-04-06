@@ -38,6 +38,7 @@ public class SMPLX : MonoBehaviour
 
     public ModelType modelType = ModelType.Unknown;
 
+    public Transform root;
     public float[] betas = new float[NUM_BETAS];
     public float[] expressions = new float[NUM_EXPRESSIONS];
 
@@ -80,6 +81,8 @@ public class SMPLX : MonoBehaviour
 
     Dictionary<string, Transform> _transformFromName;
 
+    public Dictionary<string, Transform> TransformFromName => _transformFromName;
+    
     // Joint recalculation
     public static Dictionary<string, Matrix[]> JointMatrices = null;
 
@@ -101,6 +104,8 @@ public class SMPLX : MonoBehaviour
                 }
             }
         }
+
+        root = _transformFromName["pelvis"].parent;
 
         if (_jointPositions == null)
         {
@@ -527,6 +532,15 @@ public class SMPLX : MonoBehaviour
                 return false;
             }
 
+            // store current transform
+            var globalTranslation = root.localPosition;
+            var globalRotation = root.parent.localEulerAngles;
+            var globalPosition = root.parent.localPosition;
+            
+            root.localPosition = Vector3.zero;
+            root.parent.localEulerAngles = Vector3.zero;
+            root.parent.localPosition = Vector3.zero;
+            
             Matrix[] betasToJoints = SMPLX.JointMatrices["betasToJoints_" + gender];
             Matrix[] templateJ = SMPLX.JointMatrices["templateJ_" + gender];;
 
@@ -566,8 +580,12 @@ public class SMPLX : MonoBehaviour
 
                 // Update joint position cache
                 _jointPositions[i] = joint.position;
-
             }
+            
+            // restore transform
+            root.localPosition = globalTranslation;
+            root.parent.localEulerAngles = globalRotation;
+            root.parent.localPosition = globalPosition;
         }
         else
         {

@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Animations
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(BodyAnimationController))]
     public class BodyAnimationControllerEditor: Editor
     {
@@ -39,4 +40,5 @@ namespace Animations
             EditorGUILayout.LabelField("progress：" + (controller.normalizedTime * 100f).ToString("F1") + "%");
         }
     }
+#endif
 }

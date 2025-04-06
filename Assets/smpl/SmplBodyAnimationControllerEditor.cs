@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace smpl
 {
+#if UNITY_EDITOR
     [CustomEditor(typeof(SmplBodyAnimationController))]
     public class SmplBodyAnimationControllerEditor: BodyAnimationControllerEditor
     {
@@ -17,4 +18,5 @@ namespace smpl
            }
         }
     }
+#endif
 }
