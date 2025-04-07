@@ -29,6 +29,7 @@ namespace Vsens
         protected internal readonly Dictionary<VirtualIMUSensor, VirtualIMUSensor> avatarIMUs = new();
         private VirtualIMUSensor selectedSensor;
         private List<SensorData> synthesisIMUData = new();
+        private SMPLX _targetSMPLX;
         
         public float currentProgress // from 0 - 1
         {
@@ -80,6 +81,7 @@ namespace Vsens
             virtualIMUChart.jumpProgress = progress => currentProgress = progress;
             IsAccMode = isAccMode;
             PreviewRange = previewRange;
+            _targetSMPLX = target.GetComponent<SMPLX>();
         }
 
         private void Update()
@@ -200,20 +202,24 @@ namespace Vsens
 
         public float[] GetBodyShape()
         {
-            if (target == null) return new float[SMPLX.NUM_BETAS];
-            var smplx = target.GetComponent<SMPLX>();
-            return smplx == null ? new float[SMPLX.NUM_BETAS] : smplx.betas;
+            return _targetSMPLX.betas;
         }
         
         public void SetBodyShape(float[] betas)
         {
-            if (target == null) return;
-            var smplx = target.GetComponent<SMPLX>();
-            if (smplx != null)
+            _targetSMPLX.betas = betas;
+            _targetSMPLX.SetBetaShapes();
+            avatar.betas = betas;
+            avatar.SetBetaShapes();
+            ApplyToAllActor(actor =>
             {
-                smplx.betas = betas;
-                smplx.SetBetaShapes();
-            }
+                actor.TryGetComponent<SMPLX>(out var smplx);
+                if (smplx != null)
+                {
+                    smplx.betas = betas;
+                    smplx.SetBetaShapes();
+                }
+            });
         }
 
         public void ApplyToAllActor(Action<int, BodyAnimationController> consumer)

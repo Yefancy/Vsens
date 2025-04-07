@@ -480,6 +480,13 @@ public class SMPLX : MonoBehaviour
 
     public bool UpdateJointPositions(bool recalculateJoints = true)
     {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[SMPL-X] Skipping mesh clone in Editor to avoid scene bloat.");
+            return false;
+        }
+#endif
         if (HasBetaShapes() && recalculateJoints)
         {
             if (_sharedMeshDefault == null)
@@ -488,14 +495,6 @@ public class SMPLX : MonoBehaviour
                 if (_defaultShape)
                     return false;
                 
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                {
-                    Debug.LogWarning("[SMPL-X] Skipping mesh clone in Editor to avoid scene bloat.");
-                    return false;
-                }
-#endif
-
                 // Clone default shared mesh so that we can modify later the shared mesh bind pose without affecting other shared instances.
                 // Note that this will drastically increase the Unity scene file size and make Unity Editor very slow on save when multiple bodies like this are used.
                 _sharedMeshDefault = _smr.sharedMesh;

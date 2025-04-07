@@ -7,7 +7,7 @@ Shader "Custom/HorizontalFade"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="Transparent" }
+        Tags { "Queue"="AlphaTest" "RenderType"="Transparent" }
         LOD 200
 
         Pass
