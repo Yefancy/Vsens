@@ -38,6 +38,7 @@ namespace Sensor
         public Rigidbody Rigidbody => rigidbody;
         public bool registerOnStart = false;
         public bool canBeTransform = true;
+        public bool interactable = true;
         
         /// <summary>
         /// to check if the sensor is working, if ture the sensor will collect data, otherwise it wont.
@@ -106,8 +107,10 @@ namespace Sensor
             get => _SelectedSensor == this;
             set
             {
+                if (isSelected == value) return;
                 if (value)
                 {
+                    _SelectedSensor = this;
                     if (_SelectedSensor != null)
                     {
                         _SelectedSensor.isSelected = false;
@@ -118,14 +121,13 @@ namespace Sensor
                         selectedVisualization?.SetActive(true);
                     }
                     visualBox?.SetActive(true);
-                    _SelectedSensor = this;
                 }
                 else if (_SelectedSensor == this)
                 {
+                    _SelectedSensor = null;
                     onSelectedChanged?.Invoke(false);
                     selectedVisualization?.SetActive(false);
                     visualBox?.SetActive(false);
-                    _SelectedSensor = null;
                 }
             }
         }
@@ -190,6 +192,7 @@ namespace Sensor
 
         public override void ProcessPointerEvent(PointerEvent evt)
         {
+            if (!interactable) return;
             var eventHand = DevicesRef.Instance.LeftHandGrabInteractor.Identifier == evt.Identifier ? DevicesRef.Instance.LeftHand : 
                 DevicesRef.Instance.RightHandGrabInteractor.Identifier == evt.Identifier ? DevicesRef.Instance.RightHand : null;
             base.ProcessPointerEvent(evt);

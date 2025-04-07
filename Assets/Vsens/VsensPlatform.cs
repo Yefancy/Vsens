@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Animations;
+using Oculus.Interaction;
 using Sensor;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -76,9 +77,14 @@ namespace Vsens
                 actor.isPlaying = false;
                 actor.AddComponent<IMUMarkerRendering>();
             });
+            avatar.AddComponent<IMUMarkerRendering>().baseScreenSize = 10;
             // run next frame
             StartCoroutine(LoadTargetCoroutine());
-            virtualIMUChart.jumpProgress = progress => currentProgress = progress;
+            virtualIMUChart.JumpProgress += progress =>
+            {
+                currentProgress = progress;
+                PlayAnimation(false);
+            };
             IsAccMode = isAccMode;
             PreviewRange = previewRange;
             _targetSMPLX = target.GetComponent<SMPLX>();
@@ -171,8 +177,15 @@ namespace Vsens
                     Debug.LogError($"imu {imu.name} not found in avatar");
                     continue;
                 }
-                var newImu = CopyShadowIMU(imu, avatarParent);
+                var newImu = CopyShadowIMU(imu, avatarParent, false);
                 newImu.showSelectedVisualization = false;
+                newImu.onSelectedChanged += selected =>
+                {
+                    if (selected)
+                    {
+                        SelectedIMU(imu);
+                    }
+                };
                 avatarIMUs.Add(imu, newImu);
             }
             if (actorIMUs.Count > 0)
@@ -182,7 +195,7 @@ namespace Vsens
             }
         }
 
-        private static VirtualIMUSensor CopyShadowIMU(VirtualIMUSensor imu, Transform parent)
+        private static VirtualIMUSensor CopyShadowIMU(VirtualIMUSensor imu, Transform parent, bool disableInteractable = true, bool disableVisualization = true)
         {
             var newImu = Instantiate(imu.prefab == null ? imu.gameObject : imu.prefab, parent);
             newImu.gameObject.SetActive(true);
@@ -191,10 +204,17 @@ namespace Vsens
             newImu.transform.localRotation = imu.transform.localRotation;
             var imuComponent = newImu.GetComponent<VirtualIMUSensor>();
             imuComponent.registerOnStart = false;
-            if (imuComponent.inActiveVisualization != null)
+            if (disableVisualization)
             {
-                Destroy(imuComponent.inActiveVisualization);
-                imuComponent.inActiveVisualization = null;
+                if (imuComponent.inActiveVisualization != null)
+                {
+                    Destroy(imuComponent.inActiveVisualization);
+                    imuComponent.inActiveVisualization = null;
+                }
+            }
+            if (disableInteractable)
+            {
+                imuComponent.interactable = false;
             }
             imuComponent.IsActive = false;
             return imuComponent;
@@ -207,10 +227,20 @@ namespace Vsens
         
         public void SetBodyShape(float[] betas)
         {
+            var previous = GetBodyShape();
+            if (betas.Length == previous.Length && betas.SequenceEqual(previous))
+            {
+                return;
+            }
+            var minY = _targetSMPLX.GetVerticesMinY();
             _targetSMPLX.betas = betas;
             _targetSMPLX.SetBetaShapes();
+            var newMinY = _targetSMPLX.GetVerticesMinY();
+            var diff = newMinY - minY;
+            _targetSMPLX.transform.localPosition -= new Vector3(0, diff, 0);
             avatar.betas = betas;
             avatar.SetBetaShapes();
+            avatar.transform.localPosition -= new Vector3(0, diff, 0);
             ApplyToAllActor(actor =>
             {
                 actor.TryGetComponent<SMPLX>(out var smplx);
@@ -218,6 +248,7 @@ namespace Vsens
                 {
                     smplx.betas = betas;
                     smplx.SetBetaShapes();
+                    smplx.gameObject.transform.localPosition -= new Vector3(0, diff, 0);
                 }
             });
         }
@@ -245,17 +276,21 @@ namespace Vsens
         
         public void SelectedIMU(VirtualIMUSensor sensor)
         {
-            selectedSensor = sensor;
-            // avatar
-            avatarIMUs[sensor].isSelected = true;
-            
-            // actors
-            var actorSensors = actorIMUs[sensor];
-            for (var i = 0; i < actors.Length; i++)
+            if (selectedSensor != sensor)
             {
-                var actorSensor = actorSensors[i];
-                var marker = actors[i].GetComponent<IMUMarkerRendering>();
-                marker.imuSensor = actorSensor;
+                selectedSensor = sensor;
+                // avatar
+                avatar.GetComponent<IMUMarkerRendering>().imuSensor = avatarIMUs[sensor];
+                avatarIMUs[sensor].isSelected = true;
+            
+                // actors
+                var actorSensors = actorIMUs[sensor];
+                for (var i = 0; i < actors.Length; i++)
+                {
+                    var actorSensor = actorSensors[i];
+                    var marker = actors[i].GetComponent<IMUMarkerRendering>();
+                    marker.imuSensor = actorSensor;
+                }
             }
             SimulateVirtualIMU();
             UpdateAndDrawIMUTrajectory();
@@ -316,6 +351,36 @@ namespace Vsens
             // update chart
             virtualIMUChart.updateIMUData(synthesisIMUData);
         }
+
+        #region Player
+
+        public void SetAnimation(RawAnimation rawAnimation)
+        {
+            if (target == null || target.getAnimation() == rawAnimation) return;
+            target.setAnimation(rawAnimation);
+            LoadTarget();
+        }
+        
+        public void PlayAnimationTo(bool isPlaying, float normalizeTime = -1)
+        {
+            if (target == null) return;
+            target.isPlaying = isPlaying;
+            if (!(normalizeTime >= 0)) return;
+            target.normalizedTime = normalizeTime;
+            target.PlayAnimationToTime();
+        }
+        
+        public void PlayAnimation(bool isPlaying)
+        {
+            PlayAnimationTo(isPlaying);
+        }
+
+        public bool IsPlaying()
+        {
+            return target != null && target.isPlaying;
+        }
+
+        #endregion
     }
     
     #if UNITY_EDITOR

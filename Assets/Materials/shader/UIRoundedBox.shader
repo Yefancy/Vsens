@@ -1,21 +1,14 @@
-Shader "UI/RoundedRectWithBorder_Fixed"
+Shader "UI/RoundedBorder"
 {
     Properties
     {
-        _Color("Fill Color", Color) = (1,1,1,1)
-        _BorderColor("Border Color", Color) = (0,0,0,1)
-        _Radius("Corner Radius", Float) = 30
-        _BorderWidth("Border Width", Float) = 4
+        _Color ("Border Color", Color) = (1,1,1,1)
+        _Width ("Border Width", Range(0, 0.5)) = 0.1
+        _Radius ("Corner Radius", Range(0, 0.5)) = 0.2
     }
-
     SubShader
     {
-        Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
-        LOD 100
-
-        Cull Off
-        ZWrite Off
-        ZTest Always
+        Tags { "Queue"="Transparent" }
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -23,32 +16,25 @@ Shader "UI/RoundedRectWithBorder_Fixed"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #include "UnityCG.cginc"
+            #include "UnityUI.cginc"
 
-            struct appdata_t {
+            struct appdata
+            {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
             };
 
-            struct v2f {
-                float4 vertex : SV_POSITION;
+            struct v2f
+            {
                 float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
             };
 
-            float4 _Color;
-            float4 _BorderColor;
+            fixed4 _Color;
+            float _Width;
             float _Radius;
-            float _BorderWidth;
 
-            float roundedBoxSDF(float2 uv, float2 size, float radius)
-            {
-                float2 halfSize = size * 0.5;
-                float2 pos = uv * size;
-                float2 d = abs(pos - halfSize) - (halfSize - radius);
-                return length(max(d, 0.0)) - radius;
-            }
-
-            v2f vert(appdata_t v)
+            v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
@@ -56,21 +42,16 @@ Shader "UI/RoundedRectWithBorder_Fixed"
                 return o;
             }
 
-            fixed4 frag(v2f i) : SV_Target
+            fixed4 frag (v2f i) : SV_Target
             {
-                float2 size = float2(1.0, 1.0); // normalized space
-                float radius = _Radius / 100.0;
-                float border = _BorderWidth / 100.0;
+                // 计算到边界的距离（SDF）
+                float2 uv = i.uv * 2 - 1; // 转换到[-1,1]范围
+                float2 absUV = abs(uv);
+                float2 corner = smoothstep(1.0 - _Radius, 1.0 - _Radius + 0.01, absUV);
+                float dist = max(absUV.x, absUV.y) - (1.0 - _Radius);
+                float border = smoothstep(_Width - 0.01, _Width + 0.01, abs(dist));
 
-                float sdf = roundedBoxSDF(i.uv, size, radius);
-                float antiAlias = fwidth(sdf);
-
-                float fillAlpha = smoothstep(0.0, -antiAlias, sdf);
-                float borderAlpha = smoothstep(border + antiAlias, border - antiAlias, abs(sdf));
-
-                float4 col = lerp(_BorderColor, _Color, borderAlpha);
-                col.a *= fillAlpha;
-                return col;
+                return fixed4(_Color.rgb, _Color.a * border);
             }
             ENDCG
         }

@@ -249,6 +249,41 @@ public class SMPLX : MonoBehaviour
 
         UpdateJointPositions();
     }
+    
+    public float GetVerticesMinY()
+    {
+        if (_bakedMesh == null)
+            _bakedMesh = new Mesh();
+
+        var index = 0;
+        _smr.BakeMesh(_bakedMesh);
+        Vector3[] vertices =_bakedMesh.vertices;
+        float yMin = vertices[0].y;
+        for (int i=1; i<vertices.Length; i++)
+        {
+            float y = vertices[i].y;
+
+            if (y < yMin)
+            {
+                yMin = y;
+                index = i;
+            }
+        }
+
+        return yMin;
+    }
+
+    /**
+     * If it's a T-pose, return the minimum Y value of the vertices in a quick way
+     */
+    public float GetVerticesY(int index = 4663)
+    {
+        if (_bakedMesh == null)
+            _bakedMesh = new Mesh();
+        _smr.BakeMesh(_bakedMesh);
+        Vector3[] vertices =_bakedMesh.vertices;
+        return vertices[index].y;
+    }
 
     public void SetExpressions()
     {

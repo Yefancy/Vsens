@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Sensor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using XCharts.Runtime;
 
 namespace Vsens.data
@@ -28,7 +29,7 @@ namespace Vsens.data
             }
         }
         
-        public Action<float> jumpProgress = (progress) => { };
+        public Action<float> JumpProgress { get; set; }
         
         public bool IsAccMode
         {
@@ -45,6 +46,18 @@ namespace Vsens.data
         private void Awake()
         {
             chart = GetComponent<LineChart>();
+            chart.onDrag = OnChartDrag;
+        }
+        
+        private void OnChartDrag(PointerEventData eventData, BaseGraph graph)
+        {
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(graph.canvas.transform as RectTransform,
+                    eventData.position,
+                    graph.canvas.worldCamera, out var position)) return;
+            var length = right.anchoredPosition.x - left.anchoredPosition.x;
+            var leftPos = left.anchoredPosition;
+            var progress = Mathf.Clamp((position.x - leftPos.x) * 1f / length, 0, 1);
+            JumpProgress?.Invoke(progress);
         }
 
         private void Update()
