@@ -163,7 +163,7 @@ namespace Animations
 
         public void PlayAnimationTo(float animationTime)
         {
-            if (_root != null)
+            if (_root != null && hasAnimation)
             {
                 var frameIndex = (int) (animationTime / deltaTime);
                 var lerp = (animationTime % deltaTime) / deltaTime;

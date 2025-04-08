@@ -18,6 +18,7 @@ namespace Vsens
     {
         public BodyAnimationController target;
         public BodyAnimationController[] actors;
+        public IMUChart refIMUChart;
         public IMUChart virtualIMUChart;
         public IMUTrajectory imuTrajectory;
         public TimeLineController timeLineController;
@@ -31,6 +32,7 @@ namespace Vsens
         private VirtualIMUSensor selectedSensor;
         private List<SensorData> synthesisIMUData = new();
         private SMPLX _targetSMPLX;
+        private List<SensorData> refIMUData = new();
         
         public float currentProgress // from 0 - 1
         {
@@ -52,6 +54,7 @@ namespace Vsens
                 if (isAccMode == value) return;
                 isAccMode = value;
                 virtualIMUChart.IsAccMode = isAccMode;
+                refIMUChart.IsAccMode = isAccMode;
                 UpdateAndDrawIMUTrajectory();
             }
         }
@@ -131,11 +134,11 @@ namespace Vsens
             // clear up
             foreach (var imuSensor in actorIMUs.Values.SelectMany(virtualIMUs => virtualIMUs))
             {
-                Destroy(imuSensor);
+                Destroy(imuSensor.gameObject);
             }
             foreach (var imuSensor in avatarIMUs.Values)
             {
-                Destroy(imuSensor);
+                Destroy(imuSensor.gameObject);
             }
             actorIMUs.Clear();
             avatarIMUs.Clear();
@@ -350,6 +353,7 @@ namespace Vsens
             
             // update chart
             virtualIMUChart.updateIMUData(synthesisIMUData);
+            UpdateRefChart();
         }
 
         #region Player
@@ -381,6 +385,81 @@ namespace Vsens
         }
 
         #endregion
+
+        #region Sensor Data
+
+        private void UpdateRefChart()
+        {
+            if (refIMUChart == null) return;
+            if (selectedSensor == null) return;
+            var data = GetRefDataByTag(selectedSensor.name);
+            refIMUChart.updateIMUData(data);
+        }
+        
+        public void SetRefData(List<SensorData> refData)
+        {
+            refIMUData = refData;
+            UpdateRefChart();
+        }
+
+        private List<SensorData> GetRefDataByTag(string sensorID)
+        {
+            var data = new List<SensorData>();
+            foreach (var sensorData in refIMUData)
+            {
+                if (sensorData.sensorID == sensorID)
+                {
+                    data.Add(sensorData);
+                }
+            }
+            return data;
+        }
+
+        public void SaveIMUData()
+        {
+            if (target == null || !target.hasAnimation) return;
+            var data = new List<SensorData>();
+            var smplx = target.GetComponent<SMPLX>();
+            // simulate the virtual imu
+            target.PlayAnimationTo(0);
+            foreach (var sensor in actorIMUs.Keys)
+            {
+                sensor.ClearData();
+                sensor.ClearSmoothCache();
+                sensor.StartRecording();
+            }
+            var time = 0f;
+            var deltaTime = target.deltaTime;
+            var animationTime = target.frameCount * target.deltaTime;
+            while (time < animationTime)
+            {
+                target.PlayAnimationTo(time);
+                if (smplx.usePoseCorrectives)
+                {
+                    smplx.UpdatePoseCorrectives();
+                }
+                foreach (var sensor in actorIMUs.Keys) sensor.UpdateWorking(time, deltaTime);
+                time += deltaTime;
+            }
+            foreach (var sensor in actorIMUs.Keys)
+            {
+                sensor.StopRecording();
+                data.AddRange(sensor.Data);
+            }
+            target.PlayAnimationToTime();
+            var date = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            var path = $"{Application.streamingAssetsPath}/RefIMUData";
+            if (!System.IO.Directory.Exists(path))
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+            var fileName = $"{path}/{target.name}_{date}.csv";
+            using var writer = new System.IO.StreamWriter(fileName);
+            writer.WriteLine("tag,time,ex,ey,ez,ax,ay,az,lx,ly,lz,x,y,z");
+            foreach (var sensorData in data) writer.WriteLine(sensorData.ToCsvLine());
+        }
+        #endregion
+        
     }
     
     #if UNITY_EDITOR

@@ -107,10 +107,8 @@ namespace Sensor
             get => _SelectedSensor == this;
             set
             {
-                if (isSelected == value) return;
                 if (value)
                 {
-                    _SelectedSensor = this;
                     if (_SelectedSensor != null)
                     {
                         _SelectedSensor.isSelected = false;
@@ -121,13 +119,14 @@ namespace Sensor
                         selectedVisualization?.SetActive(true);
                     }
                     visualBox?.SetActive(true);
+                    _SelectedSensor = this;
                 }
                 else if (_SelectedSensor == this)
                 {
-                    _SelectedSensor = null;
                     onSelectedChanged?.Invoke(false);
                     selectedVisualization?.SetActive(false);
                     visualBox?.SetActive(false);
+                    _SelectedSensor = null;
                 }
             }
         }

@@ -10,12 +10,13 @@ namespace Vsens.data
     [RequireComponent(typeof(LineChart))]
     public class IMUChart : MonoBehaviour
     {
-        public RectTransform left, right, indicator, trimLeft, trimRight, previewRange; 
+        public RectTransform left, right, indicator, trimLeft, trimRight; 
+        public RectTransform leftPreview, indicatorPreviewLeft, indicatorPreviewRight, rightPreview; 
         private LineChart chart;
         private List<SensorData> currentIMUData = new();
         private bool _isAccMode = true;
         private float _progress = 0.5f;
-        public float PreviewRange { get; set; } = 0.2f;
+        public float PreviewRange = 0.2f;
         public float Progress
         {
             get => _progress;
@@ -47,6 +48,18 @@ namespace Vsens.data
         {
             chart = GetComponent<LineChart>();
             chart.onDrag = OnChartDrag;
+            chart.onPointerClick = OnChartClick;
+        }
+        
+        private void OnChartClick(PointerEventData eventData, BaseGraph graph)
+        {
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(graph.canvas.transform as RectTransform,
+                    eventData.position,
+                    graph.canvas.worldCamera, out var position)) return;
+            var length = right.anchoredPosition.x - left.anchoredPosition.x;
+            var leftPos = left.anchoredPosition;
+            var progress = Mathf.Clamp((position.x - leftPos.x) * 1f / length, 0, 1);
+            JumpProgress?.Invoke(progress);
         }
         
         private void OnChartDrag(PointerEventData eventData, BaseGraph graph)
@@ -65,7 +78,30 @@ namespace Vsens.data
             // update preview range
             // TODO scissor
             var length = right.anchoredPosition.x - left.anchoredPosition.x;
-            previewRange.sizeDelta = new Vector2(length * PreviewRange, previewRange.sizeDelta.y);
+            var halfLength = length * PreviewRange / 2;
+            var indicatorPos = indicator.anchoredPosition.x;
+            var leftLeft = indicatorPos - left.anchoredPosition.x;
+            var rightLeft = right.anchoredPosition.x - indicatorPos;
+            if (halfLength <= leftLeft)
+            {
+                indicatorPreviewLeft.sizeDelta = new Vector2(halfLength, indicatorPreviewLeft.sizeDelta.y);
+                rightPreview.sizeDelta = new Vector2(0, rightPreview.sizeDelta.y);
+            }
+            else
+            {
+                indicatorPreviewLeft.sizeDelta = new Vector2(leftLeft, indicatorPreviewLeft.sizeDelta.y);
+                rightPreview.sizeDelta = new Vector2(halfLength - leftLeft, rightPreview.sizeDelta.y);
+            }
+            if (halfLength <= rightLeft)
+            {
+                indicatorPreviewRight.sizeDelta = new Vector2(halfLength, indicatorPreviewRight.sizeDelta.y);
+                leftPreview.sizeDelta = new Vector2(0, leftPreview.sizeDelta.y);
+            }
+            else
+            {
+                indicatorPreviewRight.sizeDelta = new Vector2(rightLeft, indicatorPreviewRight.sizeDelta.y);
+                leftPreview.sizeDelta = new Vector2(halfLength - rightLeft, leftPreview.sizeDelta.y);
+            }
         }
 
         public void updateIMUData(List<SensorData> imuData)
