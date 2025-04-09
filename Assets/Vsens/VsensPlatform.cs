@@ -194,7 +194,8 @@ namespace Vsens
             if (actorIMUs.Count > 0)
             {
                 var first = actorIMUs.First();
-               SelectedIMU(first.Key);
+                selectedSensor = null; 
+                SelectedIMU(first.Key);
             }
         }
 
