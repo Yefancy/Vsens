@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Oculus.Interaction.Input;
 using Sensor;
@@ -51,10 +52,14 @@ namespace Sensor
             Destroy(this);
         }
 
-        private void OnTriggerEnter(Collider other)
+        private void OnTriggerStay(Collider other)
         {
             if (other.gameObject.TryGetComponent(out SensorAttachable sensorAttachable))
             {
+                if (sensorAttachableCollided == sensorAttachable)
+                {
+                    return;
+                }
                 if (!sensorAttachable.CanAttachTo(sensor, hand))
                 {
                     return;
@@ -67,6 +72,23 @@ namespace Sensor
                 sensorAttachableCollided.OnAttachHover(sensor);
             }
         }
+
+        // private void OnTriggerEnter(Collider other)
+        // {
+        //     if (other.gameObject.TryGetComponent(out SensorAttachable sensorAttachable))
+        //     {
+        //         if (!sensorAttachable.CanAttachTo(sensor, hand))
+        //         {
+        //             return;
+        //         }
+        //         if (sensorAttachableCollided != null)
+        //         {
+        //             sensorAttachableCollided.OnAttachHoverExit(sensor);
+        //         }
+        //         sensorAttachableCollided = sensorAttachable;
+        //         sensorAttachableCollided.OnAttachHover(sensor);
+        //     }
+        // }
         
         // private void OnTriggerExit(Collider other)
         // {

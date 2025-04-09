@@ -59,11 +59,13 @@ namespace Sensor
         
         public virtual void OnAttachHover(VirtualSensor sensor)
         {
+            if (HoverEffect == null) return;
             HoverEffect?.SetActive(true);
         }
         
         public virtual void OnAttachHoverExit(VirtualSensor sensor)
         {
+            if (HoverEffect == null) return;
             HoverEffect?.SetActive(false);
         }
     }

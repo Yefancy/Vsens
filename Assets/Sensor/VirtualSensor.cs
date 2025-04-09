@@ -39,7 +39,7 @@ namespace Sensor
         public bool registerOnStart = false;
         public bool canBeTransform = true;
         public bool interactable = true;
-        
+
         /// <summary>
         /// to check if the sensor is working, if ture the sensor will collect data, otherwise it wont.
         /// </summary>

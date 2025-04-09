@@ -18,7 +18,7 @@ namespace smplx
             if (_root != null)
             {
                 _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
-                _root.parent.localPosition = new Vector3(0, -0.4f, -0.4f);
+                _root.parent.localPosition = new Vector3(0, -0.34f, -0.4f);
             }
             
             base.setAnimation(animation);
