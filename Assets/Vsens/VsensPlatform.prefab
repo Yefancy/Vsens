@@ -20946,6 +20946,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 0}
+  sensorAttachable: {fileID: 0}
   actors:
   - {fileID: 2679417808651495056}
   - {fileID: 5670293065640307912}

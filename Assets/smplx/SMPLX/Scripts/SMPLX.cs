@@ -25,9 +25,35 @@ using UnityEditor;
 
 // Joint recalculation
 using LightweightMatrixCSharp;
+using NUnit.Framework;
+using Oculus.Interaction;
 
 public class SMPLX : MonoBehaviour
 {
+    public struct Bone
+    {
+        public Transform From;
+        public Transform To;
+        public Transform Parent;
+        
+        public Bone(Transform from, Transform to, Transform parent)
+        {
+            // assert not null
+            if (from == null || to == null || parent == null)
+            {
+                Debug.LogError("[SMPL-X] ERROR: Cannot create bone with null transform");
+            }
+            From = from;
+            To = to;
+            Parent = parent;
+        }
+
+        public override string ToString()
+        {
+            return "From: " + From.name + ", To: " + To.name + ", Parent: " + Parent.name;
+        }
+    }
+    
     public const int NUM_BETAS = 10;
     public const int NUM_EXPRESSIONS = 10;
     public const int NUM_JOINTS = 55;
@@ -80,15 +106,17 @@ public class SMPLX : MonoBehaviour
     float[] _handRelaxedRight = new float[] { 0.11167871206998825f,-0.042892176657915115f,0.41644182801246643f,0.10881132632493973f,0.06598567962646484f,0.7562199831008911f,-0.09639296680688858f,0.09091565757989883f,0.18845929205417633f,-0.1180950403213501f,-0.050943851470947266f,0.529584527015686f,-0.14369840919971466f,-0.055241700261831284f,0.7048571109771729f,-0.01918291673064232f,0.09233684837818146f,0.33791351318359375f,-0.4570329785346985f,0.1962839514017105f,0.6254575252532959f,-0.21465237438678741f,0.06599828600883484f,0.5068942308425903f,-0.3697243630886078f,0.060344625264406204f,0.07949022948741913f,-0.1418696939945221f,0.08585263043642044f,0.6355282664299011f,-0.3033415973186493f,0.05788097530603409f,0.6313892006874084f,-0.17612089216709137f,0.13209307193756104f,0.37335458397865295f,0.8509643077850342f,-0.27692273259162903f,0.09154807031154633f,-0.4998394250869751f,-0.02655647136271f,-0.05288087576627731f,0.5355591773986816f,-0.04596104100346565f,0.2773580253124237f };
 
     Dictionary<string, Transform> _transformFromName;
+    List<Bone> _bones;
 
     public Dictionary<string, Transform> TransformFromName => _transformFromName;
+    public List<Bone> Bones => _bones;
     
     // Joint recalculation
     public static Dictionary<string, Matrix[]> JointMatrices = null;
 
     public void Awake()
     {
-        if (_transformFromName == null)
+        if (_transformFromName == null || _bones == null)
         {
             _transformFromName = new Dictionary<string, Transform>();
             foreach (var bodyJointName in _bodyJointNames)
@@ -103,6 +131,8 @@ public class SMPLX : MonoBehaviour
                     _transformFromName.Add(bodyJointName, transform);
                 }
             }
+            _bones = new List<Bone>();
+            InitBones();
         }
 
         root = _transformFromName["pelvis"].parent;
@@ -151,6 +181,57 @@ public class SMPLX : MonoBehaviour
         {
             Debug.Log("[SMPL-X] Initializing pose correctives quality level: " + poseCorrectivesQuality);
             SetPoseCorrectivesQuality(poseCorrectivesQuality);
+        }
+    }
+
+    private void InitBones()
+    {
+        AddBone("pelvis", "pelvis", "left_hip", false);
+        AddBone("pelvis", "pelvis", "right_hip", false);
+        
+        AddBone("hip", "hip", "knee");
+        AddBone("knee", "knee", "ankle");
+        AddBone("ankle", "ankle", "foot");
+        
+        AddBone("pelvis", "pelvis", "spine1", false);
+        AddBone("spine1", "spine1", "spine2", false);
+        AddBone("spine2", "spine2", "spine3", false);
+        
+        AddBone("spine3", "spine3", "left_collar", false);
+        AddBone("spine3", "spine3", "right_collar", false);
+        AddBone("collar", "collar", "shoulder");
+        AddBone("shoulder", "shoulder", "elbow");
+        AddBone("elbow", "elbow", "wrist");
+        AddBone("wrist", "wrist", "index1");
+        AddBone("index1", "index1", "index2");
+        AddBone("index2", "index2", "index3");
+        AddBone("wrist", "wrist", "middle1");
+        AddBone("middle1", "middle1", "middle2");
+        AddBone("middle2", "middle2", "middle3");
+        AddBone("wrist", "wrist", "pinky1");
+        AddBone("pinky1", "pinky1", "pinky2");
+        AddBone("pinky2", "pinky2", "pinky3");
+        AddBone("wrist", "wrist", "ring1");
+        AddBone("ring1", "ring1", "ring2");
+        AddBone("ring2", "ring2", "ring3");
+        AddBone("wrist", "wrist", "thumb1");
+        AddBone("thumb1", "thumb1", "thumb2");
+        AddBone("thumb2", "thumb2", "thumb3");
+        
+        AddBone("spine3", "spine3", "neck", false);
+        AddBone("neck", "neck", "head", false);
+    }
+    
+    private void AddBone(string parent, string from, string to, bool both=true)
+    {
+        if (both)
+        {
+            _bones.Add(new Bone(_transformFromName["left_" + from], _transformFromName["left_" + to], _transformFromName["left_" + parent]));
+            _bones.Add(new Bone(_transformFromName["right_" + from], _transformFromName["right_" + to], _transformFromName["right_" + parent]));
+        }
+        else
+        {
+            _bones.Add(new Bone(_transformFromName[from], _transformFromName[to], _transformFromName[parent]));
         }
     }
 
@@ -639,6 +720,18 @@ public class SMPLX : MonoBehaviour
         if (usePoseCorrectives)
             UpdatePoseCorrectives();
     }
+    
+#if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        if (_bones == null)
+            return;
+        foreach (var bone in _bones)
+        {
+            Debug.DrawLine(bone.From.position, bone.To.position, Color.yellow);
+        }
+    }
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////

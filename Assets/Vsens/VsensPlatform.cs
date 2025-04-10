@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Animations;
-using Oculus.Interaction;
 using Sensor;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -17,6 +16,7 @@ namespace Vsens
     public class VsensPlatform : MonoBehaviour
     {
         public BodyAnimationController target;
+        public SensorAttachable sensorAttachable;
         public BodyAnimationController[] actors;
         public IMUChart refIMUChart;
         public IMUChart virtualIMUChart;
@@ -75,14 +75,16 @@ namespace Vsens
         // Start is called before the first frame update
         private void Start()
         {
+            if (sensorAttachable == null && target != null)
+            {
+                sensorAttachable = target.GetComponentInChildren<SensorAttachable>();
+            }
             ApplyToAllActor(actor =>
             {
                 actor.isPlaying = false;
                 actor.AddComponent<IMUMarkerRendering>();
             });
             avatar.AddComponent<IMUMarkerRendering>().baseScreenSize = 10;
-            // run next frame
-            StartCoroutine(LoadTargetCoroutine());
             virtualIMUChart.JumpProgress += progress =>
             {
                 currentProgress = progress;
@@ -91,6 +93,8 @@ namespace Vsens
             IsAccMode = isAccMode;
             PreviewRange = previewRange;
             _targetSMPLX = target.GetComponent<SMPLX>();
+            // run next frame
+            StartCoroutine(LoadTargetCoroutine());
         }
 
         private void Update()
@@ -98,43 +102,52 @@ namespace Vsens
             bool needReload = false;
             bool reloadData = false;
             // sync sensors
-            foreach (var entry in actorIMUs)
+            var targetSensors = FindIMUsOnTheTarget();
+            if (targetSensors.Length != actorIMUs.Count || targetSensors.Any(sensor => !actorIMUs.ContainsKey(sensor)))
             {
-                var imu = entry.Key;
-                var sensors = entry.Value;
-                if (imu == null || imu.gameObject == null)
+                needReload = true;
+            }
+            else
+            {
+                foreach (var entry in actorIMUs)
                 {
-                    // remove the sensor
-                    needReload = true;
-                    break;
-                }
-                var localPosition = imu.transform.localPosition;
-                var localRotation = imu.transform.localRotation;
-                foreach (var sensor in sensors)
-                {
-                    // make sure the parent object are same, local transform are same
-                    if (imu.transform.parent.name != sensor.transform.parent.name)
+                    var imu = entry.Key;
+                    var sensors = entry.Value;
+                    if (imu == null || imu.gameObject == null)
                     {
+                        // remove the sensor
                         needReload = true;
                         break;
                     }
-                    sensor.transform.localPosition = localPosition;
-                    sensor.transform.localRotation = localRotation;
-                }
-                if (needReload) break;
-
-                if (imu == selectedSensor)
-                {
-                    // check if transform is changed
-                    if (localRotation != avatarIMUs[imu].transform.localRotation ||
-                        localPosition != avatarIMUs[imu].transform.localPosition)
+                    var localPosition = imu.transform.localPosition;
+                    var localRotation = imu.transform.localRotation;
+                    foreach (var sensor in sensors)
                     {
-                        reloadData = true;
+                        // make sure the parent object are same, local transform are same
+                        if (imu.transform.parent.name != sensor.transform.parent.name)
+                        {
+                            needReload = true;
+                            break;
+                        }
+                        sensor.transform.localPosition = localPosition;
+                        sensor.transform.localRotation = localRotation;
                     }
+                    if (needReload) break;
+
+                    if (imu == selectedSensor)
+                    {
+                        // check if transform is changed
+                        if (localRotation != avatarIMUs[imu].transform.localRotation ||
+                            localPosition != avatarIMUs[imu].transform.localPosition)
+                        {
+                            reloadData = true;
+                        }
+                    }
+                    avatarIMUs[imu].transform.localPosition = localPosition;
+                    avatarIMUs[imu].transform.localRotation = localRotation;
                 }
-                avatarIMUs[imu].transform.localPosition = localPosition;
-                avatarIMUs[imu].transform.localRotation = localRotation;
             }
+            
             if (needReload)
             {
                 LoadTarget();
@@ -328,7 +341,9 @@ namespace Vsens
 
         public VirtualIMUSensor[] FindIMUsOnTheTarget()
         {
-            return target.GetComponentsInChildren<VirtualIMUSensor>();
+            return sensorAttachable == null ? 
+                target.GetComponentsInChildren<VirtualIMUSensor>() : 
+                sensorAttachable.sensors.Where(sensor => sensor is VirtualIMUSensor).Cast<VirtualIMUSensor>().ToArray();
         }
         
         public void SelectedIMU(VirtualIMUSensor sensor)

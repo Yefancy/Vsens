@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Oculus.Interaction.Input;
 using UnityEngine;
@@ -22,7 +23,8 @@ namespace Sensor
         public HandCondition handCondition = HandCondition.Both;
         [Tooltip("The hand condition that the sensor can be controlled by.")]
         public HandCondition controlledHand = HandCondition.Both;
-        
+        public HashSet<VirtualSensor> sensors = new();
+
         public virtual bool CanAttachTo(VirtualSensor sensor, IHand usedHand = null)
         {
             if (usedHand == null) return true;
@@ -44,7 +46,16 @@ namespace Sensor
             return false;
         }
         
-        public virtual void OnAttachTo(VirtualSensor sensor)
+        public void OnAttachTo(VirtualSensor sensor)
+        {
+            if (OnAttachInternal(sensor))
+            {
+                sensor.OnAttachTo(this);
+                sensors.Add(sensor);
+            }
+        }
+
+        protected virtual bool OnAttachInternal(VirtualSensor sensor)
         {
             if (Parent)
             {
@@ -55,6 +66,7 @@ namespace Sensor
                 sensor.transform.SetParent(transform);
             }
             sensor.controlledHand = controlledHand;
+            return true;
         }
         
         public virtual void OnAttachHover(VirtualSensor sensor)
@@ -67,6 +79,11 @@ namespace Sensor
         {
             if (HoverEffect == null) return;
             HoverEffect?.SetActive(false);
+        }
+        
+        public virtual void OnSensorDetach(VirtualSensor sensor)
+        {
+            sensors.Remove(sensor);
         }
     }
 }

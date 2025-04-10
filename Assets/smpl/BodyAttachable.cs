@@ -37,9 +37,10 @@ namespace smpl
             return nearestBone.transform.parent;
         }
         
-        public override void OnAttachTo(VirtualSensor sensor)
+        protected override bool OnAttachInternal(VirtualSensor sensor)
         {
             sensor.transform.SetParent(FindNearestBone(sensor.transform.position));
+            return true;
         }
         
         public override void OnAttachHover(VirtualSensor sensor)

@@ -49,6 +49,7 @@ namespace Sensor
                 sensorAttachableCollided.OnAttachHoverExit(sensor);
                 sensorAttachableCollided.OnAttachTo(sensor);
             }
+            sensorAttachableCollided = null;
             Destroy(this);
         }
 

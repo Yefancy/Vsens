@@ -38,6 +38,7 @@ namespace Sensor
         public Rigidbody Rigidbody => rigidbody;
         public bool registerOnStart = false;
         public bool canBeTransform = true;
+        public bool canSelected = true;
         public bool interactable = true;
 
         /// <summary>
@@ -138,6 +139,20 @@ namespace Sensor
             {
                 StartCoroutine(Register());
             }
+
+            if (sensorAttachable == null)
+            {
+                sensorAttachable = GetComponent<SensorAttachable>();
+                if (sensorAttachable == null)
+                {
+                    sensorAttachable = GetComponentInParent<SensorAttachable>();
+                }
+            }
+
+            if (sensorAttachable != null)
+            {
+                sensorAttachable.OnAttachTo(this);
+            }
         }
         
         private IEnumerator Register()
@@ -146,6 +161,8 @@ namespace Sensor
             sensorDataCenter.RegisterSensor(this);
         }
 
+        
+        
         // run-time
         /// <summary>
         /// it will be used to record the time when the sensor is selected.
@@ -161,8 +178,23 @@ namespace Sensor
         private readonly List<SensorData> _sensorData = new();
         public List<SensorData> Data => _sensorData;
         private bool isRecording;
-        public BoneMeshAttachment boneMeshAttachment = null;
-    
+        public SensorAttachable sensorAttachable;
+
+        public virtual void OnAttachTo(SensorAttachable attachable)
+        {
+            Detach();
+            sensorAttachable = attachable;
+        }
+        
+        public virtual void Detach()
+        {
+            if (sensorAttachable != null)
+            {
+                sensorAttachable.OnSensorDetach(this);
+                sensorAttachable = null;
+            }
+        }
+        
         protected void AppendData(float time, ISensorData data)
         {
             if (!isRecording) return;
@@ -209,7 +241,7 @@ namespace Sensor
             }
             else if (selectedTime >= 0 && evt.Type == PointerEventType.Unselect)
             {
-                if (selectedTime < modeSwitchTime)
+                if (selectedTime < modeSwitchTime && canSelected)
                 {
                     // selecting mode
                     isSelected = !isSelected;
@@ -237,10 +269,6 @@ namespace Sensor
 
         void Update()
         {
-            if (boneMeshAttachment != null && sensorDataCenter.alwaysUpdateBoneMeshAttachment)
-            {
-                boneMeshAttachment.UpdateTransform();
-            }
             // sensor is selected
             if (selectedTime >= 0)
             {
@@ -290,6 +318,7 @@ namespace Sensor
         private void OnDestroy()
         {
             Destroy(graphChart);
+            Detach();
         }
     }
 }
