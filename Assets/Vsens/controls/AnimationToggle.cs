@@ -9,7 +9,7 @@ namespace Vsens.controls
     public class AnimationToggle : MonoBehaviour
     {
         public TextMeshProUGUI label;
-        public RawAnimation animation;
+        public RawAnimation rawAnimation;
         private Toggle _toggle;
         
         private void Awake()
@@ -19,8 +19,8 @@ namespace Vsens.controls
         
         public void SetAnimation(RawAnimation rawAnimation)
         {
-            animation = rawAnimation;
-            if (label != null)
+            this.rawAnimation = rawAnimation;
+            if (label !=null)
             {
                 label.text = rawAnimation.name;
             }

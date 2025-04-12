@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Oculus.Interaction;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Vsens.trajectory
 {
@@ -41,7 +40,7 @@ namespace Vsens.trajectory
             GenerateControllerPoints();
         }
 
-        public void GenerateControllerPoints()
+        protected internal void GenerateControllerPoints()
         {
             foreach (var controlPoint in _trajectoryRenderer.controlPoints)
             {
@@ -64,7 +63,7 @@ namespace Vsens.trajectory
 
         public void UpdateIMUData(List<Vector3> sensorData, float minValue, float maxValue, float minMag, float maxMag)
         {
-            if (_trajectoryRenderer.controlPoints.Count < 2 || sensorData.Count == 0) return;
+            if (!isActiveAndEnabled || _trajectoryRenderer.controlPoints.Count < 2 || sensorData.Count == 0) return;
 
             _sensorData = sensorData;
             _valueRange = new TransformerUtils.FloatRange { Min = minValue, Max = maxValue };
@@ -73,7 +72,7 @@ namespace Vsens.trajectory
             DrawTrajectory();
         }
 
-        public void CalculateControllerPoints()
+        protected internal void CalculateControllerPoints()
         {
             _mappedOffsets = new Vector3[_sensorData.Count];
             for (int i = 0; i < _sensorData.Count; i++)
@@ -84,7 +83,7 @@ namespace Vsens.trajectory
 
         public void DrawTrajectory()
         {
-            if (_sensorData == null || _sensorData.Count == 0 || _mappedOffsets == null) return;
+            if (!isActiveAndEnabled || _sensorData == null || _sensorData.Count == 0 || _mappedOffsets == null) return;
 
             var distance = 1f / (controllerPointCount - 1);
             float startT = Progress - PreviewRange / 2f;

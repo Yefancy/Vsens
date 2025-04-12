@@ -19,7 +19,7 @@ namespace Vsens
         public SensorAttachable sensorAttachable;
         public BodyAnimationController[] actors;
         public IMUChart refIMUChart;
-        public IMUChart virtualIMUChart;
+        public IMUChart[] virtualIMUChart;
         public IMUTrajectory imuTrajectory;
         public TimeLineController timeLineController;
         public SMPLX avatar;
@@ -53,7 +53,10 @@ namespace Vsens
             {
                 if (isAccMode == value) return;
                 isAccMode = value;
-                virtualIMUChart.IsAccMode = isAccMode;
+                foreach (var chart in virtualIMUChart)
+                {
+                    chart.IsAccMode = isAccMode;
+                }
                 refIMUChart.IsAccMode = isAccMode;
                 UpdateAndDrawIMUTrajectory();
             }
@@ -66,7 +69,10 @@ namespace Vsens
             {
                 if (Mathf.Approximately(previewRange, value)) return;
                 previewRange = value;
-                virtualIMUChart.PreviewRange = previewRange;
+                foreach (var chart in virtualIMUChart)
+                {
+                    chart.PreviewRange = previewRange;
+                }
                 imuTrajectory.PreviewRange = previewRange;
                 timeLineController.SetPreviewRange(previewRange);
             }
@@ -82,14 +88,16 @@ namespace Vsens
             ApplyToAllActor(actor =>
             {
                 actor.isPlaying = false;
-                actor.AddComponent<IMUMarkerRendering>();
             });
-            avatar.AddComponent<IMUMarkerRendering>().baseScreenSize = 10;
-            virtualIMUChart.JumpProgress += progress =>
+            foreach (var chart in virtualIMUChart)
             {
-                currentProgress = progress;
-                PlayAnimation(false);
-            };
+                chart.JumpProgress += progress =>
+                {
+                    currentProgress = progress;
+                    PlayAnimation(false);
+                };
+            }
+            
             IsAccMode = isAccMode;
             PreviewRange = previewRange;
             _targetSMPLX = target.GetComponent<SMPLX>();
@@ -181,7 +189,10 @@ namespace Vsens
                 }
             });
             var progress = currentProgress;
-            virtualIMUChart.Progress = progress;
+            foreach (var chart in virtualIMUChart)
+            {
+                chart.Progress = progress;
+            }
             imuTrajectory.Progress = progress;  
             timeLineController.SetCurrentProgress(progress);
             timeLineController.SetAnimationLength(target.AnimationPlayTime);
@@ -247,12 +258,14 @@ namespace Vsens
                 }
                 var newImu = CopyShadowIMU(imu, avatarParent, false);
                 newImu.showSelectedVisualization = false;
+                newImu.canDeselect = false;
                 newImu.onSelectedChanged += selected =>
                 {
                     if (selected)
                     {
                         SelectedIMU(imu);
                     }
+                    newImu.ShowPreview = selected;
                 };
                 avatarIMUs.Add(imu, newImu);
             }
@@ -353,13 +366,13 @@ namespace Vsens
                 selectedSensor = sensor;
                 if (sensor == null)
                 {
-                    avatar.GetComponent<IMUMarkerRendering>().imuSensor = null;
-                    ApplyToAllActor(actor => actor.GetComponent<IMUMarkerRendering>().imuSensor = null);
+                    // avatar.GetComponentInChildren<IMUMarkerQuad>().imuSensor = null;
+                    ApplyToAllActor(actor => actor.GetComponent<IMUMarkerQuad>().imuSensor = null);
                 }
                 else
                 {
                     // avatar
-                    avatar.GetComponent<IMUMarkerRendering>().imuSensor = avatarIMUs[sensor];
+                    // avatar.GetComponentInChildren<IMUMarkerQuad>().imuSensor = avatarIMUs[sensor];
                     avatarIMUs[sensor].isSelected = true;
             
                     // actors
@@ -367,7 +380,7 @@ namespace Vsens
                     for (var i = 0; i < actors.Length; i++)
                     {
                         var actorSensor = actorSensors[i];
-                        var marker = actors[i].GetComponent<IMUMarkerRendering>();
+                        var marker = actors[i].GetComponentInChildren<IMUMarkerQuad>();
                         marker.imuSensor = actorSensor;
                     }
                 }
@@ -406,7 +419,10 @@ namespace Vsens
             if (selectedSensor == null)
             {
                 synthesisIMUData = new List<SensorData>();
-                virtualIMUChart.updateIMUData(synthesisIMUData);
+                foreach (var chart in virtualIMUChart)
+                {
+                    chart.updateIMUData(synthesisIMUData);
+                }
                 UpdateRefChart();
                 return;
             }
@@ -435,7 +451,10 @@ namespace Vsens
             target.PlayAnimationToTime();
             
             // update chart
-            virtualIMUChart.updateIMUData(synthesisIMUData);
+            foreach (var chart in virtualIMUChart)
+            {
+                chart.updateIMUData(synthesisIMUData);
+            }
             UpdateRefChart();
         }
 

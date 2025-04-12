@@ -40,6 +40,7 @@ namespace Sensor
         public bool canBeTransform = true;
         public bool canSelected = true;
         public bool interactable = true;
+        public bool canDeselect = true;
 
         /// <summary>
         /// to check if the sensor is working, if ture the sensor will collect data, otherwise it wont.
@@ -110,6 +111,7 @@ namespace Sensor
             {
                 if (value)
                 {
+                    if (isSelected && !canDeselect) return;
                     if (_SelectedSensor != null)
                     {
                         _SelectedSensor.isSelected = false;

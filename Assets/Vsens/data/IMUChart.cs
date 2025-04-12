@@ -10,8 +10,15 @@ namespace Vsens.data
     [RequireComponent(typeof(LineChart))]
     public class IMUChart : MonoBehaviour
     {
+        public enum Mode
+        {
+            Acceleration,
+            Orientation,
+            Dynamic,
+        }
         public RectTransform left, right, indicator, trimLeft, trimRight; 
-        public RectTransform leftPreview, indicatorPreviewLeft, indicatorPreviewRight, rightPreview; 
+        public RectTransform leftPreview, indicatorPreviewLeft, indicatorPreviewRight, rightPreview;
+        public Mode mode = Mode.Dynamic;
         private LineChart chart;
         private List<SensorData> currentIMUData = new();
         private bool _isAccMode = true;
@@ -43,7 +50,6 @@ namespace Vsens.data
             }
         }
         
-
         private void Awake()
         {
             chart = GetComponent<LineChart>();
@@ -117,7 +123,7 @@ namespace Vsens.data
                 var timeFormat = item.time.ToString("F2");
                 var data = (VirtualIMUSensor.IMUSensorData) item.data;
                 chart.AddXAxisData(timeFormat);
-                if (_isAccMode)
+                if (mode == Mode.Acceleration || (mode == Mode.Dynamic && _isAccMode))
                 {
                     chart.AddData(0, data.LocalAcceleration.x); // x
                     chart.AddData(1, data.LocalAcceleration.y); // y

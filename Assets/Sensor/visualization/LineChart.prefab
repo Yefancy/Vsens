@@ -2729,11 +2729,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3772717356357042405}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchorMin: {x: 1, y: 0.5}
+  m_AnchorMax: {x: 1, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0.5}
+  m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &2242975340243656521
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2769,7 +2769,7 @@ MonoBehaviour:
     m_BestFit: 0
     m_MinSize: 10
     m_MaxSize: 40
-    m_Alignment: 3
+    m_Alignment: 5
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 1
@@ -2903,8 +2903,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3562109259399612333}
   - {fileID: 5052354893912851334}
+  - {fileID: 3562109259399612333}
   m_Father: {fileID: 3992647357726131597}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -5355,8 +5355,8 @@ RectTransform:
   - {fileID: 2617338775112071883}
   - {fileID: 8684087668170382443}
   - {fileID: 2122524291657946839}
-  - {fileID: 7653488151593973251}
   - {fileID: 1505004820735569218}
+  - {fileID: 7653488151593973251}
   m_Father: {fileID: 9059570834236366562}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -5393,6 +5393,27 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_EnableTextMeshPro: 0
+  m_ChildNodeNames:
+  - serie_0
+  - painter_b
+  - painter_0
+  - painter_1
+  - painter_2
+  - painter_3
+  - painter_4
+  - painter_5
+  - painter_6
+  - painter_7
+  - painter_8
+  - painter_9
+  - painter_u
+  - painter_t
+  - background
+  - Title0
+  - Tooltip0
+  - XAxis0
+  - YAxis0
+  - debug
   m_ChartName: 
   m_Theme:
     m_Show: 1
@@ -5440,6 +5461,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5538,6 +5561,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5587,6 +5612,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5635,6 +5662,7 @@ MonoBehaviour:
   - m_Show: 1
     m_Type: 4
     m_Trigger: 3
+    m_TriggerOn: 0
     m_Position: 0
     m_ItemFormatter: 
     m_TitleFormatter: 
@@ -5662,6 +5690,8 @@ MonoBehaviour:
     m_BorderColor:
       serializedVersion: 2
       rgba: 4293322470
+    m_ColumnGapWidths:
+    - 15
     m_LineStyle:
       m_Show: 1
       m_Type: 5
@@ -5692,6 +5722,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5741,6 +5773,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5770,7 +5804,7 @@ MonoBehaviour:
         m_Show: 1
         m_Font: {fileID: 0}
         m_AutoWrap: 0
-        m_AutoAlign: 1
+        m_AutoAlign: 0
         m_Rotate: 0
         m_AutoColor: 0
         m_Color: {r: 0, g: 0, b: 0, a: 0}
@@ -5789,6 +5823,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5818,7 +5854,7 @@ MonoBehaviour:
         m_Show: 1
         m_Font: {fileID: 0}
         m_AutoWrap: 0
-        m_AutoAlign: 1
+        m_AutoAlign: 0
         m_Rotate: 0
         m_AutoColor: 0
         m_Color: {r: 0, g: 0, b: 0, a: 0}
@@ -5837,6 +5873,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -5866,7 +5904,7 @@ MonoBehaviour:
         m_Show: 1
         m_Font: {fileID: 0}
         m_AutoWrap: 0
-        m_AutoAlign: 1
+        m_AutoAlign: 0
         m_Rotate: 0
         m_AutoColor: 0
         m_Color: {r: 0, g: 0, b: 0, a: 0}
@@ -5896,6 +5934,7 @@ MonoBehaviour:
     m_Inverse: 0
     m_Clockwise: 1
     m_InsertDataToHead: 0
+    m_MinCategorySpacing: 0
     m_Icons: []
     m_Data:
     - x1
@@ -5949,6 +5988,8 @@ MonoBehaviour:
         m_NumericFormatter: 
         m_Width: 0
         m_Height: 0
+        m_FixedX: 0
+        m_FixedY: 0
         m_Icon:
           m_Show: 0
           m_Layer: 0
@@ -6025,6 +6066,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -6098,6 +6141,7 @@ MonoBehaviour:
       m_AutoColor: 0
       m_ShowStartLine: 1
       m_ShowEndLine: 1
+      m_ShowZLine: 1
     m_SplitArea:
       m_Show: 0
       m_Color: []
@@ -6161,6 +6205,8 @@ MonoBehaviour:
       m_NumericFormatter: f2
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -6219,6 +6265,7 @@ MonoBehaviour:
     m_Inverse: 0
     m_Clockwise: 1
     m_InsertDataToHead: 0
+    m_MinCategorySpacing: 0
     m_Icons: []
     m_Data: []
     m_AxisLine:
@@ -6267,6 +6314,8 @@ MonoBehaviour:
         m_NumericFormatter: 
         m_Width: 0
         m_Height: 0
+        m_FixedX: 0
+        m_FixedY: 0
         m_Icon:
           m_Show: 0
           m_Layer: 0
@@ -6343,6 +6392,8 @@ MonoBehaviour:
       m_NumericFormatter: 
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -6416,6 +6467,7 @@ MonoBehaviour:
       m_AutoColor: 0
       m_ShowStartLine: 1
       m_ShowEndLine: 1
+      m_ShowZLine: 1
     m_SplitArea:
       m_Show: 0
       m_Color: []
@@ -6479,6 +6531,8 @@ MonoBehaviour:
       m_NumericFormatter: f2
       m_Width: 0
       m_Height: 0
+      m_FixedX: 0
+      m_FixedY: 0
       m_Icon:
         m_Show: 0
         m_Layer: 0
@@ -6598,6 +6652,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
     m_InsertDataToHead: 0
+    m_RealtimeSort: 0
     m_LineStyle:
       m_Show: 1
       m_Type: 0
@@ -6629,6 +6684,11 @@ MonoBehaviour:
       m_Color:
         serializedVersion: 2
         rgba: 0
+      m_BorderWidth: 0
+      m_EmptyColor:
+        serializedVersion: 2
+        rgba: 0
+      m_Size2: 0
       m_SizeType: 0
       m_DataIndex: 1
       m_DataScale: 1
@@ -6649,31 +6709,37 @@ MonoBehaviour:
         m_Reverse: 0
         m_Delay: 0
         m_Duration: 1000
+        m_Speed: 0
       m_FadeOut:
         m_Enable: 1
         m_Reverse: 1
         m_Delay: 0
         m_Duration: 1000
+        m_Speed: 0
       m_Change:
         m_Enable: 1
         m_Reverse: 0
         m_Delay: 0
         m_Duration: 500
+        m_Speed: 0
       m_Addition:
         m_Enable: 1
         m_Reverse: 0
         m_Delay: 0
         m_Duration: 500
+        m_Speed: 0
       m_Hiding:
         m_Enable: 1
         m_Reverse: 0
         m_Delay: 0
         m_Duration: 500
+        m_Speed: 0
       m_Interaction:
         m_Enable: 1
         m_Reverse: 0
         m_Delay: 0
         m_Duration: 250
+        m_Speed: 0
         m_Width:
           m_Type: 0
           m_Value: 1.1
@@ -6683,6 +6749,12 @@ MonoBehaviour:
         m_Offset:
           m_Type: 1
           m_Value: 5
+      m_Exchange:
+        m_Enable: 1
+        m_Reverse: 0
+        m_Delay: 0
+        m_Duration: 250
+        m_Speed: 0
     m_ItemStyle:
       m_Show: 1
       m_Color:
@@ -6704,6 +6776,7 @@ MonoBehaviour:
         serializedVersion: 2
         rgba: 0
       m_BackgroundWidth: 0
+      m_BackgroundGap: 0
       m_CenterColor:
         serializedVersion: 2
         rgba: 0
@@ -7133,6 +7206,9 @@ LineRenderer:
   m_ReflectionProbeUsage: 0
   m_RayTracingMode: 0
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -8641,8 +8717,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Chart
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: a6446991ef31ced4190c53c206cf4b3e, type: 2}
-  m_sharedMaterial: {fileID: -9221056233183343877, guid: a6446991ef31ced4190c53c206cf4b3e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -8682,15 +8758,17 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_enableWordWrapping: 1
+  m_TextWrappingMode: 1
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 1
+  m_ActiveFontFeatures: 6e72656b
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
+  m_EmojiFallbackSupport: 1
   m_parseCtrlCharacters: 1
   m_isOrthographic: 1
   m_isCullingEnabled: 0
@@ -8910,23 +8988,23 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4094494049803084778, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
-      propertyPath: grabbables.Array.data[0]
+      propertyPath: 'grabbables.Array.data[0]'
       value: 
       objectReference: {fileID: 9073542057099317610}
     - target: {fileID: 4094494049803084778, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
-      propertyPath: grabbables.Array.data[1]
+      propertyPath: 'grabbables.Array.data[1]'
       value: 
       objectReference: {fileID: 9073542057099317610}
     - target: {fileID: 4094494049803084778, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
-      propertyPath: grabbables.Array.data[2]
+      propertyPath: 'grabbables.Array.data[2]'
       value: 
       objectReference: {fileID: 9073542057099317610}
     - target: {fileID: 4094494049803084778, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
-      propertyPath: grabbables.Array.data[3]
+      propertyPath: 'grabbables.Array.data[3]'
       value: 
       objectReference: {fileID: 9073542057099317610}
     - target: {fileID: 4094494049803084778, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
-      propertyPath: grabbables.Array.data[4]
+      propertyPath: 'grabbables.Array.data[4]'
       value: 
       objectReference: {fileID: 9073542057099317610}
     - target: {fileID: 4163026460663813286, guid: f894e8dbff0f30b4d8407fd65526d64c, type: 3}
