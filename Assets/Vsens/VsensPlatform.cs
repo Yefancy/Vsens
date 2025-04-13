@@ -490,37 +490,24 @@ namespace Vsens
         #endregion
 
         #region Sensor Transform
-
-        public void UpdateSensorRotation(Vector3 rotation)
-        {
-            if (selectedSensor == null) return;
-            selectedSensor.transform.localRotation = Quaternion.Euler(rotation);
-        }
         
-        public void UpdateSensorRotation(Quaternion rotation)
+        public void UpdateSensorPosition(Axis axis, float appended)
         {
             if (selectedSensor == null) return;
-            selectedSensor.transform.localRotation = rotation;
-        }
-        
-        public void UpdateSensorRotation(float angle, Axis axis)
-        {
-            if (selectedSensor == null) return;
-
-            Vector3 axisVector = Vector3.zero;
+            var localPosition = selectedSensor.transform.localPosition;
             switch (axis)
             {
-                case Axis.X: axisVector = Vector3.right; break;
-                case Axis.Y: axisVector = Vector3.up; break;
-                case Axis.Z: axisVector = Vector3.forward; break;
+                case Axis.X:
+                    localPosition.x += appended;
+                    break;
+                case Axis.Y:
+                    localPosition.y += appended;
+                    break;
+                case Axis.Z:
+                    localPosition.z += appended;
+                    break;
             }
-
-            selectedSensor.transform.localRotation = Quaternion.AngleAxis(angle, axisVector);
-        }
-        
-        public Vector3 GetCurrentRotation()
-        {
-            return selectedSensor == null ? Vector3.zero : selectedSensor.transform.localRotation.eulerAngles;
+            selectedSensor.transform.localPosition = localPosition;
         }
 
         #endregion

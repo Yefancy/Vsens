@@ -57,6 +57,7 @@ namespace smplx
             {
                 Debug.Log("Find the nearest bone: " + nearestBone.name);
                 sensor.transform.SetParent(nearestBone);
+                sensor.name = nearestBone.name + "_imu";
                 return true;
             }
 
