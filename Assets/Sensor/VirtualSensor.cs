@@ -111,7 +111,6 @@ namespace Sensor
             {
                 if (value)
                 {
-                    if (isSelected && !canDeselect) return;
                     if (_SelectedSensor != null)
                     {
                         _SelectedSensor.isSelected = false;
@@ -246,7 +245,10 @@ namespace Sensor
                 if (selectedTime < modeSwitchTime && canSelected)
                 {
                     // selecting mode
-                    isSelected = !isSelected;
+                    if (!isSelected || canDeselect)
+                    {
+                        isSelected = !isSelected;
+                    }
                 }
                 selectedTime = -1;
                 sensorPlacement = null;

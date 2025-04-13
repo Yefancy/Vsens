@@ -55,6 +55,9 @@ namespace Vsens.data
             chart = GetComponent<LineChart>();
             chart.onDrag = OnChartDrag;
             chart.onPointerClick = OnChartClick;
+            chart.GetSerie(0).lineStyle.color = new Color32(253, 32, 8, 255);
+            chart.GetSerie(1).lineStyle.color = new Color32(0, 255, 23, 255);
+            chart.GetSerie(2).lineStyle.color = new Color32(85, 106, 255, 255);
         }
         
         private void OnChartClick(PointerEventData eventData, BaseGraph graph)
