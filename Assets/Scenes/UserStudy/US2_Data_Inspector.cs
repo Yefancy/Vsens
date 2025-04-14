@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Vsens.data;
 
-namespace UserStudy
+namespace Scenes.UserStudy
 {
     public class US2_Data_Inspector : MonoBehaviour
     {
@@ -17,6 +17,9 @@ namespace UserStudy
         public bool isAcc = true;
         public VirtualIMUSensor[] imuSensors;
         public List<List<SensorData>> imuData = new();
+        public string userName = "";
+        public string expName = "";
+        public bool saveWithID = true;
     }
     
 #if UNITY_EDITOR
@@ -29,7 +32,7 @@ namespace UserStudy
             var inspector = (US2_Data_Inspector)target;
             if (GUILayout.Button("Find IMU"))
             {
-                inspector.imuSensors = FindObjectsOfType<VirtualIMUSensor>().ToArray();
+                inspector.imuSensors = FindObjectsOfType<VirtualIMUSensor>().Where(sensor => sensor.gameObject.activeInHierarchy).ToArray();
             }
             var controller = inspector.controller;
             var imuSensors = inspector.imuSensors;
@@ -68,14 +71,18 @@ namespace UserStudy
                 }
                 controller.PlayAnimationToTime();
                 // visualization
-                inspector.vIMU.IsAccMode = inspector.isAcc;
-                inspector.vIMU.updateIMUData(inspector.imuData[0]);
+                if (inspector.vIMU != null)
+                {
+                    inspector.vIMU.IsAccMode = inspector.isAcc;
+                    inspector.vIMU.updateIMUData(inspector.imuData[0]);
+                }
             }
 
             if (inspector.imuData.Count > 0 && GUILayout.Button("Save IMU Data"))
             {
+                var fileName = inspector.saveWithID ? inspector.userName + "_" + inspector.expName : "imu_data";
                 // save the data as csv
-                var path = EditorUtility.SaveFilePanel("Save IMU Data", "", "imu_data.csv", "csv");
+                var path = EditorUtility.SaveFilePanel("Save IMU Data", "", fileName, "csv");
                 if (path.Length != 0)
                 {
                     using var writer = new StreamWriter(path);

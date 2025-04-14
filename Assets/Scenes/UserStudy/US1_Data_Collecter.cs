@@ -1,11 +1,10 @@
-using System;
 using System.Linq;
 using Sensor;
 using SimpleJSON;
 using UnityEditor;
 using UnityEngine;
 
-namespace UserStudy
+namespace Scenes.UserStudy
 {
     public class US1_DataCollector : MonoBehaviour
     {

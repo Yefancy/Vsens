@@ -219,7 +219,7 @@ public class SMPLX : MonoBehaviour
         AddBone("thumb2", "thumb2", "thumb3");
         
         AddBone("spine3", "spine3", "neck", false);
-        AddBone("neck", "neck", "head", false);
+        AddBone("head", "neck", "head", false);
     }
     
     private void AddBone(string parent, string from, string to, bool both=true)

@@ -11,6 +11,7 @@ namespace Animations
         [SerializeField] public bool globalTranslation = false;
         [SerializeField] public float amplitude = 1f;
         [SerializeField] private SkinCollider skinCollider;
+        [SerializeField] private bool startWithPlaying = true;
         
         // runtime
         protected Transform _root;
@@ -73,6 +74,7 @@ namespace Animations
         
         public void Start()
         {
+            isPlaying = startWithPlaying;
             PrepareModel();
         }
 

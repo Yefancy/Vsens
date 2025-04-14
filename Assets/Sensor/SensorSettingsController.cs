@@ -31,7 +31,7 @@ namespace Sensor
         
         public void RemoveSensor()
         {
-            SensorDataCenter.Instance.UnregisterSensor(sensor);
+            SensorDataCenter.Instance?.UnregisterSensor(sensor);
             Destroy(sensor.gameObject);
         }
         

@@ -16,11 +16,11 @@ namespace Sensor
         private static SensorDataCenter INSTANCE;
         public static SensorDataCenter Instance => INSTANCE;
     
-        [SerializeField] public int samplingRate = 20; // 20Hz 
+        [SerializeField] [Range(1, 120)] public int samplingRate = 20; // 20Hz 
         [SerializeField] public float smoothWindowSize = 0.2f;
         [SerializeField] public bool alwaysUpdateBoneMeshAttachment = true;
 
-        public float SamplingInterval => 1.0f / samplingRate;
+        public float SamplingInterval => 1.0f / Math.Max(samplingRate, 1);
         // run-time
         private readonly Dictionary<ISensorDefinition, List<VirtualSensor>> sensors = new();
         private readonly List<Tuple<float, Vector3>> accelerationData = new();
