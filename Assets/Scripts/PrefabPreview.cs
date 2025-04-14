@@ -50,7 +50,10 @@ public class PrefabPreview : MonoBehaviour
     public void SetPrefab(GameObject prefab)
     {
         this.prefab = prefab;
-        prefabName.text = prefab.name;
+        if (prefabName != null)
+        {
+            prefabName.text = prefab.name;
+        }
         StartCoroutine(RenderingPreview(prefab));
     }
 

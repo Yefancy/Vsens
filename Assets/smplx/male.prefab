@@ -93,6 +93,10 @@ PrefabInstance:
       value: smplx-male
       objectReference: {fileID: 0}
     - target: {fileID: 9109730072625650647, guid: 22f2d27461b82c94f9586d7e045bbdd2, type: 3}
+      propertyPath: root
+      value: 
+      objectReference: {fileID: 5070189514670453779}
+    - target: {fileID: 9109730072625650647, guid: 22f2d27461b82c94f9586d7e045bbdd2, type: 3}
       propertyPath: showJointPositions
       value: 0
       objectReference: {fileID: 0}
@@ -163,6 +167,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 3, z: 2}
   m_Center: {x: 0, y: 0, z: -0}
+--- !u!4 &5070189514670453779 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6250327545719888667, guid: 22f2d27461b82c94f9586d7e045bbdd2, type: 3}
+  m_PrefabInstance: {fileID: 1216377935425875720}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &8645456299820452589 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7429714509181789669, guid: 22f2d27461b82c94f9586d7e045bbdd2, type: 3}
