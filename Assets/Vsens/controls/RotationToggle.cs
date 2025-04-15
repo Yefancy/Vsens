@@ -95,8 +95,8 @@ namespace Vsens.controls
             // 获取当前局部坐标系的轴
             switch (Axis)
             {
-                case Axis.X: return vsensPlatform.selectedSensor.transform.right;
-                case Axis.Y: return vsensPlatform.selectedSensor.transform.up;
+                case Axis.X: return vsensPlatform.selectedSensor.transform.up;
+                case Axis.Y: return vsensPlatform.selectedSensor.transform.right;
                 case Axis.Z: return vsensPlatform.selectedSensor.transform.forward;
                 default: return Vector3.zero;
             }
