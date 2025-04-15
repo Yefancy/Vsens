@@ -57494,7 +57494,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   vsensPlatform: {fileID: 4154794210164736130}
   rotationSlider: {fileID: 7136361956608045480}
-  Axis: 1
+  Axis: 2
 --- !u!1001 &6444044565552075502
 PrefabInstance:
   m_ObjectHideFlags: 0
