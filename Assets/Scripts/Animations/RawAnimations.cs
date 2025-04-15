@@ -27,6 +27,7 @@ namespace Animations
     
     public class SMPLXAnimation: RawAnimation
     {
+        public string model;
         public string gender;
         public float[] betas;
     }
@@ -34,6 +35,7 @@ namespace Animations
     [System.Serializable]
     class SMPLXAnimationRawJson
     {
+        public string model;
         public string gender;
         public float fps;
         public float[] betas;
@@ -205,33 +207,59 @@ namespace Animations
 
             var anim = new SMPLXAnimation
             {
+                model = raw.model,
                 name = name,
                 gender = raw.gender,
                 fps = raw.fps,
                 betas = raw.betas,
                 frames = new AnimationFrame[raw.poses.Length]
             };
-            
-            for (int i = 0; i < raw.poses.Length; i++)
+
+            if (raw.model == "smpl")
             {
-                var poseVec = raw.poses[i]; // float[156]
-                var translation = raw.trans[i]; // float[3]
-
-                var frame = new AnimationFrame();
-                frame.translation = new Vector3(translation[0], -translation[1], translation[2]);
-                frame.boneRotations = new Quaternion[55];  // 165 / 3 = 55
-
-                for (int j = 0; j < 52; j++)
+                anim.betas = new[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
+                for (int i = 0; i < raw.poses.Length; i++)
                 {
-                    int idx = j * 3;
-                    Vector3 axisAngle = new Vector3(poseVec[idx], poseVec[idx + 1], poseVec[idx + 2]);
-                    axisAngle = new Vector3(axisAngle.x, -axisAngle.y, -axisAngle.z);
-                    frame.boneRotations[j] = AxisAngleToQuaternion(axisAngle);
+                    var poseVec = raw.poses[i]; // float[72]
+                    var translation = raw.trans[i]; // float[3]
+
+                    var frame = new AnimationFrame();
+                    frame.translation = new Vector3(translation[0], -translation[1], -translation[2]);
+                    frame.boneRotations = new Quaternion[55];  // 165 / 3 = 55
+
+                    for (int j = 0; j < poseVec.Length / 3; j++)
+                    {
+                        int idx = j * 3;
+                        Vector3 axisAngle = new Vector3(poseVec[idx], poseVec[idx + 1], poseVec[idx + 2]);
+                        axisAngle = new Vector3(axisAngle.x, -axisAngle.y, -axisAngle.z);
+                        frame.boneRotations[j] = AxisAngleToQuaternion(axisAngle);
+                    }
+
+                    anim.frames[i] = frame;
                 }
-
-                anim.frames[i] = frame;
             }
+            else
+            {
+                for (int i = 0; i < raw.poses.Length; i++)
+                {
+                    var poseVec = raw.poses[i]; // float[156]
+                    var translation = raw.trans[i]; // float[3]
 
+                    var frame = new AnimationFrame();
+                    frame.translation = new Vector3(translation[0], -translation[1], translation[2]);
+                    frame.boneRotations = new Quaternion[55];  // 165 / 3 = 55
+
+                    for (int j = 0; j < poseVec.Length / 3; j++)
+                    {
+                        int idx = j * 3;
+                        Vector3 axisAngle = new Vector3(poseVec[idx], poseVec[idx + 1], poseVec[idx + 2]);
+                        axisAngle = new Vector3(axisAngle.x, -axisAngle.y, -axisAngle.z);
+                        frame.boneRotations[j] = AxisAngleToQuaternion(axisAngle);
+                    }
+
+                    anim.frames[i] = frame;
+                }
+            }
             return anim;
         }
         

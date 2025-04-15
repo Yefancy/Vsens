@@ -15,15 +15,22 @@ namespace smplx
         
         public override void setAnimation(RawAnimation animation)
         {
-            if (_root != null)
-            {
-                _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
-                _root.parent.localPosition = new Vector3(0, -0.34f, -0.4f);
-            }
-            
             base.setAnimation(animation);
             if (animation is SMPLXAnimation smplxAnimation)
             {
+                if (_root != null)
+                {
+                    if (smplxAnimation.model == "smpl")
+                    {
+                        _root.parent.localEulerAngles = new Vector3(-180, 0, 0);
+                        _root.parent.localPosition = new Vector3(0, -0.72f, 0);
+                    }
+                    else
+                    {
+                        _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
+                        _root.parent.localPosition = new Vector3(0, -0.34f, -0.4f);
+                    }
+                }
                 SetBetas(smplxAnimation.betas);
             }
         }

@@ -16699,7 +16699,7 @@ PrefabInstance:
     - target: {fileID: 7313739718466191656, guid: 81691c4d3f948054aae575f7fe6d380a, type: 3}
       propertyPath: animationFile
       value: 
-      objectReference: {fileID: 4900000, guid: 5e0e2ed0172160649a4b8a1358807e09, type: 3}
+      objectReference: {fileID: 4900000, guid: 68552ec5122ed490da3c20ed9ffff79f, type: 3}
     - target: {fileID: 7966078798060139743, guid: 81691c4d3f948054aae575f7fe6d380a, type: 3}
       propertyPath: 'betas.Array.data[0]'
       value: -0.28488326

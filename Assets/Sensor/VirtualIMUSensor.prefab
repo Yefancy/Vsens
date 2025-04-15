@@ -140,6 +140,10 @@ MonoBehaviour:
   showSelectedVisualization: 1
   registerOnStart: 0
   canBeTransform: 1
+  canSelected: 1
+  interactable: 1
+  canDeselect: 1
+  sensorAttachable: {fileID: 0}
   AnchorVisual: {fileID: 376156176303673728}
 --- !u!114 &5907861347563984430
 MonoBehaviour:
