@@ -44,6 +44,21 @@ namespace Vsens.controls
                 {
                     var data = new List<SensorData>();
                     var lines = File.ReadAllLines(file);
+                    var headers = lines[0].Split(',');
+                    var headerMap = new Dictionary<string, int>();
+                    for (var i = 0; i < headers.Length; i++)
+                    {
+                        headerMap[headers[i]] = i;
+                    }
+                    var ex = headerMap["ex"];
+                    var ey = headerMap["ey"];
+                    var ez = headerMap["ez"];
+                    var ax = headerMap["ax"];
+                    var ay = headerMap["ay"];
+                    var az = headerMap["az"];
+                    var lx = headerMap["lx"];
+                    var ly = headerMap["ly"];
+                    var lz = headerMap["lz"];
                     for (var i = 0; i < lines.Length; i++)
                     {
                         if (i == 0 || lines[i].StartsWith("#")) continue;
@@ -55,10 +70,10 @@ namespace Vsens.controls
                             time = float.Parse(line[1]),
                             data = new VirtualIMUSensor.IMUSensorData
                             {
-                                Orientation = new Vector3(float.Parse(line[2]), float.Parse(line[3]), float.Parse(line[4])),
-                                Acceleration = new Vector3(float.Parse(line[5]), float.Parse(line[6]), float.Parse(line[7])),
-                                LocalAcceleration = new Vector3(float.Parse(line[8]), float.Parse(line[9]), float.Parse(line[10])),
-                                Location = new Vector3(float.Parse(line[11]), float.Parse(line[12]), float.Parse(line[13]))
+                                Orientation = new Vector3(float.Parse(line[ex]), float.Parse(line[ey]), float.Parse(line[ez])),
+                                Acceleration = new Vector3(float.Parse(line[ax]), float.Parse(line[ay]), float.Parse(line[az])),
+                                LocalAcceleration = new Vector3(float.Parse(line[lx]), float.Parse(line[ly]), float.Parse(line[lz])),
+                                Location = Vector3.zero,
                             }
                         });
                     }
