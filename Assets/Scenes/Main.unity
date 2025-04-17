@@ -3353,7 +3353,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3442699092178557990, guid: c7510dbe0d8ed0041b3e3e6bb0949644, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -16712,6 +16712,10 @@ PrefabInstance:
       propertyPath: animationFile
       value: 
       objectReference: {fileID: 4900000, guid: 68552ec5122ed490da3c20ed9ffff79f, type: 3}
+    - target: {fileID: 7313739718466191656, guid: 81691c4d3f948054aae575f7fe6d380a, type: 3}
+      propertyPath: startWithPlaying
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7966078798060139743, guid: 81691c4d3f948054aae575f7fe6d380a, type: 3}
       propertyPath: 'betas.Array.data[0]'
       value: -0.28488326
