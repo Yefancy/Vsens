@@ -7400,10 +7400,49 @@ PrefabInstance:
       propertyPath: startWithPlaying
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6156416966893722389, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6417508463627639851, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8188811154512754342, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 538859081720203925, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 1392767236327379443, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 3240119414793771926, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 3445668038438199320, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 4323187112212118398, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 314168788470378779, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 2571860759545079590, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 4008035077027462208, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
+    - targetCorrespondingSourceObject: {fileID: 593432495983130149, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 7356c9b5a282246319e6751b7e9c8910, type: 3}
 --- !u!1 &648127003
 GameObject:
