@@ -23,7 +23,12 @@ public class DevicesRef : MonoBehaviour
     [SerializeField]
     private HandGrabInteractor _rightHandGrabInteractor;
     public HandGrabInteractor RightHandGrabInteractor => _rightHandGrabInteractor;
-    
+    [SerializeField]
+    private RayInteractor _leftRayInteractor;
+    public RayInteractor LeftRayInteractor => _leftRayInteractor;
+    [SerializeField]
+    private RayInteractor _rightRayInteractor;
+    public RayInteractor RightRayInteractor => _rightRayInteractor;
 
     public void Awake()
     {
