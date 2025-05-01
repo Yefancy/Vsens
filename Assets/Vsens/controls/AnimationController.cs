@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Animations;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 namespace Vsens.controls
@@ -29,19 +31,45 @@ namespace Vsens.controls
         {
             // find animation files under the StreamingAssets folder
             var animationPath = Path.Combine(Application.streamingAssetsPath, "HumanMotion");
-            if (!Directory.Exists(animationPath))
+            List<string> jsonPaths = new List<string>();
+#if UNITY_ANDROID && !UNITY_EDITOR
+            jsonPaths = new List<string>() { "knee_kick.json", "lunge_squat_twist.json", "yoga_a.json", "reverse_crunch.json", "reverse_lunge.json" };
+#else
+            if (Directory.Exists(animationPath))
             {
-                Directory.CreateDirectory(animationPath);
+                var files = Directory.GetFiles(animationPath, "*.json");
+                foreach (var file in files)
+                {
+                    jsonPaths.Add(file);
+                }
             }
-            var files = Directory.GetFiles(animationPath, "*.json");
-            foreach (var file in files)
+#endif
+            foreach (var path in jsonPaths)
             {
-                var animationName = Path.GetFileNameWithoutExtension(file);
+                var animationName = Path.GetFileNameWithoutExtension(path);
+                string fileContent = "";
+#if UNITY_ANDROID && !UNITY_EDITOR
+                using (UnityWebRequest www = UnityWebRequest.Get(Path.Combine(animationPath, path)))
+                {
+                    yield return www.SendWebRequest();
+                    if (www.result == UnityWebRequest.Result.Success)
+                    {
+                        fileContent = www.downloadHandler.text;
+                    }
+                    else
+                    {
+                        Debug.LogError("Failed to load animation json: " + www.error);
+                        continue;
+                    }
+                }
+#else
+                fileContent = File.ReadAllText(path);
+#endif
                 // loading animation async
                 RawAnimation rawAnimation = null;
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
-                    rawAnimation = AnimationUtils.ParseSmplxAnimation(animationName, File.ReadAllText(file));
+                    rawAnimation = AnimationUtils.ParseSmplxAnimation(animationName, fileContent);
                 });
                 yield return new WaitUntil(() => rawAnimation != null);
                 AddAnimation(rawAnimation);
