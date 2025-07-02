@@ -232,27 +232,55 @@ public class WavUtility
 
 		return bytes;
 	}
+	
+	// Export file to a specific path
+	public static string FromAudioClip(AudioClip clip, string filepath, bool saveAsFile = true)
+	{
+		MemoryStream stream = new MemoryStream();
+
+		const int headerSize = 44;
+		UInt16 bitDepth = 16;
+		int fileSize = clip.samples * BlockSize_16Bit + headerSize;
+
+		WriteFileHeader(ref stream, fileSize);
+		WriteFileFormat(ref stream, clip.channels, clip.frequency, bitDepth);
+		WriteFileData(ref stream, clip, bitDepth);
+
+		byte[] bytes = stream.ToArray();
+
+		if (saveAsFile)
+		{
+			string dir = Path.GetDirectoryName(filepath);
+			if (!Directory.Exists(dir))
+				Directory.CreateDirectory(dir);
+
+			File.WriteAllBytes(filepath, bytes);
+		}
+
+		stream.Dispose();
+		return filepath;
+	}
 
 	#region write .wav file functions
 
-	private static int WriteFileHeader (ref MemoryStream stream, int fileSize)
+	private static int WriteFileHeader(ref MemoryStream stream, int fileSize)
 	{
 		int count = 0;
 		int total = 12;
 
 		// riff chunk id
-		byte[] riff = Encoding.ASCII.GetBytes ("RIFF");
-		count += WriteBytesToMemoryStream (ref stream, riff, "ID");
+		byte[] riff = Encoding.ASCII.GetBytes("RIFF");
+		count += WriteBytesToMemoryStream(ref stream, riff, "ID");
 
 		// riff chunk size
 		int chunkSize = fileSize - 8; // total size - 8 for the other two fields in the header
-		count += WriteBytesToMemoryStream (ref stream, BitConverter.GetBytes (chunkSize), "CHUNK_SIZE");
+		count += WriteBytesToMemoryStream(ref stream, BitConverter.GetBytes(chunkSize), "CHUNK_SIZE");
 
-		byte[] wave = Encoding.ASCII.GetBytes ("WAVE");
-		count += WriteBytesToMemoryStream (ref stream, wave, "FORMAT");
+		byte[] wave = Encoding.ASCII.GetBytes("WAVE");
+		count += WriteBytesToMemoryStream(ref stream, wave, "FORMAT");
 
 		// Validate header
-		Debug.AssertFormat (count == total, "Unexpected wav descriptor byte count: {0} == {1}", count, total);
+		Debug.AssertFormat(count == total, "Unexpected wav descriptor byte count: {0} == {1}", count, total);
 
 		return count;
 	}
