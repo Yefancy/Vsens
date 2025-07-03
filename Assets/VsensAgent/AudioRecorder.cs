@@ -81,6 +81,9 @@ public class AudioRecorder : MonoBehaviour
 
         Debug.Log($"[Recorder] Trimmed to {(position / (float)sampleRate):0.00} seconds.");
         SaveToWav();
+
+        // ✅ 通知 WebSocket
+        WsClient.SendTranscribeRequest(filePath);
     }
 
     void SaveToWav()
