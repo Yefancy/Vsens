@@ -3,7 +3,6 @@ using UnityEngine;
 public class AgentVoiceController : MonoBehaviour
 {
     public AudioSource audioSource;
-
     void OnEnable()
     {
         WsClient.OnAgentReady += PlayTTSFromPath;
