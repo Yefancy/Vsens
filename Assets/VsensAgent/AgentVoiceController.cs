@@ -6,12 +6,12 @@ public class AgentVoiceController : MonoBehaviour
 
     void OnEnable()
     {
-        WsClient.OnTTSAudioReady += PlayTTSFromPath;
+        WsClient.OnAgentReady += PlayTTSFromPath;
     }
 
     void OnDisable()
     {
-        WsClient.OnTTSAudioReady -= PlayTTSFromPath;
+        WsClient.OnAgentReady -= PlayTTSFromPath;
     }
 
     public void PlayTTSFromPath(string path)

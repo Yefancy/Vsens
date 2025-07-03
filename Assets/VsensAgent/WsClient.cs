@@ -1,55 +1,50 @@
 using UnityEngine;
 using NativeWebSocket;
-using System.Text;
 using System;
+using System.Text;
 using System.Threading.Tasks;
+using System.Collections;
 
 public class WsClient : MonoBehaviour
 {
     private static WebSocket websocket;
+    private static bool isTryingReconnect = false;
+    private static float reconnectInterval = 3f;
 
     // 事件定义
-    public static event Action<string> OnTTSAudioReady;
+    public static event Action<string> OnAgentReady;
     public static event Action<BehaviorMessage> OnBehaviorCommand;
 
     async void Start()
     {
+        await ConnectWebSocket();
+    }
+
+    async Task ConnectWebSocket()
+    {
         websocket = new WebSocket("ws://localhost:8765");
 
-        websocket.OnOpen += () => Debug.Log("[WS] Connection opened.");
-        websocket.OnError += (e) => Debug.LogError("[WS] Error: " + e);
-        websocket.OnClose += (e) => Debug.Log("[WS] Connection closed.");
+        websocket.OnOpen += () =>
+        {
+            Debug.Log("[WS] ✅ Connected.");
+            isTryingReconnect = false;
+        };
+
+        websocket.OnError += (e) =>
+        {
+            Debug.LogError("[WS] ❌ Error: " + e);
+        };
+
+        websocket.OnClose += (e) =>
+        {
+            Debug.LogWarning("[WS] ⚠️ Connection closed. Attempting reconnect...");
+            TryReconnect();
+        };
 
         websocket.OnMessage += (bytes) =>
         {
             string json = Encoding.UTF8.GetString(bytes);
-            Debug.Log("[WS] Message: " + json);
-
-            try
-            {
-                var typeWrapper = JsonUtility.FromJson<MessageTypeWrapper>(json);
-
-                switch (typeWrapper.type)
-                {
-                    case "tts_audio_ready":
-                        var ttsMsg = JsonUtility.FromJson<TTSMessage>(json);
-                        OnTTSAudioReady?.Invoke(ttsMsg.file);
-                        break;
-
-                    case "behavior":
-                        var behaviorMsg = JsonUtility.FromJson<BehaviorMessage>(json);
-                        OnBehaviorCommand?.Invoke(behaviorMsg);
-                        break;
-
-                    default:
-                        Debug.LogWarning($"[WS] Unknown message type: {typeWrapper.type}");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[WS] Failed to parse message: " + ex.Message);
-            }
+            HandleMessage(json);
         };
 
         await websocket.Connect();
@@ -60,6 +55,62 @@ public class WsClient : MonoBehaviour
 #if !UNITY_WEBGL || UNITY_EDITOR
         websocket?.DispatchMessageQueue();
 #endif
+    }
+
+    private void TryReconnect()
+    {
+        if (isTryingReconnect) return;
+
+        isTryingReconnect = true;
+        StartCoroutine(ReconnectCoroutine());
+    }
+
+    private IEnumerator ReconnectCoroutine()
+    {
+        while (isTryingReconnect)
+        {
+            Debug.Log("[WS] 🔁 Trying to reconnect...");
+            yield return new WaitForSeconds(reconnectInterval);
+
+            Task connectTask = ConnectWebSocket();
+            while (!connectTask.IsCompleted) yield return null;
+
+            if (websocket != null && websocket.State == WebSocketState.Open)
+            {
+                Debug.Log("[WS] ✅ Reconnected successfully.");
+                isTryingReconnect = false;
+                break;
+            }
+        }
+    }
+
+    private void HandleMessage(string json)
+    {
+        try
+        {
+            var typeWrapper = JsonUtility.FromJson<MessageTypeWrapper>(json);
+
+            switch (typeWrapper.type)
+            {
+                case "agent_ready":
+                    var replyMsg = JsonUtility.FromJson<AgentReplyMessage>(json);
+                    OnAgentReady?.Invoke(replyMsg.audio_path);
+                    break;
+
+                case "behavior":
+                    var behaviorMsg = JsonUtility.FromJson<BehaviorMessage>(json);
+                    OnBehaviorCommand?.Invoke(behaviorMsg);
+                    break;
+
+                default:
+                    Debug.LogWarning($"[WS] Unknown message type: {typeWrapper.type}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[WS] Failed to parse message: " + ex.Message);
+        }
     }
 
     public static void SendTranscribeRequest(string audioPath)
@@ -74,27 +125,25 @@ public class WsClient : MonoBehaviour
 
             string json = JsonUtility.ToJson(payload);
             websocket.SendText(json);
-            Debug.Log("[WS] Sent transcribe request: " + json);
+            Debug.Log("[WS] 📤 Sent transcribe request: " + json);
         }
         else
         {
-            Debug.LogWarning("[WS] WebSocket not connected, cannot send audio path.");
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send audio path.");
         }
     }
 
-    [Serializable]
-    public class TranscribeRequest
-    {
-        public string type;
-        public string audio_path;
-    }
+    public static bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
 
     private async void OnApplicationQuit()
     {
-        await websocket.Close();
+        if (websocket != null)
+        {
+            await websocket.Close();
+        }
     }
 
-    // 类型封装类
+    // 数据结构定义
     [Serializable]
     public class MessageTypeWrapper
     {
@@ -102,10 +151,21 @@ public class WsClient : MonoBehaviour
     }
 
     [Serializable]
-    public class TTSMessage
+    public class AgentReplyMessage
     {
         public string type;
-        public string file;
+        public string status;
+        public string transcription;
+        public string reply;
+        public string audio_path;
+        public string control;
+    }
+
+    [Serializable]
+    public class TranscribeRequest
+    {
+        public string type;
+        public string audio_path;
     }
 
     [Serializable]
