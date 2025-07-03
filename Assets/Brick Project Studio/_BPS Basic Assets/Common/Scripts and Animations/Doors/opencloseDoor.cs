@@ -1,9 +1,8 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace SojaExiles
-
 {
 	public class opencloseDoor : MonoBehaviour
 	{
@@ -11,11 +10,6 @@ namespace SojaExiles
 		public Animator openandclose;
 		public bool open;
 		public Transform Player;
-
-		void Start()
-		{
-			open = false;
-		}
 
 		void OnMouseOver()
 		{
@@ -67,6 +61,62 @@ namespace SojaExiles
 			yield return new WaitForSeconds(.5f);
 		}
 
+		public void ToggleDoor(bool openDoor)
+		{
+			if (open == openDoor) return; // No change needed
+			if (!open)
+			{
+				openandclose.Play("Opening");
+				open = true;
+			}
+			else
+			{
+				openandclose.Play("Closing");
+				open = false;
+			}
+		}
+		
+#if UNITY_EDITOR
+		public void SetDoorState(bool isOpen)
+		{
+			open = isOpen;
+			if (!EditorApplication.isPlaying)
+			{
+				string stateName = isOpen ? "Opening" : "Closing";
+				openandclose.Rebind();
+				openandclose.PlayInFixedTime(stateName, 0, 1.0f);
+				openandclose.Update(0f);
+			}
+			else
+			{
+				if (isOpen)
+					StartCoroutine(opening());
+				else
+					StartCoroutine(closing());
+			}
+		}
+#endif
 
 	}
+	
+#if UNITY_EDITOR
+	[CustomEditor(typeof(opencloseDoor))]
+	public class OpenCloseDoorEditor : Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			DrawDefaultInspector();
+
+			opencloseDoor door = (opencloseDoor)target;
+
+			GUILayout.Space(10);
+			if (GUILayout.Button(door.open ? "close" : "open"))
+			{
+				door.SetDoorState(!door.open);
+				EditorUtility.SetDirty(door.gameObject);
+			}
+		}
+	}
+#endif
+
 }

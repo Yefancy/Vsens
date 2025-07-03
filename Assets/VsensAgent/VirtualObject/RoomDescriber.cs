@@ -7,13 +7,18 @@ public class RoomDescriber : MonoBehaviour
     [TextArea(5, 20)] // Inspector 中多行显示
     public string jsonOutput;
 
-    public JSONObject ExportBoxColliderAsJson()
+    public JSONObject GetRoomDescription()
     {
         var objects = new JSONObject();
         foreach (var objectDescriber in GetComponentsInChildren<ObjectDescriber>())
         {
-            var data = objectDescriber.ExportBoxColliderAsJson();
-            objects.Add(objectDescriber.name, data);
+            var data = objectDescriber.GetDescription();
+            var objectName = objectDescriber.ObjectName;
+            if (objectName.Length ==0)
+            {
+                objectName = objectDescriber.name;
+            }
+            objects.Add(objectName, data);
         }
 
         return objects;
@@ -31,9 +36,9 @@ public class RoomDescriberEditor : Editor
         RoomDescriber describer = (RoomDescriber)target;
 
         GUILayout.Space(10);
-        if (GUILayout.Button("导出房间描述 为 JSON"))
+        if (GUILayout.Button("Obtain Room Description"))
         {
-            var json = describer.ExportBoxColliderAsJson();
+            var json = describer.GetRoomDescription();
             describer.jsonOutput = json.ToString(2);
             EditorUtility.SetDirty(describer);
         }
