@@ -19,6 +19,16 @@ public class AgentSpeechBubble : MonoBehaviour
     private Coroutine hideCoroutine;
     private Coroutine typingCoroutine;
 
+    void OnEnable()
+    {
+        WsClient.OnAgentSpeechText += ShowText;
+    }
+
+    void OnDisable()
+    {
+        WsClient.OnAgentSpeechText -= ShowText;
+    }
+
     void Update()
     {
         if (bubbleCanvas != null && Camera.main != null)
