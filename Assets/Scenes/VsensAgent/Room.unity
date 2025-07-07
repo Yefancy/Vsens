@@ -1101,6 +1101,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 85270613}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &86411605
 PrefabInstance:
@@ -2133,6 +2134,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8281444737325066938, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8281444737325066938, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8281444737325066938, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 9090885670013408196, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
       propertyPath: m_Name
       value: DoorFrame_Apt_03
@@ -2147,6 +2160,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 9090885670013408196, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
       insertIndex: -1
       addedObject: {fileID: 127434816}
+    - targetCorrespondingSourceObject: {fileID: 4929668019831370948, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 127434822}
+    - targetCorrespondingSourceObject: {fileID: 4929668019831370948, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 127434821}
   m_SourcePrefab: {fileID: 100100000, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
 --- !u!4 &127434814 stripped
 Transform:
@@ -2192,7 +2211,61 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 127434816}
+  objectName: 
   jsonOutput: 
+--- !u!1 &127434818 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4929668019831370948, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+  m_PrefabInstance: {fileID: 127434813}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &127434819 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4929668019831370810, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+  m_PrefabInstance: {fileID: 127434813}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 127434818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e8192f35a44301488ec0f072d9a16fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!65 &127434820 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 4929668019831370811, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
+  m_PrefabInstance: {fileID: 127434813}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &127434821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 127434818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43cb9f5bf8f2b42229d3a82fa5e65e3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boxCollider: {fileID: 127434820}
+  objectName: doorB
+  jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"0.020\",\n    \"y\" : \"1.560\",\n   
+    \"z\" : \"3.728\"\n  },\n  \"size\" : {\n    \"x\" : \"0.086\",\n    \"y\" :
+    \"2.839\",\n    \"z\" : \"1.426\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
+    \"y\" : \"90.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
+    \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+--- !u!114 &127434822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 127434818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd20737b4b4849519749869b0c320b65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _doorController: {fileID: 127434819}
 --- !u!1001 &134037798
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3742,6 +3815,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 278156364}
+  objectName: 
   jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"-1.200\",\n    \"y\" : \"2.000\",\n   
     \"z\" : \"5.000\"\n  },\n  \"size\" : {\n    \"x\" : \"2.500\",\n    \"y\" :
     \"4.000\",\n    \"z\" : \"0.100\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
@@ -4250,6 +4324,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 318845627}
+  objectName: 
   jsonOutput: 
 --- !u!65 &318845627
 BoxCollider:
@@ -4516,6 +4591,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 328617850}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &334229071
 PrefabInstance:
@@ -5319,6 +5395,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 379143047}
+  objectName: 
   jsonOutput: 
 --- !u!65 &379143047 stripped
 BoxCollider:
@@ -5676,6 +5753,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 408946732}
+  objectName: 
   jsonOutput: 
 --- !u!65 &408946732 stripped
 BoxCollider:
@@ -7694,6 +7772,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 553997656}
+  objectName: 
   jsonOutput: 
 --- !u!65 &553997656 stripped
 BoxCollider:
@@ -8915,6 +8994,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 620496819}
+  objectName: 
   jsonOutput: 
 --- !u!65 &620496819 stripped
 BoxCollider:
@@ -9972,6 +10052,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 675138904}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &678228010
 PrefabInstance:
@@ -12642,6 +12723,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 850646337}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &866444014
 PrefabInstance:
@@ -13624,6 +13706,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 931475643}
+  objectName: 
   jsonOutput: 
 --- !u!65 &931475643 stripped
 BoxCollider:
@@ -13823,6 +13906,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 955635624}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &958959608
 PrefabInstance:
@@ -13964,6 +14048,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1458726397}
     m_Modifications:
+    - target: {fileID: 1227557790159680335, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1227557790159680335, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1227557790159680335, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2170178008488602006, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
       propertyPath: m_Name
       value: DoorFrame_Apt_01 (1)
@@ -14020,12 +14116,12 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 2170178008488602006, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+    - targetCorrespondingSourceObject: {fileID: 7296751938604968509, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 972450881}
-    - targetCorrespondingSourceObject: {fileID: 2170178008488602006, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+      addedObject: {fileID: 972450883}
+    - targetCorrespondingSourceObject: {fileID: 7296751938604968509, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 972450880}
+      addedObject: {fileID: 972450882}
   m_SourcePrefab: {fileID: 100100000, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
 --- !u!4 &972450878 stripped
 Transform:
@@ -14034,31 +14130,39 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &972450879 stripped
 GameObject:
-  m_CorrespondingSourceObject: {fileID: 2170178008488602006, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+  m_CorrespondingSourceObject: {fileID: 7296751938604968509, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
   m_PrefabInstance: {fileID: 972450877}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &972450880
+--- !u!114 &972450880 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7296751938604968511, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+  m_PrefabInstance: {fileID: 972450877}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 972450879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e8192f35a44301488ec0f072d9a16fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!65 &972450881 stripped
 BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 7296751938604968508, guid: e9a47cdb5968d66499f6b4ee53467cd4, type: 3}
+  m_PrefabInstance: {fileID: 972450877}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &972450882
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 972450879}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.31816173, y: 3.0852091, z: 1.6834528}
-  m_Center: {x: -1.2443126, y: 1.5426046, z: -0.00000011920929}
---- !u!114 &972450881
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd20737b4b4849519749869b0c320b65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _doorController: {fileID: 972450880}
+--- !u!114 &972450883
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -14070,8 +14174,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43cb9f5bf8f2b42229d3a82fa5e65e3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _boxCollider: {fileID: 972450880}
-  jsonOutput: 
+  _boxCollider: {fileID: 972450881}
+  objectName: doorA
+  jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"-1.292\",\n    \"y\" : \"1.560\",\n   
+    \"z\" : \"4.990\"\n  },\n  \"size\" : {\n    \"x\" : \"0.086\",\n    \"y\" :
+    \"2.839\",\n    \"z\" : \"1.426\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
+    \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
+    \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
 --- !u!1001 &975146530
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14504,6 +14613,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 990263648}
+  objectName: 
   jsonOutput: 
 --- !u!65 &990263648
 BoxCollider:
@@ -14843,6 +14953,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1025829341}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1025829341 stripped
 BoxCollider:
@@ -14936,6 +15047,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1028669441}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1028669441 stripped
 BoxCollider:
@@ -15293,6 +15405,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1058021357}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1058021357 stripped
 BoxCollider:
@@ -15584,6 +15697,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1073799291}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1073799291 stripped
 BoxCollider:
@@ -15887,6 +16001,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1096766912}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1096766912 stripped
 BoxCollider:
@@ -16931,6 +17046,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1132726806}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1132726806
 BoxCollider:
@@ -17273,6 +17389,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2704188767397696482, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.1290193
+      objectReference: {fileID: 0}
+    - target: {fileID: 2704188767397696482, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.0743668
+      objectReference: {fileID: 0}
     - target: {fileID: 3524024904577399924, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
       propertyPath: m_Name
       value: Window_Frame_Apt_01 (5)
@@ -17283,18 +17407,21 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9195267871985221881, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3524024904577399924, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+    - targetCorrespondingSourceObject: {fileID: 2503783858467847972, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1147143718}
-    - targetCorrespondingSourceObject: {fileID: 3524024904577399924, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+      addedObject: {fileID: 1147143723}
+    - targetCorrespondingSourceObject: {fileID: 2503783858467847972, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1147143717}
+      addedObject: {fileID: 1147143722}
+    - targetCorrespondingSourceObject: {fileID: 2633268593446484574, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1147143721}
   m_SourcePrefab: {fileID: 100100000, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
 --- !u!4 &1147143715 stripped
 Transform:
@@ -17303,31 +17430,36 @@ Transform:
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1147143716 stripped
 GameObject:
-  m_CorrespondingSourceObject: {fileID: 3524024904577399924, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+  m_CorrespondingSourceObject: {fileID: 2633268593446484574, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
   m_PrefabInstance: {fileID: 1147143714}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &1147143717
+--- !u!65 &1147143717 stripped
 BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 3852068651105871960, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+  m_PrefabInstance: {fileID: 1147143714}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1147143716}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
+--- !u!1 &1147143718 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2503783858467847972, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+  m_PrefabInstance: {fileID: 1147143714}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1147143719 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 771466706, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+  m_PrefabInstance: {fileID: 1147143714}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147143718}
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.7747201, y: 2.5060544, z: 2.1666667}
-  m_Center: {x: -0.991721, y: 2.419137, z: 0.00000047683716}
---- !u!114 &1147143718
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea52830e8c3e35741a451b12277dfde1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!65 &1147143720 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 3999982659300000104, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
+  m_PrefabInstance: {fileID: 1147143714}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1147143721
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -17340,7 +17472,43 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1147143717}
-  jsonOutput: 
+  objectName: windowB
+  jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"3.610\",\n    \"y\" : \"2.983\",\n   
+    \"z\" : \"7.500\"\n  },\n  \"size\" : {\n    \"x\" : \"0.113\",\n    \"y\" :
+    \"1.152\",\n    \"z\" : \"1.941\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
+    \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  }\n}"
+--- !u!114 &1147143722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147143718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43cb9f5bf8f2b42229d3a82fa5e65e3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boxCollider: {fileID: 1147143720}
+  objectName: windowA
+  jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"3.467\",\n    \"y\" : \"1.895\",\n   
+    \"z\" : \"7.500\"\n  },\n  \"size\" : {\n    \"x\" : \"0.173\",\n    \"y\" :
+    \"1.184\",\n    \"z\" : \"1.941\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
+    \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
+    \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+--- !u!114 &1147143723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147143718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53b89f84a29e4cc5a172d8f027be2d9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _windowController: {fileID: 1147143719}
 --- !u!1001 &1152184297
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18041,6 +18209,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1184031236}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1184031236
 BoxCollider:
@@ -21199,6 +21368,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1361271592}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1361271592
 BoxCollider:
@@ -24959,6 +25129,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1635130873}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1635130873 stripped
 BoxCollider:
@@ -27819,6 +27990,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1836596332}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1836596332
 BoxCollider:
@@ -28166,6 +28338,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1865562354}
+  objectName: 
   jsonOutput: 
 --- !u!1001 &1872170474
 PrefabInstance:
@@ -29296,6 +29469,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1929412619}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1929412619 stripped
 BoxCollider:
@@ -29637,6 +29811,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 1942247558}
+  objectName: 
   jsonOutput: 
 --- !u!65 &1942247558
 BoxCollider:
@@ -30829,6 +31004,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 2037153948}
+  objectName: 
   jsonOutput: 
 --- !u!65 &2037153948
 BoxCollider:
@@ -31421,9 +31597,7 @@ GameObject:
   - component: {fileID: 2106958229}
   - component: {fileID: 2106958228}
   - component: {fileID: 2106958227}
-  - component: {fileID: 2106958231}
-  - component: {fileID: 2106958230}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
@@ -31504,83 +31678,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2106958230
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2106958226}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sharedProfile: {fileID: 11400000, guid: e16fff03bf0ae4e5eaa31e376930e7c3, type: 2}
-  isGlobal: 1
-  blendDistance: 0
-  weight: 1
-  priority: 0
---- !u!114 &2106958231
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2106958226}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  volumeTrigger: {fileID: 2106958229}
-  volumeLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  stopNaNPropagation: 1
-  finalBlitToCameraTarget: 0
-  antialiasingMode: 0
-  temporalAntialiasing:
-    jitterSpread: 0.75
-    sharpness: 0.25
-    stationaryBlending: 0.95
-    motionBlending: 0.85
-  subpixelMorphologicalAntialiasing:
-    quality: 2
-  fastApproximateAntialiasing:
-    fastMode: 0
-    keepAlpha: 0
-  fog:
-    enabled: 1
-    excludeSkybox: 1
-  debugLayer:
-    lightMeter:
-      width: 512
-      height: 256
-      showCurves: 1
-    histogram:
-      width: 512
-      height: 256
-      channel: 3
-    waveform:
-      exposure: 0.12
-      height: 256
-    vectorscope:
-      size: 256
-      exposure: 0.12
-    overlaySettings:
-      linearDepth: 0
-      motionColorIntensity: 4
-      motionGridSize: 64
-      colorBlindnessType: 0
-      colorBlindnessStrength: 1
-  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
-  m_ShowToolkit: 0
-  m_ShowCustomSorter: 0
-  breakBeforeColorGrading: 0
-  m_BeforeTransparentBundles: []
-  m_BeforeStackBundles: []
-  m_AfterStackBundles: []
 --- !u!1001 &2109709597
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -32241,6 +32338,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 2139256924}
+  objectName: 
   jsonOutput: 
 --- !u!65 &2139256924 stripped
 BoxCollider:

@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace SojaExiles
@@ -68,5 +68,49 @@ namespace SojaExiles
 		}
 
 
+		public void ToggleWindow(bool openWindow)
+		{
+			if (open == openWindow) return; // No change needed
+			StartCoroutine(open ? closing() : opening());
+		}
+		
+#if UNITY_EDITOR
+		public void SetWindowState(bool isOpen)
+		{
+			open = isOpen;
+			if (!EditorApplication.isPlaying)
+			{
+				string stateName = isOpen ? "Openingwindow" : "Closingwindow";
+				openandclosewindow.Rebind();
+				openandclosewindow.PlayInFixedTime(stateName, 0, 1.0f);
+				openandclosewindow.Update(0f);
+			}
+			else
+			{
+				StartCoroutine(isOpen ? opening() : closing());
+			}
+		}
+#endif
 	}
+	
+		
+#if UNITY_EDITOR
+	[CustomEditor(typeof(opencloseWindowApt))]
+	public class OpenCloseWindowAptEditor : Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			DrawDefaultInspector();
+
+			opencloseWindowApt window = (opencloseWindowApt)target;
+
+			GUILayout.Space(10);
+			if (GUILayout.Button(window.open ? "close" : "open"))
+			{
+				window.SetWindowState(!window.open);
+				EditorUtility.SetDirty(window.gameObject);
+			}
+		}
+	}
+#endif
 }

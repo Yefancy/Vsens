@@ -28,14 +28,10 @@ namespace SojaExiles
 						}
 						else
 						{
-							if (open == true)
+							if (Input.GetMouseButtonDown(0))
 							{
-								if (Input.GetMouseButtonDown(0))
-								{
-									StartCoroutine(closing());
-								}
+								StartCoroutine(closing());
 							}
-
 						}
 
 					}
@@ -64,16 +60,7 @@ namespace SojaExiles
 		public void ToggleDoor(bool openDoor)
 		{
 			if (open == openDoor) return; // No change needed
-			if (!open)
-			{
-				openandclose.Play("Opening");
-				open = true;
-			}
-			else
-			{
-				openandclose.Play("Closing");
-				open = false;
-			}
+			StartCoroutine(open ? closing() : opening());
 		}
 		
 #if UNITY_EDITOR
@@ -89,10 +76,7 @@ namespace SojaExiles
 			}
 			else
 			{
-				if (isOpen)
-					StartCoroutine(opening());
-				else
-					StartCoroutine(closing());
+				StartCoroutine(isOpen ? opening() : closing());
 			}
 		}
 #endif
