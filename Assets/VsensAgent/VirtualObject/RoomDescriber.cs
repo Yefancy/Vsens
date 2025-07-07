@@ -14,7 +14,7 @@ public class RoomDescriber : MonoBehaviour
         {
             var data = objectDescriber.GetDescription();
             var objectName = objectDescriber.ObjectName;
-            if (objectName.Length ==0)
+            if (objectName.Length == 0)
             {
                 objectName = objectDescriber.name;
             }
