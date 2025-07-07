@@ -1,3 +1,4 @@
+using System;
 using SimpleJSON;
 using UnityEngine;
 
@@ -36,27 +37,27 @@ public class BoxColliderData
     {
         JSONObject json = new JSONObject();
 
-        string fmt = "F" + 3; // e.g., "F3"
         // position
-        JSONObject pos = new JSONObject();
-        pos["x"] = position.x.ToString(fmt);
-        pos["y"] = position.y.ToString(fmt);
-        pos["z"] = position.z.ToString(fmt);
+        JSONArray pos = new JSONArray();
+        pos.Add(new JSONNumber(Math.Round(position.x, 3)));
+        pos.Add(new JSONNumber(Math.Round(position.y, 3)));
+        pos.Add(new JSONNumber(Math.Round(position.z, 3)));
         json["position"] = pos;
 
         // size
-        JSONObject s = new JSONObject();
-        s["x"] = size.x.ToString(fmt);
-        s["y"] = size.y.ToString(fmt);
-        s["z"] = size.z.ToString(fmt);
+        JSONArray s = new JSONArray();
+        s.Add(new JSONNumber(Math.Round(size.x, 3)));
+        s.Add(new JSONNumber(Math.Round(size.y, 3)));
+        s.Add(new JSONNumber(Math.Round(size.z, 3)));
         json["size"] = s;
 
         // rotation
-        JSONObject rot = new JSONObject();
-        rot["x"] = rotation.x.ToString(fmt);
-        rot["y"] = rotation.y.ToString(fmt);
-        rot["z"] = rotation.z.ToString(fmt);
+        JSONArray rot = new JSONArray();
+        rot.Add(new JSONNumber(Math.Round(rotation.x, 3)));
+        rot.Add(new JSONNumber(Math.Round(rotation.y, 3)));
+        rot.Add(new JSONNumber(Math.Round(rotation.z, 3)));
         json["rotation"] = rot;
+        
         return json;
     }
 }
