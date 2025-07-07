@@ -12,7 +12,8 @@ public class WsClient : MonoBehaviour
     private static float reconnectInterval = 3f;
 
     // 事件定义
-    public static event Action<string> OnAgentReady;
+    public static event Action<string> OnAgentSpeechAudio;
+    public static event Action<string> OnAgentSpeechText;
     public static event Action<BehaviorMessage> OnBehaviorCommand;
 
     async void Start()
@@ -94,7 +95,8 @@ public class WsClient : MonoBehaviour
             {
                 case "agent_ready":
                     var replyMsg = JsonUtility.FromJson<AgentReplyMessage>(json);
-                    OnAgentReady?.Invoke(replyMsg.audio_path);
+                    OnAgentSpeechAudio?.Invoke(replyMsg.audio_path);
+                    OnAgentSpeechText?.Invoke(replyMsg.reply);
                     break;
 
                 case "behavior":
