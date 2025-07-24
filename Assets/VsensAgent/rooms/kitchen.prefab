@@ -2850,11 +2850,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 6621406700199739215}
   objectName: 
-  jsonOutput: "{\n  \"position\" : {\n    \"x\" : \"-1.292\",\n    \"y\" : \"1.560\",\n   
-    \"z\" : \"-1.050\"\n  },\n  \"size\" : {\n    \"x\" : \"0.086\",\n    \"y\" :
-    \"2.839\",\n    \"z\" : \"1.426\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
-    \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
-    \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  jsonOutput: "{\n  \"position\" : [\n    -1.292,\n    1.56,\n    -1.05\n  ],\n 
+    \"size\" : [\n    0.086,\n    2.839,\n    1.426\n  ],\n  \"rotation\" : [\n   
+    0,\n    180,\n    0\n  ],\n  \"state\" : \"closed\",\n  \"availableStates\" :
+    [\n    \"open\",\n    \"closed\"\n  ]\n}"
 --- !u!114 &8232527081622569472
 MonoBehaviour:
   m_ObjectHideFlags: 0

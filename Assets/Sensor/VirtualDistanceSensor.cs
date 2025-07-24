@@ -1,6 +1,9 @@
+using System;
 using OVRSimpleJSON;
 using Sensor.visualization;
 using UnityEngine;
+using JSONArray = SimpleJSON.JSONArray;
+using JSONNumber = SimpleJSON.JSONNumber;
 
 namespace Sensor
 {
@@ -97,6 +100,24 @@ namespace Sensor
         public override ISensorDefinition SensorDefinition()
         {
             return DEFINITION;
+        }
+        
+        public override SimpleJSON.JSONObject GetSensorDescription()
+        {
+            var description = base.GetSensorDescription();
+            description["validDistance"] = validDistance;
+            description["value"] = Math.Round(Distance, 3);
+            var lookDirectionArray = new JSONArray();
+            lookDirectionArray.Add(new JSONNumber(Math.Round(LookDirection.x, 3)));
+            lookDirectionArray.Add(new JSONNumber(Math.Round(LookDirection.y, 3)));
+            lookDirectionArray.Add(new JSONNumber(Math.Round(LookDirection.z, 3)));
+            description["lookRay"] = lookDirectionArray;
+            var point = new JSONArray();
+            point.Add(new JSONNumber(Math.Round(StartPoint.x, 3)));
+            point.Add(new JSONNumber(Math.Round(StartPoint.y, 3)));
+            point.Add(new JSONNumber(Math.Round(StartPoint.z, 3)));
+            description["startPoint"] = point;
+            return description;
         }
     }
 }

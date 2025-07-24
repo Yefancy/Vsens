@@ -1,3 +1,4 @@
+using System;
 using OVRSimpleJSON;
 using Sensor.visualization;
 using UnityEngine;
@@ -6,7 +7,7 @@ namespace Sensor
 {
     public class VirtualLightSensor : VirtualSensor
     {
-        public static readonly ISensorDefinition DEFINITION = ISensorDefinition.create("LIGHT", "lux");
+        public static readonly ISensorDefinition DEFINITION = ISensorDefinition.create("OPTICAL", "lux");
  
         private struct LightSensorData : ISensorData
         {
@@ -97,6 +98,13 @@ namespace Sensor
         public override ISensorDefinition SensorDefinition()
         {
             return DEFINITION;
+        }
+        
+        public override SimpleJSON.JSONObject GetSensorDescription()
+        {
+            var description = base.GetSensorDescription();
+            description["value"] = Math.Round(CalculateLightIntensityAtPosition(transform.position), 3);
+            return description;
         }
     }
 }

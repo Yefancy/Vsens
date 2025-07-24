@@ -87,6 +87,7 @@ GameObject:
   - component: {fileID: 5988207486985688187}
   - component: {fileID: 5907861347563984430}
   - component: {fileID: 3985323958919249435}
+  - component: {fileID: 5903142261133250439}
   m_Layer: 0
   m_Name: VirtualLightSensor
   m_TagString: Untagged
@@ -143,6 +144,10 @@ MonoBehaviour:
   showSelectedVisualization: 1
   registerOnStart: 0
   canBeTransform: 1
+  canSelected: 1
+  interactable: 1
+  canDeselect: 1
+  sensorAttachable: {fileID: 0}
   maxIntensity: 5
   barChart: {fileID: 7855963295389892336}
 --- !u!114 &5907861347563984430
@@ -208,6 +213,25 @@ MonoBehaviour:
   _rigidbody: {fileID: 0}
   _kinematicWhileSelected: 1
   _throwWhenUnselected: 1
+--- !u!114 &5903142261133250439
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3534786048013251570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3d6834d8e76947cb876a5f7377b1aaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boxCollider: {fileID: 2148145458679328336}
+  objectName: 
+  jsonOutput: "{\n  \"position\" : [\n    0,\n    -0.02,\n    0\n  ],\n  \"size\"
+    : [\n    1,\n    0.346,\n    1\n  ],\n  \"rotation\" : [\n    0,\n    0,\n   
+    0\n  ],\n  \"isSensor\" : true,\n  \"sensor\" : {\n    \"sensorType\" : \"OPTICAL\",\n   
+    \"value\" : 0\n  }\n}"
+  _sensor: {fileID: 5988207486985688187}
 --- !u!1 &4215862516616444306
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,6 +290,9 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -548,7 +575,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5168339746943940182, guid: 0f909174a66719046a290aba409f6c15, type: 3}
-      propertyPath: m_Materials.Array.data[0]
+      propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: eadf9f46229e1435897f254a7baad9ce, type: 2}
     m_RemovedComponents: []
@@ -1154,23 +1181,23 @@ PrefabInstance:
       value: -22.5
       objectReference: {fileID: 0}
     - target: {fileID: 6662926616190421274, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}
-      propertyPath: m_SerieLines.Array.data[0].m_Data.Array.data[0].m_Data.Array.data[1]
+      propertyPath: 'm_SerieLines.Array.data[0].m_Data.Array.data[0].m_Data.Array.data[1]'
       value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 6662926616190421274, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}
-      propertyPath: m_SerieLines.Array.data[0].m_Data.Array.data[1].m_Data.Array.data[1]
+      propertyPath: 'm_SerieLines.Array.data[0].m_Data.Array.data[1].m_Data.Array.data[1]'
       value: 0.28
       objectReference: {fileID: 0}
     - target: {fileID: 6662926616190421274, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}
-      propertyPath: m_SerieLines.Array.data[0].m_Data.Array.data[2].m_Data.Array.data[1]
+      propertyPath: 'm_SerieLines.Array.data[0].m_Data.Array.data[2].m_Data.Array.data[1]'
       value: 0.45
       objectReference: {fileID: 0}
     - target: {fileID: 6662926616190421274, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}
-      propertyPath: m_SerieLines.Array.data[0].m_Data.Array.data[3].m_Data.Array.data[1]
+      propertyPath: 'm_SerieLines.Array.data[0].m_Data.Array.data[3].m_Data.Array.data[1]'
       value: 0.21
       objectReference: {fileID: 0}
     - target: {fileID: 6662926616190421274, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}
-      propertyPath: m_SerieLines.Array.data[0].m_Data.Array.data[4].m_Data.Array.data[1]
+      propertyPath: 'm_SerieLines.Array.data[0].m_Data.Array.data[4].m_Data.Array.data[1]'
       value: 0.83
       objectReference: {fileID: 0}
     - target: {fileID: 6824193679115243778, guid: 62c01d46b69880d469d1eb56687ccbf7, type: 3}

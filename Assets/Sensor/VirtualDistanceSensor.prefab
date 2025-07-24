@@ -151,6 +151,7 @@ GameObject:
   - component: {fileID: 5322648215080773538}
   - component: {fileID: 5907861347563984430}
   - component: {fileID: 3985323958919249435}
+  - component: {fileID: 3118018527650485057}
   m_Layer: 0
   m_Name: VirtualDistanceSensor
   m_TagString: Untagged
@@ -207,6 +208,10 @@ MonoBehaviour:
   showSelectedVisualization: 1
   registerOnStart: 0
   canBeTransform: 1
+  canSelected: 1
+  interactable: 1
+  canDeselect: 1
+  sensorAttachable: {fileID: 0}
   showBarPreview: 1
   validDistance: 3
   barChart: {fileID: 7855963295389892336}
@@ -276,6 +281,22 @@ MonoBehaviour:
   _rigidbody: {fileID: 0}
   _kinematicWhileSelected: 1
   _throwWhenUnselected: 1
+--- !u!114 &3118018527650485057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3534786048013251570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3d6834d8e76947cb876a5f7377b1aaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boxCollider: {fileID: 5227760456242919622}
+  objectName: 
+  jsonOutput: 
+  _sensor: {fileID: 5322648215080773538}
 --- !u!1 &4215862516616444306
 GameObject:
   m_ObjectHideFlags: 0

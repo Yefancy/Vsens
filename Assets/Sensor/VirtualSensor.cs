@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Oculus.Interaction;
 using Oculus.Interaction.Input;
+using SimpleJSON;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -323,6 +324,14 @@ namespace Sensor
         {
             Destroy(graphChart);
             Detach();
+        }
+        
+        public virtual JSONObject GetSensorDescription()
+        {
+            var description = new JSONObject();
+            var definition = SensorDefinition();
+            description["sensorType"] = definition.getSensorName();
+            return description;
         }
     }
 }

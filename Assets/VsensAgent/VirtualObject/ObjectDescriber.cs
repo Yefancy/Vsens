@@ -12,7 +12,7 @@ public class ObjectDescriber : MonoBehaviour
     
     public string ObjectName => objectName;
 
-    private void Awake()
+    protected void Awake()
     {
         _boxCollider = GetOrCreateBoxCollider();
     }
@@ -28,7 +28,7 @@ public class ObjectDescriber : MonoBehaviour
         return _boxCollider;
     }
     
-    public JSONObject GetDescription()
+    public virtual JSONObject GetDescription()
     {
         var data = BoxColliderData.FromBoxCollider(GetOrCreateBoxCollider(), transform).toJSONObject();
         var stateHolder = GetComponent<IStateHolder>();
@@ -54,7 +54,8 @@ public class ObjectDescriber : MonoBehaviour
 }
 
 #if UNITY_EDITOR
-[CustomEditor(typeof(ObjectDescriber))]
+[CanEditMultipleObjects]
+[CustomEditor(typeof(ObjectDescriber), true)]
 public class ObjectDescriberEditor : Editor
 {
     public override void OnInspectorGUI()
