@@ -115,14 +115,15 @@ public class WsClient : MonoBehaviour
         }
     }
 
-    public static void SendTranscribeRequest(string audioPath)
+    public static void SendTranscribeRequest(string audioPath, string roomJson)
     {
         if (websocket != null && websocket.State == WebSocketState.Open)
         {
             var payload = new TranscribeRequest()
             {
                 type = "transcribe_and_reply",
-                audio_path = audioPath
+                audio_path = audioPath,
+                room_description = roomJson
             };
 
             string json = JsonUtility.ToJson(payload);
@@ -168,6 +169,7 @@ public class WsClient : MonoBehaviour
     {
         public string type;
         public string audio_path;
+        public string room_description;
     }
 
     [Serializable]
