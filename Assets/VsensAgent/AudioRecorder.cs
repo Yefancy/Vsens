@@ -83,7 +83,7 @@ public class AudioRecorder : MonoBehaviour
         SaveToWav();
 
         // ✅ 通知 WebSocket
-        WsClient.SendTranscribeRequest(filePath);
+        WsClient.SendTranscribeRequest(filePath, GetRoomDescriptionJson());
     }
 
     void SaveToWav()
@@ -102,6 +102,21 @@ public class AudioRecorder : MonoBehaviour
 
         WavUtility.FromAudioClip(recordedClip, filePath, true);  // ✅ 注意：你需要带路径版本的 WavUtility
         Debug.Log("[Recorder] Saved to: " + filePath);
+    }
+
+    // Support method to get room description in JSON format (Assuming RoomDescriber is set up)
+    private string GetRoomDescriptionJson()
+    {
+        RoomDescriber describer = FindFirstObjectByType<RoomDescriber>();
+        if (describer != null)
+        {
+            return describer.GetRoomDescription().ToString();
+        }
+        else
+        {
+            Debug.LogWarning("[Recorder] No RoomDescriber found in scene.");
+            return "{}";
+        }
     }
 
     public string GetLatestFilePath()
