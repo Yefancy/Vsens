@@ -30,8 +30,8 @@ public class UserMainCameraControl : MonoBehaviour
         if (Input.GetKey(KeyCode.S)) direction -= transform.forward;
         if (Input.GetKey(KeyCode.A)) direction -= transform.right;
         if (Input.GetKey(KeyCode.D)) direction += transform.right;
-        if (Input.GetKey(KeyCode.LeftShift)) direction += transform.up;
-        if (Input.GetKey(KeyCode.LeftControl)) direction -= transform.up;
+        if (Input.GetKey(KeyCode.Space)) direction += transform.up;
+        if (Input.GetKey(KeyCode.LeftShift)) direction -= transform.up;
 
         transform.position += direction * movementSpeed * Time.deltaTime;
     }
