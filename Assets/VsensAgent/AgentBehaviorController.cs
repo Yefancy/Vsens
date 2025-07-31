@@ -39,12 +39,12 @@ public class AgentBehaviorController : MonoBehaviour
 
     void OnEnable()
     {
-        WsClient.OnBehaviorCommand += PerformBehavior;
+        WsClient.OnAgentBehavior += PerformBehavior;
     }
 
     void OnDisable()
     {
-        WsClient.OnBehaviorCommand -= PerformBehavior;
+        WsClient.OnAgentBehavior -= PerformBehavior;
     }
 
     void Update()
@@ -68,19 +68,42 @@ public class AgentBehaviorController : MonoBehaviour
     /// <summary>
     /// 行为指令回调
     /// </summary>
-    public void PerformBehavior(WsClient.BehaviorMessage msg)
+    public void PerformBehavior(WsClient.AgentBehavior msg)
     {
         Debug.Log($"[Behavior] Action: {msg.action}, Target: {msg.target}, Emotion: {msg.emotion}");
 
-        // 示例行为逻辑
-        if (msg.action == "wave")
+        // 根据不同的行为执行相应的动作
+        switch (msg.action)
         {
-            // 播放动画或执行动作
+            case "wave":
+                PerformWaveAction();
+                break;
+            case "nod":
+                PerformNodAction();
+                break;
+            case "look_at":
+                PerformLookAtAction(msg.target);
+                break;
+            case "float_up":
+                PerformFloatUpAction();
+                break;
+            case "float_down":
+                PerformFloatDownAction();
+                break;
+            default:
+                Debug.LogWarning($"[Behavior] Unknown action: {msg.action}");
+                break;
         }
 
-        if (msg.target == "user")
+        // 处理情绪相关的行为
+        if (!string.IsNullOrEmpty(msg.emotion))
         {
-            // 将眼睛快速看向用户
+            ApplyEmotionBehavior(msg.emotion);
+        }
+
+        // 处理目标相关的行为
+        if (msg.target == "user" || msg.target == "camera")
+        {
             LookAtUserInstantly();
         }
     }
@@ -117,4 +140,96 @@ public class AgentBehaviorController : MonoBehaviour
         Vector3 dirToCam = (cameraTarget.position - agentBody.position).normalized;
         eyeBaseDir = dirToCam; // 立即更新方向
     }
+
+    #region 行为动作实现方法
+
+    private void PerformWaveAction()
+    {
+        Debug.Log("[Behavior] Performing wave action - 占位实现");
+        // TODO: 实现挥手动画
+        // 可以使用 Animator 或者简单的 Transform 动画
+    }
+
+    private void PerformNodAction()
+    {
+        Debug.Log("[Behavior] Performing nod action - 占位实现");
+        // TODO: 实现点头动画
+        // 可以让 agentRoot 做上下点头动作
+    }
+
+    private void PerformLookAtAction(string target)
+    {
+        Debug.Log($"[Behavior] Looking at target: {target} - 占位实现");
+        // TODO: 根据目标名称查找场景中的对象并看向它
+        if (target == "user" || target == "camera")
+        {
+            LookAtUserInstantly();
+        }
+    }
+
+    private void PerformFloatUpAction()
+    {
+        Debug.Log("[Behavior] Floating up - 占位实现");
+        // TODO: 让Agent向上浮动
+        // 可以临时增加 floatAmplitude 或调整 initialPosition
+    }
+
+    private void PerformFloatDownAction()
+    {
+        Debug.Log("[Behavior] Floating down - 占位实现");
+        // TODO: 让Agent向下浮动
+    }
+
+    private void ApplyEmotionBehavior(string emotion)
+    {
+        Debug.Log($"[Behavior] Applying emotion: {emotion} - 占位实现");
+        // TODO: 根据情绪调整行为
+        switch (emotion)
+        {
+            case "happy":
+                // 增加浮动频率，让动作更活泼
+                break;
+            case "sad":
+                // 降低浮动频率，让动作更缓慢
+                break;
+            case "excited":
+                // 增加旋转速度
+                break;
+            case "calm":
+                // 减少所有动作幅度
+                break;
+        }
+    }
+
+    #endregion
+
+    #region 测试方法（可在Inspector中调用）
+
+    [ContextMenu("Test Wave Behavior")]
+    public void TestWaveBehavior()
+    {
+        var testBehavior = new WsClient.AgentBehavior
+        {
+            type = "agent_behavior",
+            action = "wave",
+            target = "user",
+            emotion = "happy"
+        };
+        PerformBehavior(testBehavior);
+    }
+
+    [ContextMenu("Test Look At User")]
+    public void TestLookAtUser()
+    {
+        var testBehavior = new WsClient.AgentBehavior
+        {
+            type = "agent_behavior",
+            action = "look_at",
+            target = "user",
+            emotion = "curious"
+        };
+        PerformBehavior(testBehavior);
+    }
+
+    #endregion
 }

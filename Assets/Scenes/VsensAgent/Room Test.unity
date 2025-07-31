@@ -3487,6 +3487,50 @@ Transform:
   - {fileID: 1446401332}
   m_Father: {fileID: 415055213}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &295013514
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 295013515}
+  - component: {fileID: 295013516}
+  m_Layer: 0
+  m_Name: ControlManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &295013515
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295013514}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.15769732, y: 1.2040972, z: 4.259549}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &295013516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295013514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 249a79bbc90664542a9b701bb1c73db6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &301481712
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9385,6 +9429,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: kitchen
       objectReference: {fileID: 0}
+    - target: {fileID: 4133925317643375055, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: open
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4595439026480044809, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -9593,7 +9641,10 @@ PrefabInstance:
         : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"CoffeeMaker\" : {\n   
         \"position\" : [\n      2.639,\n      1.688,\n      4.286\n    ],\n    \"size\"
         : [\n      0.299,\n      0.444,\n      0.253\n    ],\n    \"rotation\" :
-        [\n      0,\n      0,\n      0\n    ]\n  }\n}"
+        [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Main Camera\" : {\n    \"position\"
+        : [\n      0.61,\n      1.88,\n      7.2\n    ],\n    \"size\" : [\n     
+        0.3,\n      0.3,\n      0.3\n    ],\n    \"rotation\" : [\n      0,\n     
+        182.69,\n      0\n    ]\n  }\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 4652667815586779944, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: additionalDescribers.Array.size
@@ -9603,6 +9654,14 @@ PrefabInstance:
       propertyPath: 'additionalDescribers.Array.data[0]'
       value: 
       objectReference: {fileID: 2106958231}
+    - target: {fileID: 4882407843848633896, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4882407843848633896, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7351439342049037521, guid: fc69750e99aa04343889e924cba5b705, type: 3}
     m_RemovedGameObjects: []
@@ -28405,6 +28464,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1253090186}
     - target: {fileID: 7835952939788947458, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
+      propertyPath: followSpeed
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 7835952939788947458, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: cameraTarget
       value: 
       objectReference: {fileID: 2106958229}
@@ -28486,3 +28549,4 @@ SceneRoots:
   - {fileID: 9190006078706173079}
   - {fileID: 682513809}
   - {fileID: 989194386}
+  - {fileID: 295013515}

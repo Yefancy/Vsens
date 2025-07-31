@@ -4,6 +4,8 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 public class WsClient : MonoBehaviour
 {
@@ -14,7 +16,8 @@ public class WsClient : MonoBehaviour
     // 事件定义
     public static event Action<string> OnAgentSpeechAudio;
     public static event Action<string> OnAgentSpeechText;
-    public static event Action<BehaviorMessage> OnBehaviorCommand;
+    public static event Action<ControlObject[]> OnControl; // 统一使用数组
+    public static event Action<AgentBehavior> OnAgentBehavior;
 
     async void Start()
     {
@@ -89,19 +92,26 @@ public class WsClient : MonoBehaviour
     {
         try
         {
-            var typeWrapper = JsonUtility.FromJson<MessageTypeWrapper>(json);
+            Debug.Log($"[WS] 📥 Received message: {json}"); // 添加调试日志
+            var typeWrapper = JsonConvert.DeserializeObject<MessageTypeWrapper>(json);
 
             switch (typeWrapper.type)
             {
                 case "agent_ready":
-                    var replyMsg = JsonUtility.FromJson<AgentReplyMessage>(json);
+                    var replyMsg = JsonConvert.DeserializeObject<AgentReplyMessage>(json);
                     OnAgentSpeechAudio?.Invoke(replyMsg.audio_path);
                     OnAgentSpeechText?.Invoke(replyMsg.reply);
+                    
+                    if (replyMsg.control != null && replyMsg.control.actions != null)
+                    {
+                        Debug.Log($"[WS] 🎮 Triggering OnControl with {replyMsg.control.actions.Length} actions");
+                        OnControl?.Invoke(replyMsg.control.actions);
+                    }
                     break;
 
-                case "behavior":
-                    var behaviorMsg = JsonUtility.FromJson<BehaviorMessage>(json);
-                    OnBehaviorCommand?.Invoke(behaviorMsg);
+                case "agent_behavior":
+                    var behaviorMsg = JsonConvert.DeserializeObject<AgentBehavior>(json);
+                    OnAgentBehavior?.Invoke(behaviorMsg);
                     break;
 
                 default:
@@ -115,18 +125,19 @@ public class WsClient : MonoBehaviour
         }
     }
 
-    public static void SendTranscribeRequest(string audioPath, string roomJson)
+    public static void SendTranscribeRequest(string audioPath, string sceneSnapshotJson)
     {
         if (websocket != null && websocket.State == WebSocketState.Open)
         {
+            // 获取主摄像机信息
             var payload = new TranscribeRequest()
             {
                 type = "transcribe_and_reply",
                 audio_path = audioPath,
-                room_description = roomJson,
+                scene_snapshot = sceneSnapshotJson,
             };
 
-            string json = JsonUtility.ToJson(payload);
+            string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
             Debug.Log("[WS] 📤 Sent transcribe request: " + json);
         }
@@ -161,7 +172,20 @@ public class WsClient : MonoBehaviour
         public string transcription;
         public string reply;
         public string audio_path;
-        public string control;
+        [JsonProperty("control")]
+        public ControlActions control; // 使用包装类来处理 actions 字段
+    }
+
+    [Serializable]
+    public class ControlActions
+    {
+        [JsonProperty("actions")]
+        public ControlObject[] actions;
+        
+        public ControlActions()
+        {
+            actions = new ControlObject[0];
+        }
     }
 
     [Serializable]
@@ -169,15 +193,36 @@ public class WsClient : MonoBehaviour
     {
         public string type;
         public string audio_path;
-        public string room_description;
+        public string scene_snapshot;
     }
 
     [Serializable]
-    public class BehaviorMessage
+    public class ControlObject
+    {
+        public string target;
+        public string action;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public Dictionary<string, string> parameters;
+        
+        public ControlObject()
+        {
+            parameters = new Dictionary<string, string>();
+        }
+    }
+
+    [Serializable]
+    public class AgentBehavior
     {
         public string type;
         public string action;
         public string target;
         public string emotion;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public Dictionary<string, string> parameters;
+        
+        public AgentBehavior()
+        {
+            parameters = new Dictionary<string, string>();
+        }
     }
 }
