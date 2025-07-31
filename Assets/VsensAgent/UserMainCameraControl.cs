@@ -35,4 +35,26 @@ public class UserMainCameraControl : MonoBehaviour
 
         transform.position += direction * movementSpeed * Time.deltaTime;
     }
+
+    /// <summary>
+    /// 返回 Main Camera 的位置和朝向
+    /// </summary>
+    public CameraTransformInfo GetCameraTransformInfo()
+    {
+        return new CameraTransformInfo()
+        {
+            position = transform.position,
+            rotation = transform.eulerAngles
+        };
+    }
+}
+
+/// <summary>
+/// 传输用的数据结构
+/// </summary>
+[System.Serializable]
+public struct CameraTransformInfo
+{
+    public Vector3 position;
+    public Vector3 rotation;
 }

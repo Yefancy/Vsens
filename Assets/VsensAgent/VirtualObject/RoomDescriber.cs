@@ -1,9 +1,12 @@
 using SimpleJSON;
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class RoomDescriber : MonoBehaviour
 {
+    [SerializeField]
+    public List<ObjectDescriber> additionalDescribers = new List<ObjectDescriber>();
     [TextArea(5, 20)] // Inspector 中多行显示
     public string jsonOutput;
 
@@ -17,6 +20,17 @@ public class RoomDescriber : MonoBehaviour
             if (objectName.Length == 0)
             {
                 objectName = objectDescriber.name;
+            }
+            objects.Add(objectName, data);
+        }
+
+        foreach (var additionalDescriber in additionalDescribers)
+        {
+            var data = additionalDescriber.GetDescription();
+            var objectName = additionalDescriber.ObjectName;
+            if (objectName.Length == 0)
+            {
+                objectName = additionalDescriber.name;
             }
             objects.Add(objectName, data);
         }

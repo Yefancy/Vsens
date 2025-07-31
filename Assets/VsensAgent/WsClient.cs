@@ -123,7 +123,7 @@ public class WsClient : MonoBehaviour
             {
                 type = "transcribe_and_reply",
                 audio_path = audioPath,
-                room_description = roomJson
+                room_description = roomJson,
             };
 
             string json = JsonUtility.ToJson(payload);
