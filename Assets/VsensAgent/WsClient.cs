@@ -202,11 +202,11 @@ public class WsClient : MonoBehaviour
         public string target;
         public string action;
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public Dictionary<string, string> parameters;
+        public Dictionary<string, object> parameters;
         
         public ControlObject()
         {
-            parameters = new Dictionary<string, string>();
+            parameters = new Dictionary<string, object>();
         }
     }
 
@@ -218,11 +218,11 @@ public class WsClient : MonoBehaviour
         public string target;
         public string emotion;
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public Dictionary<string, string> parameters;
+        public Dictionary<string, object> parameters;
         
         public AgentBehavior()
         {
-            parameters = new Dictionary<string, string>();
+            parameters = new Dictionary<string, object>();
         }
     }
 }
