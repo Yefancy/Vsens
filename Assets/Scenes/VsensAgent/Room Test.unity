@@ -2018,6 +2018,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4819301098079367791, guid: 93aca5305e2fdde45bd10238f67be364, type: 3}
   m_PrefabInstance: {fileID: 144411996}
   m_PrefabAsset: {fileID: 0}
+--- !u!65 &164034737 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 7114418746757785907, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &177581499
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3454,6 +3459,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 1017606091530846216, guid: c5be39b879c83f54d9bbfebe68c809be, type: 3}
   m_PrefabInstance: {fileID: 289822893}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &292732247 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 7114418748063605863, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &294994222
 GameObject:
@@ -9425,13 +9435,77 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 989194386}
     m_Modifications:
+    - target: {fileID: 1085543752655518458, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1470585505764263501, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: m_Name
       value: kitchen
       objectReference: {fileID: 0}
+    - target: {fileID: 1471285746615222636, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2294928327753656315, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2294928327753656315, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: jsonOutput
+      value: "{\n  \"position\" : [\n    -0.106,\n    2.943,\n    8.245\n  ],\n 
+        \"size\" : [\n    0.036,\n    0.661,\n    0.667\n  ],\n  \"rotation\" : [\n   
+        0,\n    0,\n    0\n  ],\n  \"properties\" : [\n    \"with_state\"\n  ],\n 
+        \"state\" : \"closed\",\n  \"availableStates\" : [\n    \"open\",\n    \"closed\"\n 
+        ]\n}"
+      objectReference: {fileID: 0}
+    - target: {fileID: 2294928327753656315, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: _boxCollider
+      value: 
+      objectReference: {fileID: 292732247}
+    - target: {fileID: 2539482797824735860, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2567417996366998716, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2784419827194537001, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3071501529251480807, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3408364417544110302, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3813751505792303214, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3857274712319857630, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3923201978289985691, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3923201978289985691, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: _boxCollider
+      value: 
+      objectReference: {fileID: 1091984574}
     - target: {fileID: 4133925317643375055, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: open
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4401818033652158286, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4595439026480044809, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9477,174 +9551,194 @@ PrefabInstance:
       propertyPath: jsonOutput
       value: "{\n  \"Wall_A\" : {\n    \"position\" : [\n      -1.2,\n      2,\n     
         5\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n    ],\n   
-        \"rotation\" : [\n      0,\n      270,\n      0\n    ]\n  },\n  \"Wall_B\"
-        : {\n    \"position\" : [\n      -1.2,\n      2,\n      7.5\n    ],\n   
-        \"size\" : [\n      2.5,\n      4,\n      0.1\n    ],\n    \"rotation\" :
-        [\n      0,\n      270,\n      0\n    ]\n  },\n  \"Wall_C\" : {\n    \"position\"
-        : [\n      0,\n      2,\n      8.7\n    ],\n    \"size\" : [\n      2.5,\n     
-        4,\n      0.1\n    ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n   
-        ]\n  },\n  \"Wall_D\" : {\n    \"position\" : [\n      2.5,\n      2,\n     
-        8.7\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n    ],\n   
-        \"rotation\" : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Wall_E\"
-        : {\n    \"position\" : [\n      3.441,\n      2,\n      7.5\n    ],\n   
-        \"size\" : [\n      0.619,\n      4,\n      2.5\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Wall_F\" : {\n    \"position\"
-        : [\n      3.441,\n      2,\n      5\n    ],\n    \"size\" : [\n      0.619,\n     
-        4,\n      2.5\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ]\n  },\n  \"Wall_G\" : {\n    \"position\" : [\n      0,\n      2,\n     
-        3.8\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n    ],\n   
-        \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Wall_H\"
-        : {\n    \"position\" : [\n      2.5,\n      2,\n      3.8\n    ],\n    \"size\"
-        : [\n      2.5,\n      4,\n      0.1\n    ],\n    \"rotation\" : [\n     
-        0,\n      180,\n      0\n    ]\n  },\n  \"Window_A\" : {\n    \"position\"
-        : [\n      3.467,\n      1.895,\n      7.5\n    ],\n    \"size\" : [\n     
-        0.173,\n      1.184,\n      1.941\n    ],\n    \"rotation\" : [\n      0,\n     
-        180,\n      0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        \"rotation\" : [\n      0,\n      270,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_B\" : {\n    \"position\" : [\n      -1.2,\n     
+        2,\n      7.5\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n   
+        ],\n    \"rotation\" : [\n      0,\n      270,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_C\" : {\n    \"position\" : [\n      0,\n     
+        2,\n      8.7\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n   
+        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_D\" : {\n    \"position\" : [\n      2.5,\n     
+        2,\n      8.7\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n   
+        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_E\" : {\n    \"position\" : [\n      3.441,\n     
+        2,\n      7.5\n    ],\n    \"size\" : [\n      0.619,\n      4,\n      2.5\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_F\" : {\n    \"position\" : [\n      3.441,\n     
+        2,\n      5\n    ],\n    \"size\" : [\n      0.619,\n      4,\n      2.5\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_G\" : {\n    \"position\" : [\n      0,\n     
+        2,\n      3.8\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Wall_H\" : {\n    \"position\" : [\n      2.5,\n     
+        2,\n      3.8\n    ],\n    \"size\" : [\n      2.5,\n      4,\n      0.1\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Window_A\" : {\n    \"position\" : [\n      3.467,\n     
+        1.895,\n      7.5\n    ],\n    \"size\" : [\n      0.173,\n      1.184,\n     
+        1.941\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
+        \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
         : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Window_B\" : {\n   
         \"position\" : [\n      3.61,\n      2.983,\n      7.5\n    ],\n    \"size\"
         : [\n      0.113,\n      1.152,\n      1.941\n    ],\n    \"rotation\" :
-        [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Door_A\" : {\n    \"position\"
-        : [\n      -1.292,\n      1.56,\n      4.99\n    ],\n    \"size\" : [\n     
+        [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ]\n 
+        },\n  \"Door_A\" : {\n    \"position\" : [\n      -1.292,\n      1.56,\n     
+        4.99\n    ],\n    \"size\" : [\n      0.086,\n      2.839,\n      1.426\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\" : [\n     
+        \"open\",\n      \"closed\"\n    ]\n  },\n  \"Door_B\" : {\n    \"position\"
+        : [\n      0.02,\n      1.56,\n      3.728\n    ],\n    \"size\" : [\n     
         0.086,\n      2.839,\n      1.426\n    ],\n    \"rotation\" : [\n      0,\n     
-        180,\n      0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
-        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Door_B\" : {\n   
-        \"position\" : [\n      0.02,\n      1.56,\n      3.728\n    ],\n    \"size\"
-        : [\n      0.086,\n      2.839,\n      1.426\n    ],\n    \"rotation\" :
-        [\n      0,\n      90,\n      0\n    ],\n    \"state\" : \"closed\",\n   
+        90,\n      0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
         \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
         \"Bowl\" : {\n    \"position\" : [\n      2.714,\n      1.53,\n      8.325\n   
         ],\n    \"size\" : [\n      0.229,\n      0.127,\n      0.229\n    ],\n   
-        \"rotation\" : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Plate\" :
-        {\n    \"position\" : [\n      2.361,\n      1.504,\n      8.343\n    ],\n   
-        \"size\" : [\n      0.224,\n      0.075,\n      0.224\n    ],\n    \"rotation\"
-        : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Trash\" : {\n    \"position\"
-        : [\n      -0.655,\n      0.346,\n      6.055\n    ],\n    \"size\" : [\n     
-        0.322,\n      0.492,\n      0.439\n    ],\n    \"rotation\" : [\n      0,\n     
-        90,\n      0\n    ]\n  },\n  \"Cabinet_Wall_A\" : {\n    \"position\" : [\n     
-        2.878,\n      2.614,\n      4.265\n    ],\n    \"size\" : [\n      0.575,\n     
-        1.179,\n      -0.603\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ]\n  },\n  \"Cabinet_Wall_A_Door\" : {\n    \"position\" : [\n     
-        2.572,\n      2.614,\n      4.265\n    ],\n    \"size\" : [\n      0.036,\n     
-        1.165,\n      -0.589\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\" : [\n     
-        \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Wall_B\" : {\n    \"position\"
-        : [\n      2.844,\n      2.86,\n      5.132\n    ],\n    \"size\" : [\n     
-        0.575,\n      0.676,\n      1.122\n    ],\n    \"rotation\" : [\n      0,\n     
-        180,\n      0\n    ]\n  },\n  \"Cabinet_Wall_B_Door_Left\" : {\n    \"position\"
-        : [\n      2.538,\n      2.859,\n      5.404\n    ],\n    \"size\" : [\n     
-        0.036,\n      0.661,\n      0.541\n    ],\n    \"rotation\" : [\n      0,\n     
-        180,\n      0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Plate\" : {\n    \"position\" : [\n      2.361,\n     
+        1.504,\n      8.343\n    ],\n    \"size\" : [\n      0.224,\n      0.075,\n     
+        0.224\n    ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n   
+        \"properties\" : [\n    ]\n  },\n  \"Trash\" : {\n    \"position\" : [\n     
+        -0.655,\n      0.346,\n      6.055\n    ],\n    \"size\" : [\n      0.322,\n     
+        0.492,\n      0.439\n    ],\n    \"rotation\" : [\n      0,\n      90,\n     
+        0\n    ],\n    \"properties\" : [\n    ]\n  },\n  \"Cabinet_Wall_A\" : {\n   
+        \"position\" : [\n      2.878,\n      2.614,\n      4.265\n    ],\n    \"size\"
+        : [\n      0.575,\n      1.179,\n      -0.603\n    ],\n    \"rotation\" :
+        [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ]\n 
+        },\n  \"Cabinet_Wall_A_Door\" : {\n    \"position\" : [\n      2.572,\n     
+        2.614,\n      4.265\n    ],\n    \"size\" : [\n      0.036,\n      1.165,\n     
+        -0.589\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n   
+        ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Wall_B\"
+        : {\n    \"position\" : [\n      2.844,\n      2.86,\n      5.132\n    ],\n   
+        \"size\" : [\n      0.575,\n      0.676,\n      1.122\n    ],\n    \"rotation\"
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ]\n 
+        },\n  \"Cabinet_Wall_B_Door_Left\" : {\n    \"position\" : [\n      2.538,\n     
+        2.859,\n      5.404\n    ],\n    \"size\" : [\n      0.036,\n      0.661,\n     
+        0.541\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
+        \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
         : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Wall_B_Door_Right\"
         : {\n    \"position\" : [\n      2.538,\n      2.859,\n      4.86\n    ],\n   
         \"size\" : [\n      0.036,\n      0.661,\n      0.541\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
-        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
-        \"Cabinet_Wall_C\" : {\n    \"position\" : [\n      2.878,\n      2.614,\n     
-        6\n    ],\n    \"size\" : [\n      0.575,\n      1.179,\n      0.603\n   
-        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Cabinet_Wall_C_Door\"
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ],\n   
+        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
+        \"closed\"\n    ]\n  },\n  \"Cabinet_Wall_C\" : {\n    \"position\" : [\n     
+        2.878,\n      2.614,\n      6\n    ],\n    \"size\" : [\n      0.575,\n     
+        1.179,\n      0.603\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
+        0\n    ],\n    \"properties\" : [\n    ]\n  },\n  \"Cabinet_Wall_C_Door\"
         : {\n    \"position\" : [\n      2.572,\n      2.614,\n      6\n    ],\n   
         \"size\" : [\n      0.036,\n      1.165,\n      0.589\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
-        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
-        \"Cabinet_Base_A\" : {\n    \"position\" : [\n      2.619,\n      0.777,\n     
-        4.232\n    ],\n    \"size\" : [\n      0.907,\n      1.353,\n      -0.657\n   
-        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Cabinet_Base_A_Door\"
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ],\n   
+        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
+        \"closed\"\n    ]\n  },\n  \"Cabinet_Base_A\" : {\n    \"position\" : [\n     
+        2.619,\n      0.777,\n      4.232\n    ],\n    \"size\" : [\n      0.907,\n     
+        1.353,\n      -0.657\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
+        0\n    ],\n    \"properties\" : [\n    ]\n  },\n  \"Cabinet_Base_A_Door\"
         : {\n    \"position\" : [\n      2.148,\n      0.636,\n      4.233\n    ],\n   
         \"size\" : [\n      0.036,\n      0.913,\n      -0.641\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
-        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
-        \"Stove\" : {\n    \"position\" : [\n      2.643,\n      0.76,\n      5.132\n   
-        ],\n    \"size\" : [\n      0.893,\n      1.286,\n      1.112\n    ],\n   
-        \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Oven_Door\"
-        : {\n    \"position\" : [\n      2.182,\n      0.856,\n      5.132\n    ],\n   
-        \"size\" : [\n      0.089,\n      0.799,\n      1.112\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ],\n   
+        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
+        \"closed\"\n    ]\n  },\n  \"Stove\" : {\n    \"position\" : [\n      2.643,\n     
+        0.76,\n      5.132\n    ],\n    \"size\" : [\n      0.893,\n      1.286,\n     
+        1.112\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
+        \"properties\" : [\n    ]\n  },\n  \"Oven_Door\" : {\n    \"position\" :
+        [\n      2.182,\n      0.856,\n      5.132\n    ],\n    \"size\" : [\n     
+        0.089,\n      0.799,\n      1.112\n    ],\n    \"rotation\" : [\n      0,\n     
+        180,\n      0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
         \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
         \"Cabinet_Base_B\" : {\n    \"position\" : [\n      2.619,\n      0.747,\n     
         6.295\n    ],\n    \"size\" : [\n      0.907,\n      1.294,\n      1.164\n   
-        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Cabinet_Base_B_Door_Left\"
-        : {\n    \"position\" : [\n      2.147,\n      0.636,\n      6.577\n    ],\n   
-        \"size\" : [\n      0.036,\n      0.913,\n      0.562\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Cabinet_Base_B_Door_Left\" : {\n    \"position\" :
+        [\n      2.147,\n      0.636,\n      6.577\n    ],\n    \"size\" : [\n     
+        0.036,\n      0.913,\n      0.562\n    ],\n    \"rotation\" : [\n      0,\n     
+        180,\n      0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
         \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
         \"Cabinet_Base_B_Door_Right\" : {\n    \"position\" : [\n      2.147,\n     
         0.636,\n      6.012\n    ],\n    \"size\" : [\n      0.036,\n      0.913,\n     
         0.562\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
-        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
-        \"closed\"\n    ]\n  },\n  \"Cabinet_Base_C\" : {\n    \"position\" : [\n     
-        2.619,\n      0.747,\n      7.556\n    ],\n    \"size\" : [\n      0.907,\n     
-        1.294,\n      1.361\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ]\n  },\n  \"Cabinet_Base_C_Door_Left\" : {\n    \"position\" : [\n     
-        2.147,\n      0.636,\n      7.888\n    ],\n    \"size\" : [\n      0.036,\n     
-        0.913,\n      0.66\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\" : [\n     
-        \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Base_C_Door_Right\"
+        \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Base_C\"
+        : {\n    \"position\" : [\n      2.619,\n      0.747,\n      7.556\n    ],\n   
+        \"size\" : [\n      0.907,\n      1.294,\n      1.361\n    ],\n    \"rotation\"
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ]\n 
+        },\n  \"Cabinet_Base_C_Door_Left\" : {\n    \"position\" : [\n      2.147,\n     
+        0.636,\n      7.888\n    ],\n    \"size\" : [\n      0.036,\n      0.913,\n     
+        0.66\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
+        \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Base_C_Door_Right\"
         : {\n    \"position\" : [\n      2.147,\n      0.636,\n      7.224\n    ],\n   
         \"size\" : [\n      0.036,\n      0.913,\n      0.66\n    ],\n    \"rotation\"
-        : [\n      0,\n      180,\n      0\n    ],\n    \"state\" : \"closed\",\n   
-        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
-        \"Fridge\" : {\n    \"position\" : [\n      -0.582,\n      1.371,\n     
-        7.89\n    ],\n    \"size\" : [\n      0.916,\n      2.456,\n      1.093\n   
-        ],\n    \"rotation\" : [\n      0,\n      -0.001,\n      0\n    ]\n  },\n 
-        \"Fridge_Door_Left\" : {\n    \"position\" : [\n      -0.021,\n      1.877,\n     
-        7.616\n    ],\n    \"size\" : [\n      0.202,\n      1.444,\n      0.545\n   
-        ],\n    \"rotation\" : [\n      0,\n      -0.001,\n      0\n    ],\n    \"state\"
-        : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n      \"closed\"\n   
-        ]\n  },\n  \"Fridge_Door_Right\" : {\n    \"position\" : [\n      -0.021,\n     
-        1.877,\n      8.164\n    ],\n    \"size\" : [\n      0.202,\n      1.444,\n     
-        0.545\n    ],\n    \"rotation\" : [\n      0,\n      -0.001,\n      0\n   
+        : [\n      0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ],\n   
+        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
+        \"closed\"\n    ]\n  },\n  \"Fridge\" : {\n    \"position\" : [\n      -0.582,\n     
+        1.371,\n      7.89\n    ],\n    \"size\" : [\n      0.916,\n      2.456,\n     
+        1.093\n    ],\n    \"rotation\" : [\n      0,\n      -0.001,\n      0\n   
+        ],\n    \"properties\" : [\n    ]\n  },\n  \"Fridge_Door_Left\" : {\n   
+        \"position\" : [\n      -0.021,\n      1.877,\n      7.616\n    ],\n    \"size\"
+        : [\n      0.202,\n      1.444,\n      0.545\n    ],\n    \"rotation\" :
+        [\n      0,\n      -0.001,\n      0\n    ],\n    \"properties\" : [\n   
         ],\n    \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
-        \"closed\"\n    ]\n  },\n  \"Cabinet_Base_D\" : {\n    \"position\" : [\n     
-        2.619,\n      0.747,\n      8.435\n    ],\n    \"size\" : [\n      0.907,\n     
-        1.294,\n      0.399\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ]\n  },\n  \"Cabinet_Base_D_Door\" : {\n    \"position\" : [\n     
-        2.148,\n      0.636,\n      8.435\n    ],\n    \"size\" : [\n      0.036,\n     
-        0.913,\n      0.39\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\" : [\n     
-        \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Wall_D\" : {\n    \"position\"
-        : [\n      -0.844,\n      2.614,\n      6.823\n    ],\n    \"size\" : [\n     
-        0.575,\n      1.179,\n      0.887\n    ],\n    \"rotation\" : [\n      0,\n     
-        0,\n      0\n    ]\n  },\n  \"Cabinet_Wall_D_Door\" : {\n    \"position\"
-        : [\n      -0.538,\n      2.614,\n      6.824\n    ],\n    \"size\" : [\n     
-        0.036,\n      1.165,\n      0.867\n    ],\n    \"rotation\" : [\n      0,\n     
-        0,\n      0\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
-        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Cabinet_Base_E\"
-        : {\n    \"position\" : [\n      -0.684,\n      0.747,\n      6.792\n   
-        ],\n    \"size\" : [\n      0.907,\n      1.294,\n      0.887\n    ],\n   
-        \"rotation\" : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Cabinet_Base_E_Door\"
-        : {\n    \"position\" : [\n      -0.213,\n      0.636,\n      6.793\n   
-        ],\n    \"size\" : [\n      0.036,\n      0.913,\n      0.867\n    ],\n   
-        \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"state\" : \"closed\",\n   
+        \"closed\"\n    ]\n  },\n  \"Fridge_Door_Right\" : {\n    \"position\" :
+        [\n      -0.021,\n      1.877,\n      8.164\n    ],\n    \"size\" : [\n     
+        0.202,\n      1.444,\n      0.545\n    ],\n    \"rotation\" : [\n      0,\n     
+        -0.001,\n      0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" :
+        \"closed\",\n    \"availableStates\" : [\n      \"open\",\n      \"closed\"\n   
+        ]\n  },\n  \"Cabinet_Base_D\" : {\n    \"position\" : [\n      2.619,\n     
+        0.747,\n      8.435\n    ],\n    \"size\" : [\n      0.907,\n      1.294,\n     
+        0.399\n    ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n   
+        \"properties\" : [\n    ]\n  },\n  \"Cabinet_Base_D_Door\" : {\n    \"position\"
+        : [\n      2.148,\n      0.636,\n      8.435\n    ],\n    \"size\" : [\n     
+        0.036,\n      0.913,\n      0.39\n    ],\n    \"rotation\" : [\n      0,\n     
+        180,\n      0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
+        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
+        \"Cabinet_Wall_D\" : {\n    \"position\" : [\n      -0.844,\n      2.614,\n     
+        6.823\n    ],\n    \"size\" : [\n      0.575,\n      1.179,\n      0.887\n   
+        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Cabinet_Wall_D_Door\" : {\n    \"position\" : [\n     
+        -0.538,\n      2.614,\n      6.824\n    ],\n    \"size\" : [\n      0.036,\n     
+        1.165,\n      0.867\n    ],\n    \"rotation\" : [\n      0,\n      0,\n     
+        0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
+        \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
+        \"Cabinet_Base_E\" : {\n    \"position\" : [\n      -0.684,\n      0.747,\n     
+        6.792\n    ],\n    \"size\" : [\n      0.907,\n      1.294,\n      0.887\n   
+        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Cabinet_Base_E_Door\" : {\n    \"position\" : [\n     
+        -0.213,\n      0.636,\n      6.793\n    ],\n    \"size\" : [\n      0.036,\n     
+        0.913,\n      0.867\n    ],\n    \"rotation\" : [\n      0,\n      0,\n     
+        0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
         \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
         \"Cabinet_Tall\" : {\n    \"position\" : [\n      -0.62,\n      1.691,\n     
         7.91\n    ],\n    \"size\" : [\n      0.992,\n      3.182,\n      1.374\n   
-        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Cabinet_Tall_Door_Left\"
-        : {\n    \"position\" : [\n      -0.106,\n      2.943,\n      7.575\n   
-        ],\n    \"size\" : [\n      0.036,\n      0.661,\n      0.667\n    ],\n   
-        \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"state\" : \"closed\",\n   
+        ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Cabinet_Tall_Door_Left\" : {\n    \"position\" : [\n     
+        -0.106,\n      2.943,\n      7.575\n    ],\n    \"size\" : [\n      0.036,\n     
+        0.661,\n      0.667\n    ],\n    \"rotation\" : [\n      0,\n      0,\n     
+        0\n    ],\n    \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n   
         \"availableStates\" : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n 
         \"Cabinet_Tall_Door_Right\" : {\n    \"position\" : [\n      -0.106,\n     
         2.943,\n      8.245\n    ],\n    \"size\" : [\n      0.036,\n      0.661,\n     
         0.667\n    ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n   
-        \"state\" : \"closed\",\n    \"availableStates\" : [\n      \"open\",\n     
-        \"closed\"\n    ]\n  },\n  \"Range_Hood\" : {\n    \"position\" : [\n     
-        2.74,\n      2.415,\n      5.132\n    ],\n    \"size\" : [\n      0.785,\n     
-        0.215,\n      1.12\n    ],\n    \"rotation\" : [\n      0,\n      180,\n     
-        0\n    ]\n  },\n  \"Toaster\" : {\n    \"position\" : [\n      2.754,\n     
-        1.488,\n      6.005\n    ],\n    \"size\" : [\n      0.215,\n      0.042,\n     
-        0.415\n    ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ]\n 
+        \"properties\" : [\n    ],\n    \"state\" : \"closed\",\n    \"availableStates\"
+        : [\n      \"open\",\n      \"closed\"\n    ]\n  },\n  \"Range_Hood\" : {\n   
+        \"position\" : [\n      2.74,\n      2.415,\n      5.132\n    ],\n    \"size\"
+        : [\n      0.785,\n      0.215,\n      1.12\n    ],\n    \"rotation\" : [\n     
+        0,\n      180,\n      0\n    ],\n    \"properties\" : [\n    ]\n  },\n  \"Toaster\"
+        : {\n    \"position\" : [\n      2.754,\n      1.488,\n      6.005\n    ],\n   
+        \"size\" : [\n      0.215,\n      0.042,\n      0.415\n    ],\n    \"rotation\"
+        : [\n      0,\n      0,\n      0\n    ],\n    \"properties\" : [\n    ]\n 
         },\n  \"Blender\" : {\n    \"position\" : [\n      -0.814,\n      1.573,\n     
         6.797\n    ],\n    \"size\" : [\n      0.275,\n      0.213,\n      0.226\n   
-        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ]\n  },\n  \"Lamp_Ceiling\"
-        : {\n    \"position\" : [\n      1.208,\n      3.876,\n      5.884\n    ],\n   
-        \"size\" : [\n      1.144,\n      0.048,\n      1.144\n    ],\n    \"rotation\"
-        : [\n      0,\n      0,\n      0\n    ]\n  },\n  \"CoffeeMaker\" : {\n   
-        \"position\" : [\n      2.639,\n      1.688,\n      4.286\n    ],\n    \"size\"
-        : [\n      0.299,\n      0.444,\n      0.253\n    ],\n    \"rotation\" :
-        [\n      0,\n      0,\n      0\n    ]\n  },\n  \"Main Camera\" : {\n    \"position\"
-        : [\n      0.61,\n      1.88,\n      7.2\n    ],\n    \"size\" : [\n     
-        0.3,\n      0.3,\n      0.3\n    ],\n    \"rotation\" : [\n      0,\n     
-        182.69,\n      0\n    ]\n  }\n}"
+        ],\n    \"rotation\" : [\n      0,\n      180,\n      0\n    ],\n    \"properties\"
+        : [\n    ]\n  },\n  \"Lamp_Ceiling\" : {\n    \"position\" : [\n      1.208,\n     
+        3.876,\n      5.884\n    ],\n    \"size\" : [\n      1.144,\n      0.048,\n     
+        1.144\n    ],\n    \"rotation\" : [\n      0,\n      0,\n      0\n    ],\n   
+        \"properties\" : [\n    ]\n  },\n  \"CoffeeMaker\" : {\n    \"position\"
+        : [\n      2.639,\n      1.688,\n      4.286\n    ],\n    \"size\" : [\n     
+        0.299,\n      0.444,\n      0.253\n    ],\n    \"rotation\" : [\n      0,\n     
+        0,\n      0\n    ],\n    \"properties\" : [\n    ]\n  },\n  \"Main Camera\"
+        : {\n    \"position\" : [\n      0.61,\n      1.88,\n      7.2\n    ],\n   
+        \"size\" : [\n      0.3,\n      0.3,\n      0.3\n    ],\n    \"rotation\"
+        : [\n      0,\n      182.69,\n      0\n    ],\n    \"properties\" : [\n   
+        ]\n  }\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 4652667815586779944, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: additionalDescribers.Array.size
@@ -9661,6 +9755,94 @@ PrefabInstance:
     - target: {fileID: 4882407843848633896, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: m_LocalRotation.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5442302700096525397, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5489855617422728237, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: jsonOutput
+      value: "{\n  \"position\" : [\n    1.208,\n    3.876,\n    5.884\n  ],\n  \"size\"
+        : [\n    1.144,\n    0.048,\n    1.144\n  ],\n  \"rotation\" : [\n    0,\n   
+        0,\n    0\n  ],\n  \"properties\" : [\n  ]\n}"
+      objectReference: {fileID: 0}
+    - target: {fileID: 6049226813309231257, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6174953439631416951, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572861586638100436, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6712068516378358490, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6841725365610184715, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6841725365610184715, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7092260317379433609, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7092260317379433609, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: _boxCollider
+      value: 
+      objectReference: {fileID: 739882316}
+    - target: {fileID: 7429426822205194766, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7958804120675270023, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7995919848821898881, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8094891198927496806, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8094891198927496806, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: jsonOutput
+      value: "{\n  \"position\" : [\n    2.754,\n    1.488,\n    6.005\n  ],\n  \"size\"
+        : [\n    0.215,\n    0.042,\n    0.415\n  ],\n  \"rotation\" : [\n    0,\n   
+        0,\n    0\n  ],\n  \"properties\" : [\n    \"movable\"\n  ]\n}"
+      objectReference: {fileID: 0}
+    - target: {fileID: 8237219386695608398, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8237219386695608398, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: jsonOutput
+      value: "{\n  \"position\" : [\n    -0.106,\n    2.943,\n    7.575\n  ],\n 
+        \"size\" : [\n    0.036,\n    0.661,\n    0.667\n  ],\n  \"rotation\" : [\n   
+        0,\n    0,\n    0\n  ],\n  \"properties\" : [\n    \"with_state\"\n  ],\n 
+        \"state\" : \"closed\",\n  \"availableStates\" : [\n    \"open\",\n    \"closed\"\n 
+        ]\n}"
+      objectReference: {fileID: 0}
+    - target: {fileID: 8237219386695608398, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: _boxCollider
+      value: 
+      objectReference: {fileID: 164034737}
+    - target: {fileID: 8241526466322944450, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: movable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9160230757952294286, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: withState
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7351439342049037521, guid: fc69750e99aa04343889e924cba5b705, type: 3}
@@ -10002,6 +10184,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 5566769706127300985, guid: 6ecb0bf6d9576ac4c9db5a24641bdf73, type: 3}
   m_PrefabInstance: {fileID: 735477371}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &739882316 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 5727450294111316960, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &739905361
 PrefabInstance:
@@ -13801,6 +13988,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 2065881535484882948, guid: c39a7487ae8768f46b4f6344ce704453, type: 3}
   m_PrefabInstance: {fileID: 1085312346}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1091984574 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 5727450292152620648, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1092820409
 PrefabInstance:
@@ -27747,6 +27939,8 @@ MonoBehaviour:
   jsonOutput: "{\n  \"position\" : [\n    0.61,\n    1.88,\n    7.2\n  ],\n  \"size\"
     : [\n    0.3,\n    0.3,\n    0.3\n  ],\n  \"rotation\" : [\n    0,\n    182.69,\n   
     0\n  ]\n}"
+  withState: 0
+  movable: 0
 --- !u!65 &2106958232
 BoxCollider:
   m_ObjectHideFlags: 0
