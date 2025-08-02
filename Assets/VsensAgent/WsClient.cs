@@ -13,6 +13,9 @@ public class WsClient : MonoBehaviour
     private static bool isTryingReconnect = false;
     private static float reconnectInterval = 3f;
 
+    // Agent行为控制器引用
+    public AgentBehaviorController agentBehaviorController;
+    
     // 事件定义
     public static event Action<string> OnAgentSpeechAudio;
     public static event Action<string> OnAgentSpeechText;
@@ -102,6 +105,13 @@ public class WsClient : MonoBehaviour
                     OnAgentSpeechAudio?.Invoke(replyMsg.audio_path);
                     OnAgentSpeechText?.Invoke(replyMsg.reply);
                     
+                    // 停止思考状态 - 结束呼吸动画
+                    var wsClient = FindObjectOfType<WsClient>();
+                    if (wsClient != null && wsClient.agentBehaviorController != null)
+                    {
+                        wsClient.agentBehaviorController.StopThinking();
+                    }
+                    
                     if (replyMsg.control != null && replyMsg.control.actions != null)
                     {
                         Debug.Log($"[WS] 🎮 Triggering OnControl with {replyMsg.control.actions.Length} actions");
@@ -140,6 +150,13 @@ public class WsClient : MonoBehaviour
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
             Debug.Log("[WS] 📤 Sent transcribe request: " + json);
+            
+            // 开始思考状态 - 启动呼吸动画
+            var wsClient = FindObjectOfType<WsClient>();
+            if (wsClient != null && wsClient.agentBehaviorController != null)
+            {
+                wsClient.agentBehaviorController.StartThinking();
+            }
         }
         else
         {

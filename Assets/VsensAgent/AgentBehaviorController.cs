@@ -14,9 +14,23 @@ public class AgentBehaviorController : MonoBehaviour
     public float eyeRadius = 0.55f;    // 眼睛贴在AgentBody表面的半径
     public float followSpeed = 5f;     // 眼睛跟随速度（平滑）
 
+    [Header("Thinking Animation Settings")]
+    public Transform pupil;            // Pupil对象（需要在Inspector中指定）
+    public float breathingFrequency = 2f;    // 呼吸频率（每秒周期数）
+    public float breathingAmplitude = 0.2f;  // 呼吸幅度（scale变化范围）
+    public float minScale = 0.8f;           // 最小缩放
+    public float maxScale = 1.2f;           // 最大缩放
+    public Color normalColor = Color.white;      // 正常颜色
+    public Color thinkingColor = Color.cyan;     // 思考时的颜色
+
     private Vector3 eyeBaseDir;        // 眼睛初始方向（相对AgentBody中心）
     private Transform agentBody;       // 用于计算球面方向的父物体
     private Vector3 initialPosition;
+    private bool isThinking = false;   // 思考状态标志
+    private Vector3 pupilOriginalScale; // Pupil原始缩放
+    private Color pupilOriginalColor;   // Pupil原始颜色
+    private Renderer pupilRenderer;     // Pupil的Renderer组件
+    private Coroutine breathingCoroutine; // 呼吸协程引用
 
     void Start()
     {
@@ -34,6 +48,29 @@ public class AgentBehaviorController : MonoBehaviour
         {
             agentBody = eye.parent;
             eyeBaseDir = eye.localPosition.normalized;
+        }
+
+        // 保存Pupil原始缩放和颜色
+        if (pupil != null)
+        {
+            pupilOriginalScale = pupil.localScale;
+            
+            // 获取Pupil的Renderer组件
+            pupilRenderer = pupil.GetComponent<Renderer>();
+            if (pupilRenderer != null)
+            {
+                pupilOriginalColor = pupilRenderer.material.color;
+                Debug.Log($"[AgentBehavior] Pupil original color: {pupilOriginalColor}");
+            }
+            else
+            {
+                Debug.LogWarning("[AgentBehavior] Pupil has no Renderer component! Color breathing will not work.");
+                pupilOriginalColor = Color.white; // 默认颜色
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[AgentBehavior] Pupil Transform not assigned! Please assign it in Inspector.");
         }
     }
 
@@ -143,6 +180,85 @@ public class AgentBehaviorController : MonoBehaviour
 
     #region 行为动作实现方法
 
+    /// <summary>
+    /// 开始思考状态 - 启动呼吸动画
+    /// </summary>
+    public void StartThinking()
+    {
+        if (isThinking) return; // 已经在思考状态
+        
+        isThinking = true;
+        Debug.Log("[AgentBehavior] 🧠 Started thinking - breathing animation activated");
+        
+        if (pupil != null && breathingCoroutine == null)
+        {
+            breathingCoroutine = StartCoroutine(BreathingAnimation());
+        }
+    }
+
+    /// <summary>
+    /// 停止思考状态 - 结束呼吸动画
+    /// </summary>
+    public void StopThinking()
+    {
+        if (!isThinking) return; // 不在思考状态
+        
+        isThinking = false;
+        Debug.Log("[AgentBehavior] ✅ Stopped thinking - breathing animation deactivated");
+        
+        // 停止呼吸协程
+        if (breathingCoroutine != null)
+        {
+            StopCoroutine(breathingCoroutine);
+            breathingCoroutine = null;
+        }
+        
+        // 恢复Pupil原始大小和颜色
+        if (pupil != null)
+        {
+            pupil.localScale = pupilOriginalScale;
+            
+            if (pupilRenderer != null)
+            {
+                pupilRenderer.material.color = pupilOriginalColor;
+                Debug.Log($"[AgentBehavior] Restored pupil to original color: {pupilOriginalColor}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 呼吸动画协程 - Pupil缩放和颜色动画
+    /// </summary>
+    private System.Collections.IEnumerator BreathingAnimation()
+    {
+        if (pupil == null) yield break;
+        
+        float time = 0f;
+        
+        while (isThinking)
+        {
+            // 使用Sin波生成呼吸节奏
+            float breathingCycle = Mathf.Sin(time * breathingFrequency * Mathf.PI * 2f);
+            
+            // 将 -1 to 1 的Sin波映射到 0 to 1 用于插值
+            float normalizedCycle = (breathingCycle + 1f) * 0.5f;
+            
+            // 应用缩放呼吸
+            float scaleMultiplier = Mathf.Lerp(minScale, maxScale, normalizedCycle);
+            pupil.localScale = pupilOriginalScale * scaleMultiplier;
+            
+            // 应用颜色呼吸
+            if (pupilRenderer != null)
+            {
+                Color currentColor = Color.Lerp(normalColor, thinkingColor, normalizedCycle);
+                pupilRenderer.material.color = currentColor;
+            }
+            
+            time += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     private void PerformWaveAction()
     {
         Debug.Log("[Behavior] Performing wave action - 占位实现");
@@ -229,6 +345,18 @@ public class AgentBehaviorController : MonoBehaviour
             emotion = "curious"
         };
         PerformBehavior(testBehavior);
+    }
+
+    [ContextMenu("Test Start Thinking")]
+    public void TestStartThinking()
+    {
+        StartThinking();
+    }
+
+    [ContextMenu("Test Stop Thinking")]
+    public void TestStopThinking()
+    {
+        StopThinking();
     }
 
     #endregion
