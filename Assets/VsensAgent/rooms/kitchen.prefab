@@ -89,6 +89,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84df97ad7ae9d4d8482f4f8f2cd5ab2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  additionalDescribers: []
   jsonOutput: "{\n  \"Int_Apt_01_Wall_02 (3)\" : {\n    \"position\" : {\n      \"x\"
     : \"-1.200\",\n      \"y\" : \"2.000\",\n      \"z\" : \"5.000\"\n    },\n   
     \"size\" : {\n      \"x\" : \"2.500\",\n      \"y\" : \"4.000\",\n      \"z\"
@@ -601,6 +602,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 8871591109648026778}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &8871591109648026778 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 8726469985235319948, guid: add8565ea42029f4abfaa37c7dbe2abf, type: 3}
@@ -748,6 +750,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 2088268435720204680}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &2088268435720204680
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -806,6 +809,7 @@ MonoBehaviour:
     \"1.165\",\n    \"z\" : \"-0.589\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1001 &865830104521248266
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -924,6 +928,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2063085490807765964, guid: f920163421f537643a94fbbfe25244f9, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 65d72af2f614466478d9d8d8d7593b95, type: 2}
     - target: {fileID: 4388711389979429264, guid: f920163421f537643a94fbbfe25244f9, type: 3}
       propertyPath: m_Name
       value: Lamp_Ceiling
@@ -935,10 +943,21 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4388711389979429264, guid: f920163421f537643a94fbbfe25244f9, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5489855617422728237}
+    - targetCorrespondingSourceObject: {fileID: 4388711389979429264, guid: f920163421f537643a94fbbfe25244f9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6556063540689796364}
+    - targetCorrespondingSourceObject: {fileID: 4388711389979429264, guid: f920163421f537643a94fbbfe25244f9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1597491152468863662}
   m_SourcePrefab: {fileID: 100100000, guid: f920163421f537643a94fbbfe25244f9, type: 3}
 --- !u!4 &357955817841640051 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 761187056149873997, guid: f920163421f537643a94fbbfe25244f9, type: 3}
+  m_PrefabInstance: {fileID: 1038063716677715774}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1352905223308836082 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 2063085490807765964, guid: f920163421f537643a94fbbfe25244f9, type: 3}
   m_PrefabInstance: {fileID: 1038063716677715774}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &3638948849925705390 stripped
@@ -961,6 +980,88 @@ MonoBehaviour:
   _boxCollider: {fileID: 7871058987102284509}
   objectName: 
   jsonOutput: 
+  movable: 0
+--- !u!114 &6556063540689796364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3638948849925705390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf86516d67a14ea3ba6039627f6c92b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _light: {fileID: 1597491152468863662}
+  _onMaterial: {fileID: 2100000, guid: 823f8d5383d173a4fb4153a73427684f, type: 2}
+  _offMaterial: {fileID: 2100000, guid: 65d72af2f614466478d9d8d8d7593b95, type: 2}
+  _renderer: {fileID: 1352905223308836082}
+--- !u!108 &1597491152468863662
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3638948849925705390}
+  m_Enabled: 0
+  serializedVersion: 11
+  m_Type: 2
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1
+  m_Range: 5
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize: 10
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShadowRadius: 0
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
 --- !u!65 &7871058987102284509 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 7159719559756033507, guid: f920163421f537643a94fbbfe25244f9, type: 3}
@@ -1248,6 +1349,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 1738577830896827959}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &1738577830896827959 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 4086183816566013596, guid: cd4ca976dbf626549971e19d7ef53367, type: 3}
@@ -1347,6 +1449,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 2597184712935222313}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &3353673546261165841 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1017606091530846216, guid: c5be39b879c83f54d9bbfebe68c809be, type: 3}
@@ -1498,6 +1601,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 6595820706551854953}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &6595820706551854953
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1556,6 +1660,7 @@ MonoBehaviour:
     \"0.913\",\n    \"z\" : \"-0.641\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1001 &2905003092994342217
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1650,6 +1755,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 4373577907166882917}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &3543301617688532114
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1779,6 +1885,7 @@ MonoBehaviour:
     \"2.839\",\n    \"z\" : \"1.426\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"90.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &8450412056489926824 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4929668019831370810, guid: f3e82dc7c471ff447b3ca0e0bfded076, type: 3}
@@ -1942,6 +2049,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 1540372683651646295}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!95 &3561118584241842390 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 546353384, guid: 452921da7fe17904da8c1d34c235dee4, type: 3}
@@ -1976,6 +2084,7 @@ MonoBehaviour:
     \"0.799\",\n    \"z\" : \"1.112\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &5232439063728926582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2208,6 +2317,7 @@ MonoBehaviour:
     \"0.661\",\n    \"z\" : \"0.541\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &917645909452117335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2262,6 +2372,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 923582095472051049}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1 &2784356178825603017 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2303757860436825979, guid: af872b04269986143906a126ca9ff444, type: 3}
@@ -2299,6 +2410,7 @@ MonoBehaviour:
     \"0.661\",\n    \"z\" : \"0.541\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &5719155468831593501
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2485,6 +2597,7 @@ MonoBehaviour:
     \"1.184\",\n    \"z\" : \"1.941\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1 &2149792593113435715 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2633268593446484574, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
@@ -2508,6 +2621,7 @@ MonoBehaviour:
     \"z\" : \"7.500\"\n  },\n  \"size\" : {\n    \"x\" : \"0.113\",\n    \"y\" :
     \"1.152\",\n    \"z\" : \"1.941\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  }\n}"
+  movable: 0
 --- !u!4 &3149737768886535114 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1362544481890875351, guid: ff74a2d207593764ea3699571e28d00a, type: 3}
@@ -2687,6 +2801,7 @@ MonoBehaviour:
     \"0.913\",\n    \"z\" : \"0.867\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"0.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1 &7895508982555611733 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5987332885971693606, guid: d9d9f374cc51a6b4fb75751346d70b83, type: 3}
@@ -2728,6 +2843,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 6562254216165720950}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &4512804144208860531
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2854,6 +2970,7 @@ MonoBehaviour:
     \"size\" : [\n    0.086,\n    2.839,\n    1.426\n  ],\n  \"rotation\" : [\n   
     0,\n    180,\n    0\n  ],\n  \"state\" : \"closed\",\n  \"availableStates\" :
     [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &8232527081622569472
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3023,6 +3140,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 6074371739744059255}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &6074371739744059255
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3094,6 +3212,7 @@ MonoBehaviour:
     \"0.913\",\n    \"z\" : \"0.562\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &1648246678498663476
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3131,6 +3250,7 @@ MonoBehaviour:
     \"0.913\",\n    \"z\" : \"0.562\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &869231847485475976
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3252,6 +3372,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 9182033131814962942}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &9182033131814962942
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3442,6 +3563,7 @@ MonoBehaviour:
     \"1.444\",\n    \"z\" : \"0.545\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"-0.001\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1 &2400527386724331275 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7334539273898789907, guid: b9f258a086096d24aa7861fa20deed65, type: 3}
@@ -3494,6 +3616,7 @@ MonoBehaviour:
     \"1.444\",\n    \"z\" : \"0.545\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"-0.001\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!1 &4330950823160758240 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8683862293970279672, guid: b9f258a086096d24aa7861fa20deed65, type: 3}
@@ -3514,6 +3637,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 2554083991867517038}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &2554083991867517038
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3691,6 +3815,7 @@ MonoBehaviour:
     \"1.165\",\n    \"z\" : \"0.589\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!114 &4114217905147998717
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3769,6 +3894,7 @@ MonoBehaviour:
     \"z\" : \"6.000\"\n  },\n  \"size\" : {\n    \"x\" : \"0.575\",\n    \"y\" :
     \"1.179\",\n    \"z\" : \"0.603\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  }\n}"
+  movable: 0
 --- !u!1001 &5225533905826573751
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3853,6 +3979,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 5483759070305613447}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &5087818808537984447 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1017606091530846216, guid: c5be39b879c83f54d9bbfebe68c809be, type: 3}
@@ -4010,6 +4137,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 5493139605865296785}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &5493139605865296785
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4064,6 +4192,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 0}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1 &4660973658753995906 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1140791054482062205, guid: 1a83256f7767c2c46a1371969648490c, type: 3}
@@ -4112,6 +4241,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 0}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!95 &5727450292152620649 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 2085779862, guid: 1a83256f7767c2c46a1371969648490c, type: 3}
@@ -4260,6 +4390,7 @@ MonoBehaviour:
     \"1.165\",\n    \"z\" : \"0.867\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"0.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!65 &6131982655778987576 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 778501379, guid: 36510e737e626954986f2c5112be9091, type: 3}
@@ -4317,6 +4448,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 4994142270458010672}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &8606096302599268696 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2483685999063698019, guid: 36510e737e626954986f2c5112be9091, type: 3}
@@ -4411,6 +4543,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 6014957748694159940}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &6483149204414220668 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1017606091530846216, guid: c5be39b879c83f54d9bbfebe68c809be, type: 3}
@@ -4571,6 +4704,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 3843854399707884}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &3811764191712793894 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7621463442920724631, guid: 0ef87058d11dd764abf30aefa470c526, type: 3}
@@ -4728,6 +4862,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 0}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1 &3460463617122438746 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5962052852234290801, guid: 48e9669af95ae5746aa4ad24d893f391, type: 3}
@@ -4776,6 +4911,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 0}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &6938931929086300143 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 213771427595585476, guid: 48e9669af95ae5746aa4ad24d893f391, type: 3}
@@ -4827,6 +4963,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 744248399804472886}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &7191534551065543440
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4918,6 +5055,7 @@ MonoBehaviour:
     \"z\" : \"5.000\"\n  },\n  \"size\" : {\n    \"x\" : \"2.500\",\n    \"y\" :
     \"4.000\",\n    \"z\" : \"0.100\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"270.000\",\n    \"z\" : \"0.000\"\n  }\n}"
+  movable: 0
 --- !u!65 &2939749840669784274
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5090,6 +5228,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 920981819755515895}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1 &4433871878512294935 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6260647602378257005, guid: d9d9f374cc51a6b4fb75751346d70b83, type: 3}
@@ -5127,6 +5266,7 @@ MonoBehaviour:
     \"0.913\",\n    \"z\" : \"0.390\"\n  },\n  \"rotation\" : {\n    \"x\" : \"0.000\",\n   
     \"y\" : \"180.000\",\n    \"z\" : \"0.000\"\n  },\n  \"state\" : \"closed\",\n 
     \"availableStates\" : [\n    \"open\",\n    \"closed\"\n  ]\n}"
+  movable: 0
 --- !u!65 &7349514245191924412 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 1050666295784109254, guid: d9d9f374cc51a6b4fb75751346d70b83, type: 3}
@@ -5232,6 +5372,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 7606179650870234840}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &7137992077769283040 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1017606091530846216, guid: c5be39b879c83f54d9bbfebe68c809be, type: 3}
@@ -5336,6 +5477,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 2694828739329877944}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &8009984486065355136
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5425,6 +5567,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 236009732364752751}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!4 &8075820230738495951 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2250178883754422351, guid: 143623a82f19a9e49b450142a80c6d52, type: 3}
@@ -5519,6 +5662,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 8147095498725890678}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!65 &8147095498725890678 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 2224919939340103282, guid: c442118e981d163429716195e7cade2f, type: 3}
@@ -5638,6 +5782,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 2580853830713589584}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &8423144821383629251
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5732,6 +5877,7 @@ MonoBehaviour:
   _boxCollider: {fileID: 5470515469504119013}
   objectName: 
   jsonOutput: 
+  movable: 0
 --- !u!1001 &9036081239713767479
 PrefabInstance:
   m_ObjectHideFlags: 0
