@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Sensor;
 using SimpleJSON;
 using UnityEngine;
@@ -8,7 +9,7 @@ public class SensorObjectDescriber : ObjectDescriber
     
     protected new void Awake()
     {
-        if (_sensor == null)
+        if (_sensor ==null)
         {
             _sensor = GetComponent<VirtualSensor>();
         }
@@ -21,10 +22,20 @@ public class SensorObjectDescriber : ObjectDescriber
         var data = base.GetDescription();
         if (_sensor != null)
         {
-            data["isSensor"] = true;
             data["sensor"] = _sensor.GetSensorDescription();
+            var parent = _sensor.transform.parent;
+            if (parent != null && parent.TryGetComponent(out ObjectDescriber parentDescriber))
+            {
+                data["attachTo"] = parentDescriber.GetObjectName();
+            }
         }
         return data;
     }
-    
+
+    public override HashSet<string> GetProperties()
+    {
+        var properties = base.GetProperties();
+        properties.Add("sensor");
+        return properties;
+    }
 }

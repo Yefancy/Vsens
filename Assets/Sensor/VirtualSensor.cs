@@ -331,6 +331,8 @@ namespace Sensor
             var description = new JSONObject();
             var definition = SensorDefinition();
             description["sensorType"] = definition.getSensorName();
+            description["showVisualization"] = showPreview;
+            description["showDataGraph"] = showGraph;
             return description;
         }
     }

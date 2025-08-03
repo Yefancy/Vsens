@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SimpleJSON;
 using UnityEditor;
 using UnityEngine;
@@ -11,11 +12,16 @@ public class ObjectDescriber : MonoBehaviour
     public string jsonOutput;
     
     [Header("Object Properties")]
-    [SerializeField] private bool withState = false;
-    [SerializeField] private bool movable = false;
+    [SerializeField] private bool movable;
     
     public string ObjectName => objectName;
 
+    public string GetObjectName()
+    {
+        if (!string.IsNullOrEmpty(objectName)) return objectName;
+        return gameObject.name;
+    }
+    
     protected void Awake()
     {
         _boxCollider = GetOrCreateBoxCollider();
@@ -38,41 +44,35 @@ public class ObjectDescriber : MonoBehaviour
         
         // 添加物品属性
         var properties = new JSONArray();
-        if (withState)
+        foreach (var property in GetProperties())
         {
-            properties.Add("with_state");
-        }
-        if (movable)
-        {
-            properties.Add("movable");
+            properties.Add(property);
         }
         data["properties"] = properties;
         
-        var stateHolder = GetComponent<IStateHolder>();
-        if (stateHolder == null) return data;
-        data["state"] = stateHolder.getCurrentState();
-        var array = new JSONArray();
-        foreach (var state in stateHolder.getAvailableStates())
+        if (TryGetComponent<IStateHolder>(out var stateHolder))
         {
-            array.Add(state);
+            data["state"] = stateHolder.getCurrentState();
+            var array = new JSONArray();
+            foreach (var state in stateHolder.getAvailableStates())
+            {
+                array.Add(state);
+            }
+            data["availableStates"] = array;
         }
-        data["availableStates"] = array;
         return data;
     }
     
-    /// <summary>
-    /// 获取物品的所有属性
-    /// </summary>
-    public string[] GetProperties()
+    public virtual HashSet<string> GetProperties()
     {
-        var propertiesList = new System.Collections.Generic.List<string>();
+        var propertiesList = new HashSet<string>();
         
-        if (withState)
+        if (TryGetComponent<IStateHolder>(out _))
             propertiesList.Add("with_state");
         if (movable)
             propertiesList.Add("movable");
-            
-        return propertiesList.ToArray();
+        
+        return propertiesList;
     }
     
     /// <summary>
@@ -80,31 +80,7 @@ public class ObjectDescriber : MonoBehaviour
     /// </summary>
     public bool HasProperty(string property)
     {
-        switch (property.ToLower())
-        {
-            case "with_state":
-                return withState;
-            case "movable":
-                return movable;
-            default:
-                return false;
-        }
-    }
-    
-    /// <summary>
-    /// 设置物品属性
-    /// </summary>
-    public void SetProperty(string property, bool value)
-    {
-        switch (property.ToLower())
-        {
-            case "with_state":
-                withState = value;
-                break;
-            case "movable":
-                movable = value;
-                break;
-        }
+        return GetProperties().Contains(property);
     }
     
     private Vector3 RoundVector3(Vector3 v, int digits = 3)
@@ -133,7 +109,7 @@ public class ObjectDescriberEditor : Editor
         // 显示当前属性信息
         EditorGUILayout.LabelField("Current Properties:", EditorStyles.boldLabel);
         var properties = describer.GetProperties();
-        if (properties.Length > 0)
+        if (properties.Count > 0)
         {
             foreach (var property in properties)
             {
@@ -155,47 +131,7 @@ public class ObjectDescriberEditor : Editor
         }
         
         GUILayout.Space(5);
-        
-        // 批量操作按钮
-        if (Selection.gameObjects.Length > 1)
-        {
-            EditorGUILayout.LabelField($"Batch Operations ({Selection.gameObjects.Length} objects selected):", EditorStyles.boldLabel);
-            
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Set All Movable"))
-            {
-                SetPropertyForSelected("movable", true);
-            }
-            if (GUILayout.Button("Set All With State"))
-            {
-                SetPropertyForSelected("with_state", true);
-            }
-            EditorGUILayout.EndHorizontal();
-            
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Clear All Movable"))
-            {
-                SetPropertyForSelected("movable", false);
-            }
-            if (GUILayout.Button("Clear All With State"))
-            {
-                SetPropertyForSelected("with_state", false);
-            }
-            EditorGUILayout.EndHorizontal();
-        }
     }
     
-    private void SetPropertyForSelected(string property, bool value)
-    {
-        foreach (var obj in Selection.gameObjects)
-        {
-            var describer = obj.GetComponent<ObjectDescriber>();
-            if (describer != null)
-            {
-                describer.SetProperty(property, value);
-                EditorUtility.SetDirty(describer);
-            }
-        }
-    }
 }
 #endif

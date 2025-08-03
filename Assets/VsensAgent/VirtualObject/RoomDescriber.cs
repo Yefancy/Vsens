@@ -16,22 +16,14 @@ public class RoomDescriber : MonoBehaviour
         foreach (var objectDescriber in GetComponentsInChildren<ObjectDescriber>())
         {
             var data = objectDescriber.GetDescription();
-            var objectName = objectDescriber.ObjectName;
-            if (objectName.Length == 0)
-            {
-                objectName = objectDescriber.name;
-            }
+            var objectName = objectDescriber.GetObjectName();
             objects.Add(objectName, data);
         }
 
         foreach (var additionalDescriber in additionalDescribers)
         {
             var data = additionalDescriber.GetDescription();
-            var objectName = additionalDescriber.ObjectName;
-            if (objectName.Length == 0)
-            {
-                objectName = additionalDescriber.name;
-            }
+            var objectName = additionalDescriber.GetObjectName();
             objects.Add(objectName, data);
         }
 

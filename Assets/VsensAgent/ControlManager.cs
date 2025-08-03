@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -70,7 +71,7 @@ namespace VsensAgent
 
         private void HandleControlWithProperties(GameObject targetObj, ObjectDescriber describer, WsClient.ControlObject ctrl)
         {
-            Debug.Log($"[ControlManager] 📋 Object '{ctrl.target}' has properties: [{string.Join(", ", describer.GetProperties())}]");
+            Debug.Log($"[ControlManager] 📋 Object '{ctrl.target}' has properties: [{string.Join(", ", describer.GetProperties().ToArray())}]");
 
             // 根据action和属性来决定处理方式
             switch (ctrl.action)
