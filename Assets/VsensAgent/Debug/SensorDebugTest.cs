@@ -8,6 +8,70 @@ namespace VsensAgent
     /// </summary>
     public class SensorDebugTest : MonoBehaviour
     {
+        [ContextMenu("Test Global Coordinate Sensor Creation")]
+        public void TestGlobalCoordinateSensorCreation()
+        {
+            Debug.Log("[SensorDebugTest] 🌍 Testing sensor creation with global coordinates workflow");
+            
+            // 模拟Agent发送的命令：全局坐标 + parent设置
+            var testCommand = new WsClient.ControlObject
+            {
+                target = "", // 空target，创建新传感器
+                action = "set_sensor",
+                parameters = new Dictionary<string, object>
+                {
+                    ["sensor_type"] = "OPTICAL",
+                    ["position"] = new float[] { 5.0f, 2.0f, 3.0f }, // Agent给出的global坐标
+                    ["rotation"] = new float[] { 0f, 90f, 0f }, // Agent给出的global旋转
+                    ["parent"] = "Main Camera", // 设置到摄像机下
+                    ["show_visualization"] = "true"
+                }
+            };
+
+            Debug.Log("[SensorDebugTest] 📋 Global coordinate workflow test:");
+            Debug.Log($"  Step 1: Create sensor in global space");
+            Debug.Log($"  Step 2: Apply global position: [{string.Join(", ", (float[])testCommand.parameters["position"])}]");
+            Debug.Log($"  Step 3: Apply global rotation: [{string.Join(", ", (float[])testCommand.parameters["rotation"])}]");
+            Debug.Log($"  Step 4: Set parent: '{testCommand.parameters["parent"]}' (Unity will convert to local)");
+
+            // 检查场景状态
+            CheckSceneComponents();
+
+            // 执行测试
+            ControlManager controlManager = FindFirstObjectByType<ControlManager>();
+            if (controlManager != null)
+            {
+                Debug.Log("[SensorDebugTest] ✅ ControlManager found, executing command...");
+                
+                var commands = new WsClient.ControlObject[] { testCommand };
+                try
+                {
+                    // 使用反射调用private方法进行测试
+                    var methodInfo = typeof(ControlManager).GetMethod("HandleControlBatch", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                    if (methodInfo != null)
+                    {
+                        methodInfo.Invoke(controlManager, new object[] { commands });
+                        Debug.Log("[SensorDebugTest] ✅ Global coordinate workflow test completed");
+                    }
+                    else
+                    {
+                        Debug.LogError("[SensorDebugTest] ❌ Could not find HandleControlBatch method");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[SensorDebugTest] ❌ Exception during global coordinate test: {ex.Message}");
+                    Debug.LogError($"[SensorDebugTest] 🔍 Stack trace: {ex.StackTrace}");
+                }
+            }
+            else
+            {
+                Debug.LogError("[SensorDebugTest] ❌ ControlManager not found in scene");
+            }
+        }
+
         [ContextMenu("Test Empty Target Sensor Creation")]
         public void TestEmptyTargetSensorCreation()
         {

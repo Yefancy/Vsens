@@ -365,25 +365,9 @@ namespace VsensAgent
                 }
                 else
                 {
-                    // 创建新传感器 - 确定parent (从parameters中获取)
-                    Transform parentTransform = null;
-                    if (ctrl.parameters != null && ctrl.parameters.ContainsKey("parent"))
-                    {
-                        string parentName = ParseStringFromParameter(ctrl.parameters["parent"]);
-                        if (!string.IsNullOrEmpty(parentName))
-                        {
-                            GameObject parentObj = GameObject.Find(parentName);
-                            if (parentObj != null)
-                            {
-                                parentTransform = parentObj.transform;
-                                Debug.Log($"[ControlManager] 👨‍👧‍👦 Using parent object: {parentName}");
-                            }
-                            else
-                            {
-                                Debug.LogWarning($"[ControlManager] ⚠️ Parent object '{parentName}' not found, creating sensor without parent");
-                            }
-                        }
-                    }
+                    // 创建新传感器 - 重要：始终以null parent创建，确保在global空间中
+                    // 这样Agent给出的global坐标才能正确应用
+                    Debug.Log($"[ControlManager] 🌍 Creating sensor in global space first (Agent coordinates are global)");
                     
                     // 检查VsensAgentSensorManager实例是否存在
                     if (VsensAgentSensorManager.Instance == null)
@@ -403,15 +387,15 @@ namespace VsensAgent
                         return;
                     }
                     
-                    Debug.Log($"[ControlManager] 🔧 Creating sensor of type '{sensorType}' with parent: {(parentTransform != null ? parentTransform.name : "null")}");
+                    Debug.Log($"[ControlManager] 🔧 Creating sensor of type '{sensorType}' in global space (parent will be set later)");
                     
-                    // 如果没有指定parent，使用默认的null (全局创建)
-                    Debug.Log("[ControlManager] 🚀 Calling VsensAgentSensorManager.Instance.CreateSensorByName...");
+                    // 始终以null parent创建，确保在global空间
+                    Debug.Log("[ControlManager] 🚀 Calling VsensAgentSensorManager.Instance.CreateSensorByName with null parent...");
                     VirtualSensor virtualSensor = null;
                     
                     try
                     {
-                        virtualSensor = VsensAgentSensorManager.Instance.CreateSensorByName(sensorType, parentTransform);
+                        virtualSensor = VsensAgentSensorManager.Instance.CreateSensorByName(sensorType, null);
                     }
                     catch (System.Exception createEx)
                     {
@@ -438,8 +422,8 @@ namespace VsensAgent
                     Debug.Log($"[ControlManager] ✅ Created new sensor: {sensorObj.name} (GameObject valid: {sensorObj != null})");
                 }
 
-                // 4. 应用变换参数
-                Debug.Log("[ControlManager] 🔧 About to apply transform parameters...");
+                // 4. 应用Agent的global变换参数 (必须在设置parent之前)
+                Debug.Log("[ControlManager] 🌍 Applying Agent's global transform parameters...");
                 if (sensorObj != null)
                 {
                     Debug.Log($"[ControlManager] 📍 sensorObj is valid: {sensorObj.name} (active: {sensorObj.activeInHierarchy})");
@@ -451,8 +435,8 @@ namespace VsensAgent
                     return;
                 }
 
-                // 5. 应用传感器特定参数
-                Debug.Log("[ControlManager] 🔧 About to apply sensor-specific parameters...");
+                // 5. 应用传感器特定参数 (包括parent设置，必须在应用global坐标之后)
+                Debug.Log("[ControlManager] 🔧 Applying sensor-specific parameters (including parent setup)...");
                 if (sensorObj != null && ctrl.parameters != null)
                 {
                     ApplySensorSpecificParameters(sensorObj, ctrl.parameters);
@@ -550,7 +534,8 @@ namespace VsensAgent
                 }
             }
 
-            // 处理parent参数 (用于修改现有传感器的父对象)
+            // 处理parent参数 (重要：必须在应用global坐标之后设置)
+            // Agent给出的坐标是global的，我们先应用了这些坐标，现在设置parent让Unity自动转换为local坐标
             if (parameters.ContainsKey("parent"))
             {
                 string parentName = ParseStringFromParameter(parameters["parent"]);
@@ -559,8 +544,13 @@ namespace VsensAgent
                     GameObject parentObj = GameObject.Find(parentName);
                     if (parentObj != null)
                     {
+                        Debug.Log($"[ControlManager] 🌍➡️👨‍👧‍👦 Converting from global to local space by setting parent '{parentName}' for {sensorObj.name}");
+                        Debug.Log($"[ControlManager] 📍 Before parent: position={sensorObj.transform.position}, rotation={sensorObj.transform.eulerAngles}");
+                        
                         sensorObj.transform.SetParent(parentObj.transform);
-                        Debug.Log($"[ControlManager] 👨‍👧‍👦 Set parent of {sensorObj.name} to {parentName}");
+                        
+                        Debug.Log($"[ControlManager] 📍 After parent: position={sensorObj.transform.position}, rotation={sensorObj.transform.eulerAngles}");
+                        Debug.Log($"[ControlManager] 📍 Local coordinates: position={sensorObj.transform.localPosition}, rotation={sensorObj.transform.localEulerAngles}");
                     }
                     else
                     {
@@ -569,15 +559,16 @@ namespace VsensAgent
                 }
                 else
                 {
-                    // 空字符串表示移除父对象
+                    // 空字符串表示移除父对象 (回到global space)
+                    Debug.Log($"[ControlManager] 🆓 Removing parent from {sensorObj.name} (back to global space)");
                     sensorObj.transform.SetParent(null);
-                    Debug.Log($"[ControlManager] 🆓 Removed parent from {sensorObj.name} (set to global)");
                 }
             }
         }
 
         /// <summary>
-        /// 应用变换参数到游戏对象
+        /// 应用Agent给出的global变换参数到游戏对象
+        /// 注意：Agent给出的所有坐标和旋转都是global coordinate，必须在设置parent之前应用
         /// </summary>
         /// <param name="obj">目标游戏对象</param>
         /// <param name="parameters">参数字典</param>
@@ -595,22 +586,22 @@ namespace VsensAgent
                 return;
             }
 
-            Debug.Log($"[ControlManager] 🔧 Applying transform parameters to {obj.name}");
+            Debug.Log($"[ControlManager] 🌍 Applying Agent's global transform parameters to {obj.name}");
 
-            // 处理位置参数
+            // 处理位置参数 - Agent给出的是global坐标
             if (parameters.ContainsKey("position"))
             {
                 Vector3 newPosition = ParseVector3FromArray(parameters["position"], obj.transform.position);
                 obj.transform.position = newPosition;
-                Debug.Log($"[ControlManager] 📍 Set position of '{obj.name}' to {newPosition}");
+                Debug.Log($"[ControlManager] 📍 Set global position of '{obj.name}' to {newPosition}");
             }
 
-            // 处理旋转参数
+            // 处理旋转参数 - Agent给出的是global旋转
             if (parameters.ContainsKey("rotation"))
             {
                 Vector3 newRotation = ParseVector3FromArray(parameters["rotation"], obj.transform.eulerAngles);
                 obj.transform.rotation = Quaternion.Euler(newRotation);
-                Debug.Log($"[ControlManager] 🔄 Set rotation of '{obj.name}' to {newRotation}");
+                Debug.Log($"[ControlManager] 🔄 Set global rotation of '{obj.name}' to {newRotation}");
             }
 
             // 注意：根据用户反馈，删除了scale参数支持，因为用户不太会去调整传感器的大小
