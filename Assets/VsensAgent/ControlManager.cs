@@ -3,6 +3,8 @@ using System;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using VsensAgent.VirtualObject.Sensor;
+using Sensor;
 
 namespace VsensAgent
 {
@@ -40,13 +42,27 @@ namespace VsensAgent
 
         private void HandleSingleControl(WsClient.ControlObject ctrl)
         {
-            if (ctrl == null || string.IsNullOrEmpty(ctrl.target))
+            if (ctrl == null)
             {
-                Debug.LogWarning("[ControlManager] ⚠️ Received null or invalid control command.");
+                Debug.LogWarning("[ControlManager] ⚠️ Received null control command.");
                 return;
             }
 
             Debug.Log($"[ControlManager] 🎮 Handling control: {ctrl.action} on {ctrl.target}");
+
+            // set_sensor 命令的特殊处理（可能不需要现有的target object）
+            if (ctrl.action == "set_sensor")
+            {
+                HandleSetSensorAction(ctrl);
+                return;
+            }
+
+            // 其他命令需要target object
+            if (string.IsNullOrEmpty(ctrl.target))
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ Received invalid control command - missing target.");
+                return;
+            }
 
             // 1. 查找场景物体
             GameObject targetObj = GameObject.Find(ctrl.target);
@@ -110,6 +126,11 @@ namespace VsensAgent
                     // 高亮不需要特定属性，任何物品都可以高亮
                     HandleHighlightAction(targetObj, ctrl);
                     break;
+
+                case "set_sensor":
+                    // 传感器命令需要特殊处理，因为可能创建新对象
+                    HandleSetSensorAction(ctrl);
+                    return; // 直接返回，不需要targetObj
 
                 default:
                     Debug.LogWarning($"[ControlManager] ⚠️ Unsupported action '{ctrl.action}' for object '{ctrl.target}'.");
@@ -293,5 +314,308 @@ namespace VsensAgent
                 Debug.LogWarning($"[ControlManager] ⚠️ Cannot highlight '{obj.name}' - no Renderer component found.");
             }
         }
+
+        // ===================== SENSOR CONTROL METHODS =====================
+
+        /// <summary>
+        /// 处理传感器创建和修改命令
+        /// </summary>
+        /// <param name="ctrl">传感器控制命令</param>
+        private void HandleSetSensorAction(WsClient.ControlObject ctrl)
+        {
+            Debug.Log($"[ControlManager] 🔧 Processing sensor command: {ctrl.action}");
+
+            try
+            {
+                // 1. 获取传感器类型（必需参数）
+                if (ctrl.parameters == null || !ctrl.parameters.ContainsKey("sensor_type"))
+                {
+                    Debug.LogError("[ControlManager] ❌ sensor_type parameter is required for set_sensor command");
+                    return;
+                }
+
+                string sensorType = ParseStringFromParameter(ctrl.parameters["sensor_type"]);
+                if (string.IsNullOrEmpty(sensorType))
+                {
+                    Debug.LogError("[ControlManager] ❌ sensor_type parameter cannot be empty");
+                    return;
+                }
+
+                // 2. 检查是否是修改现有传感器
+                GameObject existingSensor = null;
+                if (!string.IsNullOrEmpty(ctrl.target))
+                {
+                    existingSensor = GameObject.Find(ctrl.target);
+                    if (existingSensor != null)
+                    {
+                        Debug.Log($"[ControlManager] 🔄 Modifying existing sensor: {ctrl.target}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ControlManager] ⚠️ Target sensor '{ctrl.target}' not found, creating new sensor instead");
+                    }
+                }
+
+                // 3. 创建或修改传感器
+                GameObject sensorObj;
+                if (existingSensor != null)
+                {
+                    sensorObj = existingSensor;
+                    Debug.Log($"[ControlManager] 📝 Modifying sensor: {sensorObj.name}");
+                }
+                else
+                {
+                    // 创建新传感器 - 确定parent (从parameters中获取)
+                    Transform parentTransform = null;
+                    if (ctrl.parameters != null && ctrl.parameters.ContainsKey("parent"))
+                    {
+                        string parentName = ParseStringFromParameter(ctrl.parameters["parent"]);
+                        if (!string.IsNullOrEmpty(parentName))
+                        {
+                            GameObject parentObj = GameObject.Find(parentName);
+                            if (parentObj != null)
+                            {
+                                parentTransform = parentObj.transform;
+                                Debug.Log($"[ControlManager] 👨‍👧‍👦 Using parent object: {parentName}");
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[ControlManager] ⚠️ Parent object '{parentName}' not found, creating sensor without parent");
+                            }
+                        }
+                    }
+                    
+                    // 检查VsensAgentSensorManager实例是否存在
+                    if (VsensAgentSensorManager.Instance == null)
+                    {
+                        Debug.LogError("[ControlManager] ❌ VsensAgentSensorManager.Instance is null! Make sure VsensAgentSensorManager is in the scene.");
+                        
+                        // 尝试查找场景中的VsensAgentSensorManager
+                        var sensorManagerInScene = FindFirstObjectByType<VsensAgentSensorManager>();
+                        if (sensorManagerInScene != null)
+                        {
+                            Debug.LogWarning("[ControlManager] 🔧 Found VsensAgentSensorManager in scene but Instance is null. This suggests initialization issue.");
+                        }
+                        else
+                        {
+                            Debug.LogError("[ControlManager] ❌ No VsensAgentSensorManager found in scene!");
+                        }
+                        return;
+                    }
+                    
+                    Debug.Log($"[ControlManager] 🔧 Creating sensor of type '{sensorType}' with parent: {(parentTransform != null ? parentTransform.name : "null")}");
+                    
+                    // 如果没有指定parent，使用默认的null (全局创建)
+                    Debug.Log("[ControlManager] 🚀 Calling VsensAgentSensorManager.Instance.CreateSensorByName...");
+                    VirtualSensor virtualSensor = null;
+                    
+                    try
+                    {
+                        virtualSensor = VsensAgentSensorManager.Instance.CreateSensorByName(sensorType, parentTransform);
+                    }
+                    catch (System.Exception createEx)
+                    {
+                        Debug.LogError($"[ControlManager] ❌ Exception during CreateSensorByName: {createEx.Message}");
+                        Debug.LogError($"[ControlManager] 🔍 CreateSensorByName stack trace: {createEx.StackTrace}");
+                        return;
+                    }
+                    
+                    if (virtualSensor == null)
+                    {
+                        Debug.LogError($"[ControlManager] ❌ Failed to create sensor of type: {sensorType}");
+                        return;
+                    }
+                    
+                    Debug.Log($"[ControlManager] ✅ CreateSensorByName returned: {virtualSensor} (type: {virtualSensor.GetType().Name})");
+                    
+                    sensorObj = virtualSensor.gameObject;
+                    if (sensorObj == null)
+                    {
+                        Debug.LogError("[ControlManager] ❌ Created VirtualSensor has null gameObject!");
+                        return;
+                    }
+                    
+                    Debug.Log($"[ControlManager] ✅ Created new sensor: {sensorObj.name} (GameObject valid: {sensorObj != null})");
+                }
+
+                // 4. 应用变换参数
+                Debug.Log("[ControlManager] 🔧 About to apply transform parameters...");
+                if (sensorObj != null)
+                {
+                    Debug.Log($"[ControlManager] 📍 sensorObj is valid: {sensorObj.name} (active: {sensorObj.activeInHierarchy})");
+                    ApplyTransformParameters(sensorObj, ctrl.parameters);
+                }
+                else
+                {
+                    Debug.LogError("[ControlManager] ❌ Cannot apply transform parameters - sensorObj is null");
+                    return;
+                }
+
+                // 5. 应用传感器特定参数
+                Debug.Log("[ControlManager] 🔧 About to apply sensor-specific parameters...");
+                if (sensorObj != null && ctrl.parameters != null)
+                {
+                    ApplySensorSpecificParameters(sensorObj, ctrl.parameters);
+                }
+                else
+                {
+                    Debug.LogError("[ControlManager] ❌ Cannot apply sensor parameters - sensorObj or parameters is null");
+                    return;
+                }
+
+                Debug.Log($"[ControlManager] 🎯 Sensor command completed successfully for: {sensorObj.name}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[ControlManager] ❌ Error in HandleSetSensorAction: {e.Message}");
+                Debug.LogError($"[ControlManager] 🔍 Stack trace: {e.StackTrace}");
+                
+                // 提供更详细的错误信息
+                if (e is System.NullReferenceException)
+                {
+                    Debug.LogError("[ControlManager] 💡 This is a NullReferenceException. Check if:");
+                    Debug.LogError("  - VsensAgentSensorManager.Instance is not null");
+                    Debug.LogError("  - CreateSensorByName returned a valid VirtualSensor");
+                    Debug.LogError("  - VirtualSensor.gameObject is not null");
+                    Debug.LogError("  - All required components are attached to the sensor prefab");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 应用传感器特定的参数
+        /// </summary>
+        /// <param name="sensorObj">传感器游戏对象</param>
+        /// <param name="parameters">参数字典</param>
+        private void ApplySensorSpecificParameters(GameObject sensorObj, System.Collections.Generic.Dictionary<string, object> parameters)
+        {
+            if (sensorObj == null)
+            {
+                Debug.LogError("[ControlManager] ❌ ApplySensorSpecificParameters: sensorObj is null");
+                return;
+            }
+            
+            if (parameters == null)
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ ApplySensorSpecificParameters: parameters is null");
+                return;
+            }
+
+            Debug.Log($"[ControlManager] 🔧 Applying sensor-specific parameters to {sensorObj.name}");
+
+            // 获取SensorObjectDescriber组件
+            SensorObjectDescriber sensorDescriber = sensorObj.GetComponent<SensorObjectDescriber>();
+            if (sensorDescriber == null)
+            {
+                Debug.LogWarning($"[ControlManager] ⚠️ No SensorObjectDescriber found on {sensorObj.name}");
+                return;
+            }
+
+            // 处理show_visualization参数
+            if (parameters.ContainsKey("show_visualization"))
+            {
+                string showVisString = ParseStringFromParameter(parameters["show_visualization"]);
+                bool showVis = bool.Parse(showVisString);
+                Debug.Log($"[ControlManager] 👁️ Setting show_visualization to {showVis} for {sensorObj.name}");
+                // 这里可以添加具体的可视化控制逻辑
+            }
+
+            // 处理show_data_graph参数
+            if (parameters.ContainsKey("show_data_graph"))
+            {
+                string showDataString = ParseStringFromParameter(parameters["show_data_graph"]);
+                bool showData = bool.Parse(showDataString);
+                Debug.Log($"[ControlManager] 📊 Setting show_data_graph to {showData} for {sensorObj.name}");
+                // 这里可以添加具体的数据图表控制逻辑
+            }
+
+            // 处理validDistance参数 (仅用于DISTANCE传感器)
+            if (parameters.ContainsKey("validDistance"))
+            {
+                string distanceString = ParseStringFromParameter(parameters["validDistance"]);
+                float distance = float.Parse(distanceString);
+                Debug.Log($"[ControlManager] 📏 Setting validDistance to {distance} for {sensorObj.name}");
+                // 这里可以添加具体的距离设置逻辑
+            }
+
+            // 处理lookDirection参数 (仅用于DISTANCE传感器)
+            if (parameters.ContainsKey("lookDirection"))
+            {
+                Vector3 lookDir = ParseVector3FromArray(parameters["lookDirection"], Vector3.forward);
+                Debug.Log($"[ControlManager] 👀 Setting lookDirection to {lookDir} for {sensorObj.name}");
+                // 应用朝向
+                if (lookDir != Vector3.zero)
+                {
+                    sensorObj.transform.rotation = Quaternion.LookRotation(lookDir);
+                }
+            }
+
+            // 处理parent参数 (用于修改现有传感器的父对象)
+            if (parameters.ContainsKey("parent"))
+            {
+                string parentName = ParseStringFromParameter(parameters["parent"]);
+                if (!string.IsNullOrEmpty(parentName))
+                {
+                    GameObject parentObj = GameObject.Find(parentName);
+                    if (parentObj != null)
+                    {
+                        sensorObj.transform.SetParent(parentObj.transform);
+                        Debug.Log($"[ControlManager] 👨‍👧‍👦 Set parent of {sensorObj.name} to {parentName}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ControlManager] ⚠️ Parent object '{parentName}' not found");
+                    }
+                }
+                else
+                {
+                    // 空字符串表示移除父对象
+                    sensorObj.transform.SetParent(null);
+                    Debug.Log($"[ControlManager] 🆓 Removed parent from {sensorObj.name} (set to global)");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 应用变换参数到游戏对象
+        /// </summary>
+        /// <param name="obj">目标游戏对象</param>
+        /// <param name="parameters">参数字典</param>
+        private void ApplyTransformParameters(GameObject obj, System.Collections.Generic.Dictionary<string, object> parameters)
+        {
+            if (obj == null)
+            {
+                Debug.LogError("[ControlManager] ❌ ApplyTransformParameters: obj is null");
+                return;
+            }
+            
+            if (parameters == null)
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ ApplyTransformParameters: parameters is null");
+                return;
+            }
+
+            Debug.Log($"[ControlManager] 🔧 Applying transform parameters to {obj.name}");
+
+            // 处理位置参数
+            if (parameters.ContainsKey("position"))
+            {
+                Vector3 newPosition = ParseVector3FromArray(parameters["position"], obj.transform.position);
+                obj.transform.position = newPosition;
+                Debug.Log($"[ControlManager] 📍 Set position of '{obj.name}' to {newPosition}");
+            }
+
+            // 处理旋转参数
+            if (parameters.ContainsKey("rotation"))
+            {
+                Vector3 newRotation = ParseVector3FromArray(parameters["rotation"], obj.transform.eulerAngles);
+                obj.transform.rotation = Quaternion.Euler(newRotation);
+                Debug.Log($"[ControlManager] 🔄 Set rotation of '{obj.name}' to {newRotation}");
+            }
+
+            // 注意：根据用户反馈，删除了scale参数支持，因为用户不太会去调整传感器的大小
+        }
+
+        // ===================== END SENSOR CONTROL METHODS =====================
     }
 }
