@@ -9786,7 +9786,9 @@ PrefabInstance:
       propertyPath: jsonOutput
       value: "{\n  \"position\" : [\n    1.208,\n    3.876,\n    5.884\n  ],\n  \"size\"
         : [\n    1.144,\n    0.048,\n    1.144\n  ],\n  \"rotation\" : [\n    0,\n   
-        0,\n    0\n  ],\n  \"properties\" : [\n  ]\n}"
+        0,\n    0\n  ],\n  \"properties\" : [\n    \"with_state\"\n  ],\n  \"state\"
+        : \"closed\",\n  \"availableStates\" : [\n    \"open\",\n    \"closed\"\n 
+        ]\n}"
       objectReference: {fileID: 0}
     - target: {fileID: 6049226813309231257, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: movable
