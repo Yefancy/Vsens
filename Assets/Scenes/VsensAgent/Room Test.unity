@@ -28731,6 +28731,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2783434132659308662, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
+      propertyPath: m_fontSize
+      value: 22.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 2783434132659308662, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 56d2da2fd37714299893df9cf20de84d, type: 2}
+    - target: {fileID: 2783434132659308662, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -8727113273258808542, guid: 56d2da2fd37714299893df9cf20de84d, type: 2}
+    - target: {fileID: 2783434132659308662, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4245039401993328653, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_Name
       value: Agent
