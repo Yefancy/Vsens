@@ -293,7 +293,10 @@ namespace VsensAgent
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer != null)
             {
-                // 简单的高亮实现 - 可以替换为更复杂的效果
+                // 保存原始颜色
+                Color originalColor = renderer.material.color;
+                
+                // 设置高亮颜色
                 Color highlightColor = Color.yellow;
                 
                 // 如果参数中指定了颜色
@@ -306,12 +309,39 @@ namespace VsensAgent
                     }
                 }
                 
+                // 应用高亮颜色
                 renderer.material.color = highlightColor;
-                Debug.Log($"[ControlManager] ✅ Highlighted '{obj.name}' with color {highlightColor}");
+                Debug.Log($"[ControlManager] ✅ Highlighted '{obj.name}' with color {highlightColor}, will restore to {originalColor} in 5 seconds");
+                
+                // 启动协程在5秒后恢复原始颜色
+                StartCoroutine(RestoreColorAfterDelay(renderer, originalColor, 5.0f, obj.name));
             }
             else
             {
                 Debug.LogWarning($"[ControlManager] ⚠️ Cannot highlight '{obj.name}' - no Renderer component found.");
+            }
+        }
+
+        /// <summary>
+        /// 在指定延迟后恢复物体的原始颜色
+        /// </summary>
+        /// <param name="renderer">渲染器组件</param>
+        /// <param name="originalColor">原始颜色</param>
+        /// <param name="delay">延迟时间（秒）</param>
+        /// <param name="objectName">物体名称（用于日志）</param>
+        private System.Collections.IEnumerator RestoreColorAfterDelay(Renderer renderer, Color originalColor, float delay, string objectName)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            // 检查渲染器是否仍然存在（物体可能已被销毁）
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.color = originalColor;
+                Debug.Log($"[ControlManager] 🔄 Restored original color {originalColor} for '{objectName}' after {delay} seconds");
+            }
+            else
+            {
+                Debug.LogWarning($"[ControlManager] ⚠️ Cannot restore color for '{objectName}' - renderer or material no longer exists");
             }
         }
 
