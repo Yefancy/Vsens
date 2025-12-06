@@ -17,8 +17,7 @@ public class WsClient : MonoBehaviour
     public AgentBehaviorController agentBehaviorController;
     
     // 事件定义
-    public static event Action<string> OnAgentSpeechAudio;
-    public static event Action<string> OnAgentSpeechText;
+    public static event Action<AgentReplyMessage> OnAgentReply;  // 统一的Agent回复事件（语音+文字）
     public static event Action<ControlObject[]> OnControl; // 统一使用数组
     public static event Action<AgentBehavior> OnAgentBehavior;
 
@@ -33,7 +32,6 @@ public class WsClient : MonoBehaviour
 
         websocket.OnOpen += () =>
         {
-            Debug.Log("[WS] ✅ Connected.");
             isTryingReconnect = false;
         };
 
@@ -76,7 +74,6 @@ public class WsClient : MonoBehaviour
     {
         while (isTryingReconnect)
         {
-            Debug.Log("[WS] 🔁 Trying to reconnect...");
             yield return new WaitForSeconds(reconnectInterval);
 
             Task connectTask = ConnectWebSocket();
@@ -84,7 +81,6 @@ public class WsClient : MonoBehaviour
 
             if (websocket != null && websocket.State == WebSocketState.Open)
             {
-                Debug.Log("[WS] ✅ Reconnected successfully.");
                 isTryingReconnect = false;
                 break;
             }
@@ -95,26 +91,26 @@ public class WsClient : MonoBehaviour
     {
         try
         {
-            Debug.Log($"[WS] 📥 Received message: {json}"); // 添加调试日志
             var typeWrapper = JsonConvert.DeserializeObject<MessageTypeWrapper>(json);
 
             switch (typeWrapper.type)
             {
                 case "agent_ready":
                     var replyMsg = JsonConvert.DeserializeObject<AgentReplyMessage>(json);
-                    OnAgentSpeechAudio?.Invoke(replyMsg.audio_path);
-                    OnAgentSpeechText?.Invoke(replyMsg.reply);
+                    
+                    // 触发统一的回复事件
+                    OnAgentReply?.Invoke(replyMsg);
                     
                     // 停止思考状态 - 结束呼吸动画
-                    var wsClient = FindObjectOfType<WsClient>();
+                    var wsClient = FindFirstObjectByType<WsClient>();
                     if (wsClient != null && wsClient.agentBehaviorController != null)
                     {
                         wsClient.agentBehaviorController.StopThinking();
                     }
                     
+                    // 处理控制指令
                     if (replyMsg.control != null && replyMsg.control.actions != null)
                     {
-                        Debug.Log($"[WS] 🎮 Triggering OnControl with {replyMsg.control.actions.Length} actions");
                         OnControl?.Invoke(replyMsg.control.actions);
                     }
                     break;
@@ -135,24 +131,25 @@ public class WsClient : MonoBehaviour
         }
     }
 
-    public static void SendTranscribeRequest(string audioPath, string sceneSnapshotJson)
+    public static void SendTranscribeRequest(string audioPath)
     {
         if (websocket != null && websocket.State == WebSocketState.Open)
         {
-            // 获取主摄像机信息
+            // 获取场景描述
+            string sceneDescription = GetCurrentSceneDescription();
+            
             var payload = new TranscribeRequest()
             {
                 type = "transcribe_and_reply",
                 audio_path = audioPath,
-                scene_snapshot = sceneSnapshotJson,
+                scene_snapshot = sceneDescription,
             };
 
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
-            Debug.Log("[WS] 📤 Sent transcribe request: " + json);
             
             // 开始思考状态 - 启动呼吸动画
-            var wsClient = FindObjectOfType<WsClient>();
+            var wsClient = FindFirstObjectByType<WsClient>();
             if (wsClient != null && wsClient.agentBehaviorController != null)
             {
                 wsClient.agentBehaviorController.StartThinking();
@@ -164,7 +161,55 @@ public class WsClient : MonoBehaviour
         }
     }
 
+    public static void SendTextChatRequest(string message)
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            // 获取场景描述
+            string sceneDescription = GetCurrentSceneDescription();
+            
+            var payload = new TextChatRequest()
+            {
+                type = "text_chat",
+                message = message,
+                scene_snapshot = sceneDescription,
+                request_audio = false
+            };
+
+            string json = JsonConvert.SerializeObject(payload);
+            websocket.SendText(json);
+            
+            // 开始思考状态 - 启动呼吸动画
+            var wsClient = FindFirstObjectByType<WsClient>();
+            if (wsClient != null && wsClient.agentBehaviorController != null)
+            {
+                wsClient.agentBehaviorController.StartThinking();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send text message.");
+        }
+    }
+
     public static bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
+
+    /// <summary>
+    /// 获取当前场景描述的统一方法
+    /// </summary>
+    public static string GetCurrentSceneDescription()
+    {
+        RoomDescriber describer = FindFirstObjectByType<RoomDescriber>();
+        if (describer != null)
+        {
+            return describer.GetRoomDescription().ToString();
+        }
+        else
+        {
+            Debug.LogWarning("[WsClient] No RoomDescriber found in scene.");
+            return "{}";
+        }
+    }
 
     private async void OnApplicationQuit()
     {
@@ -211,6 +256,15 @@ public class WsClient : MonoBehaviour
         public string type;
         public string audio_path;
         public string scene_snapshot;
+    }
+
+    [Serializable]
+    public class TextChatRequest
+    {
+        public string type;
+        public string message;
+        public string scene_snapshot;
+        public bool request_audio;
     }
 
     [Serializable]

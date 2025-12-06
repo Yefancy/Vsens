@@ -5,12 +5,24 @@ public class AgentVoiceController : MonoBehaviour
     public AudioSource audioSource;
     void OnEnable()
     {
-        WsClient.OnAgentSpeechAudio += PlayTTSFromPath;
+        WsClient.OnAgentReply += OnAgentReplyReceived;
     }
 
     void OnDisable()
     {
-        WsClient.OnAgentSpeechAudio -= PlayTTSFromPath;
+        WsClient.OnAgentReply -= OnAgentReplyReceived;
+    }
+
+    /// <summary>
+    /// 处理Agent回复，如果有音频则播放
+    /// </summary>
+    private void OnAgentReplyReceived(WsClient.AgentReplyMessage reply)
+    {
+        // 只有当有音频路径时才播放
+        if (!string.IsNullOrEmpty(reply.audio_path))
+        {
+            PlayTTSFromPath(reply.audio_path);
+        }
     }
 
     public void PlayTTSFromPath(string path)

@@ -20,6 +20,7 @@ public class AudioRecorder : MonoBehaviour
     private AudioClip recordedClip;
     private string filePath;
     private bool isRecording = false;
+    private bool inputEnabled = true;  // 控制是否响应键盘输入
 
     void Start()
     {
@@ -38,6 +39,17 @@ public class AudioRecorder : MonoBehaviour
 
     void Update()
     {
+        // 只有在输入启用时才响应R键
+        if (!inputEnabled) 
+        {
+            // 在输入被禁用时检测R键按下并显示警告
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                Debug.LogWarning("[AudioRecorder] ⚠️ R key pressed but input is DISABLED (chat focused)");
+            }
+            return;
+        }
+        
         if (Input.GetKeyDown(KeyCode.R) && !isRecording)
         {
             StartRecording();
@@ -53,7 +65,13 @@ public class AudioRecorder : MonoBehaviour
     {
         recordedClip = Microphone.Start(micDevice, false, maxDuration, sampleRate);
         isRecording = true;
-        Debug.Log("[Recorder] Recording started...");
+        
+        // 🔥 通知ChatUI显示录音指示器
+        var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+        if (chatUI != null)
+        {
+            chatUI.ShowVoiceRecording(true);
+        }
     }
 
     void StopRecording()
@@ -61,6 +79,15 @@ public class AudioRecorder : MonoBehaviour
         int position = Microphone.GetPosition(micDevice);
         Microphone.End(micDevice);
         isRecording = false;
+        
+        // 🔥 获取ChatUI引用（在方法开头获取一次）
+        var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+        
+        // 通知ChatUI隐藏录音指示器
+        if (chatUI != null)
+        {
+            chatUI.ShowVoiceRecording(false);
+        }
 
         if (position <= 0)
         {
@@ -69,6 +96,12 @@ public class AudioRecorder : MonoBehaviour
         }
 
         // Trim to actual recorded samples
+        if (recordedClip == null)
+        {
+            Debug.LogError("[AudioRecorder] ❌ recordedClip is null! Cannot process audio.");
+            return;
+        }
+
         float[] fullData = new float[recordedClip.samples * recordedClip.channels];
         recordedClip.GetData(fullData, 0);
 
@@ -79,11 +112,16 @@ public class AudioRecorder : MonoBehaviour
         trimmedClip.SetData(trimmedData, 0);
         recordedClip = trimmedClip;
 
-        Debug.Log($"[Recorder] Trimmed to {(position / (float)sampleRate):0.00} seconds.");
         SaveToWav();
+        
+        // 🔥 通知ChatUI添加语音消息
+        if (chatUI != null && position > 0)
+        {
+            chatUI.AddVoiceMessage(filePath);
+        }
 
         // ✅ 通知 WebSocket
-        WsClient.SendTranscribeRequest(filePath, GetRoomDescriptionJson());
+        WsClient.SendTranscribeRequest(filePath);
     }
 
     void SaveToWav()
@@ -100,27 +138,33 @@ public class AudioRecorder : MonoBehaviour
         string fileName = "recorded_audio_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".wav";
         filePath = Path.Combine(folderPath, fileName);
 
-        WavUtility.FromAudioClip(recordedClip, filePath, true);  // ✅ 注意：你需要带路径版本的 WavUtility
-        Debug.Log("[Recorder] Saved to: " + filePath);
-    }
-
-    // Support method to get room description in JSON format (Assuming RoomDescriber is set up)
-    private string GetRoomDescriptionJson()
-    {
-        RoomDescriber describer = FindFirstObjectByType<RoomDescriber>();
-        if (describer != null)
-        {
-            return describer.GetRoomDescription().ToString();
-        }
-        else
-        {
-            Debug.LogWarning("[Recorder] No RoomDescriber found in scene.");
-            return "{}";
-        }
+        WavUtility.FromAudioClip(recordedClip, filePath, true);
     }
 
     public string GetLatestFilePath()
     {
         return filePath;
+    }
+    
+    /// <summary>
+    /// 设置是否启用输入控制（由InputController调用）
+    /// </summary>
+    public void SetInputEnabled(bool enabled)
+    {
+        inputEnabled = enabled;
+        
+        // 如果在禁用输入时正在录音，停止录音
+        if (!enabled && isRecording)
+        {
+            StopRecording();
+        }
+    }
+    
+    /// <summary>
+    /// 获取当前输入状态
+    /// </summary>
+    public bool IsInputEnabled()
+    {
+        return inputEnabled;
     }
 }

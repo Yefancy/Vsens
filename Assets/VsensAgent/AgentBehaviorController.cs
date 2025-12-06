@@ -60,7 +60,6 @@ public class AgentBehaviorController : MonoBehaviour
             if (pupilRenderer != null)
             {
                 pupilOriginalColor = pupilRenderer.material.color;
-                Debug.Log($"[AgentBehavior] Pupil original color: {pupilOriginalColor}");
             }
             else
             {
@@ -107,7 +106,6 @@ public class AgentBehaviorController : MonoBehaviour
     /// </summary>
     public void PerformBehavior(WsClient.AgentBehavior msg)
     {
-        Debug.Log($"[Behavior] Action: {msg.action}, Target: {msg.target}, Emotion: {msg.emotion}");
 
         // 根据不同的行为执行相应的动作
         switch (msg.action)
@@ -188,7 +186,6 @@ public class AgentBehaviorController : MonoBehaviour
         if (isThinking) return; // 已经在思考状态
         
         isThinking = true;
-        Debug.Log("[AgentBehavior] 🧠 Started thinking - breathing animation activated");
         
         if (pupil != null && breathingCoroutine == null)
         {
@@ -204,7 +201,6 @@ public class AgentBehaviorController : MonoBehaviour
         if (!isThinking) return; // 不在思考状态
         
         isThinking = false;
-        Debug.Log("[AgentBehavior] ✅ Stopped thinking - breathing animation deactivated");
         
         // 停止呼吸协程
         if (breathingCoroutine != null)
@@ -221,7 +217,6 @@ public class AgentBehaviorController : MonoBehaviour
             if (pupilRenderer != null)
             {
                 pupilRenderer.material.color = pupilOriginalColor;
-                Debug.Log($"[AgentBehavior] Restored pupil to original color: {pupilOriginalColor}");
             }
         }
     }
@@ -261,21 +256,18 @@ public class AgentBehaviorController : MonoBehaviour
 
     private void PerformWaveAction()
     {
-        Debug.Log("[Behavior] Performing wave action - 占位实现");
         // TODO: 实现挥手动画
         // 可以使用 Animator 或者简单的 Transform 动画
     }
 
     private void PerformNodAction()
     {
-        Debug.Log("[Behavior] Performing nod action - 占位实现");
         // TODO: 实现点头动画
         // 可以让 agentRoot 做上下点头动作
     }
 
     private void PerformLookAtAction(string target)
     {
-        Debug.Log($"[Behavior] Looking at target: {target} - 占位实现");
         // TODO: 根据目标名称查找场景中的对象并看向它
         if (target == "user" || target == "camera")
         {
@@ -285,20 +277,17 @@ public class AgentBehaviorController : MonoBehaviour
 
     private void PerformFloatUpAction()
     {
-        Debug.Log("[Behavior] Floating up - 占位实现");
         // TODO: 让Agent向上浮动
         // 可以临时增加 floatAmplitude 或调整 initialPosition
     }
 
     private void PerformFloatDownAction()
     {
-        Debug.Log("[Behavior] Floating down - 占位实现");
         // TODO: 让Agent向下浮动
     }
 
     private void ApplyEmotionBehavior(string emotion)
     {
-        Debug.Log($"[Behavior] Applying emotion: {emotion} - 占位实现");
         // TODO: 根据情绪调整行为
         switch (emotion)
         {
