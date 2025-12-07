@@ -14,6 +14,7 @@ namespace VsensAgent
         public Transform messageContainer;              // 消息容器 (ScrollRect的Content)
         public TMP_InputField textInputField;          // 文字输入框
         public Button sendButton;                      // 发送按钮
+        public Button toggleViewButton;                 // 切换视角按钮
         public GameObject voiceInputIndicator;          // 语音录制指示器
 
         [Header("消息预制件")]
@@ -24,7 +25,6 @@ namespace VsensAgent
         [Header("设置")]
         public int maxMessageHistory = 100;            // 最大消息历史数量
         public float autoScrollSpeed = 1f;             // 自动滚动速度
-        public bool showTimestamp = true;              // 是否显示时间戳
         public bool autoFocusInput = true;             // 是否自动聚焦输入框
 
         [Header("交互控制")]
@@ -87,6 +87,8 @@ namespace VsensAgent
                 sendButton.onClick.AddListener(SendTextMessage);
             if (textInputField != null)
                 textInputField.onSubmit.AddListener(OnTextInputSubmit);
+            if (toggleViewButton != null)
+                toggleViewButton.onClick.AddListener(OnToggleViewClicked);
         }
 
         void OnDisable()
@@ -98,6 +100,8 @@ namespace VsensAgent
                 sendButton.onClick.RemoveListener(SendTextMessage);
             if (textInputField != null)
                 textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
+            if (toggleViewButton != null)
+                toggleViewButton.onClick.RemoveListener(OnToggleViewClicked);
         }
 
         void Update()
@@ -272,13 +276,6 @@ namespace VsensAgent
             else
             {
                 Debug.LogError($"[ChatUIManager] ❌ No TextMeshProUGUI found in {messageUI.name}!");
-            }
-
-            // 设置时间戳 (如果有对应的UI组件)
-            TextMeshProUGUI timestampText = messageUI.transform.Find("Timestamp")?.GetComponent<TextMeshProUGUI>();
-            if (timestampText != null && showTimestamp)
-            {
-                timestampText.text = message.GetFormattedTimestamp();
             }
 
             // 如果是Agent消息且有音频，设置播放按钮
@@ -604,6 +601,29 @@ namespace VsensAgent
         public List<ChatMessage> GetMessageHistory()
         {
             return new List<ChatMessage>(messageHistory);
+        }
+        
+        // ========== 相机视角切换 ==========
+        
+        /// <summary>
+        /// 切换视角按钮点击事件
+        /// </summary>
+        private void OnToggleViewClicked()
+        {
+            UserMainCameraControl cameraControl = FindFirstObjectByType<UserMainCameraControl>();
+            if (cameraControl != null)
+            {
+                cameraControl.ToggleCameraMode();
+                
+                // 显示切换提示
+                string modeName = cameraControl.GetCurrentMode() == UserMainCameraControl.CameraMode.FirstPerson 
+                    ? "第一人称" : "上帝视角";
+                AddSystemMessage($"📷 已切换到{modeName}模式");
+            }
+            else
+            {
+                Debug.LogError("[ChatUIManager] UserMainCameraControl not found!");
+            }
         }
 
     }
