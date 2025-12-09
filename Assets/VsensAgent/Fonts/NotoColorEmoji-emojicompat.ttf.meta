@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 562fbf939766f4d959f73a6d427d2d86
+guid: 2b19788134d2140cdb84dd21ec2120be
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Noto Sans JP
+  - Noto Color Emoji
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0
