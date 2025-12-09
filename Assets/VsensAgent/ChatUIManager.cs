@@ -166,7 +166,7 @@ namespace VsensAgent
             }
             
             // 添加欢迎消息
-            AddSystemMessage("聊天系统已就绪。您可以输入文字或按住R键进行语音输入。");
+            AddSystemMessage("Chat system ready, say hi! Or press R to record voice.");
         }
 
         // ========== 消息处理方法 ==========
@@ -457,11 +457,11 @@ namespace VsensAgent
 
             if (isRecording)
             {
-                AddSystemMessage("🎤 正在录音... 松开R键发送");
+                AddSystemMessage("🎤 Recording, release R to send");
             }
             else
             {
-                AddSystemMessage("⏹️ 录音结束，正在处理...");
+                AddSystemMessage("⏹️ Recording ended, processing...");
             }
         }
 
@@ -472,7 +472,7 @@ namespace VsensAgent
         /// </summary>
         public void AddVoiceMessage(string audioFilePath)
         {
-            AddUserMessage("[🎤 语音消息]");
+            AddUserMessage("[🎤 Voice Message]");
         }
 
         // ========== WebSocket集成方法 ==========
@@ -483,7 +483,7 @@ namespace VsensAgent
             WsClient.SendTextChatRequest(message);
             
             // 添加系统消息表示正在发送
-            AddSystemMessage("💬 发送文字消息中...");
+            AddSystemMessage("💬 Sending text message...");
         }
 
         /// <summary>
@@ -493,7 +493,7 @@ namespace VsensAgent
         {
             if (response.status != "success")
             {
-                AddSystemMessage($"❌ Agent回复失败: {response.status}");
+                AddSystemMessage($"❌ Agent reply failed: {response.status}");
                 return;
             }
 
@@ -517,7 +517,7 @@ namespace VsensAgent
             }
             else
             {
-                AddSystemMessage("⚠️ Agent回复内容为空");
+                AddSystemMessage("⚠️ Agent reply contained no text.");
             }
         }
 
@@ -592,7 +592,7 @@ namespace VsensAgent
             messageUIObjects.Clear();
 
             // 添加清空提示
-            AddSystemMessage("💬 聊天记录已清空");
+            AddSystemMessage("💬 Chat history cleared");
         }
 
         /// <summary>
