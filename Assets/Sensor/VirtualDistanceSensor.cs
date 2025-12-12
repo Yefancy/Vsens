@@ -30,7 +30,7 @@ namespace Sensor
         }
 
         [SerializeField] private bool showBarPreview = true;
-        [SerializeField] private float validDistance = 2;
+        [SerializeField] public float validDistance = 2;
         [SerializeField] private BarChart barChart;
         [SerializeField] private GameObject indicatorLine;
         [SerializeField] private Transform startPoint;

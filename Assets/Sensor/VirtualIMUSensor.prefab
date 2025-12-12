@@ -84,6 +84,7 @@ GameObject:
   - component: {fileID: 8863770231898903844}
   - component: {fileID: 4642365546682344880}
   - component: {fileID: 8747749425755985866}
+  - component: {fileID: 300410635422088275}
   m_Layer: 0
   m_Name: VirtualIMUSensor
   m_TagString: Untagged
@@ -265,6 +266,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _collider: {fileID: 7644818216315726723}
+--- !u!114 &300410635422088275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3534786048013251570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3d6834d8e76947cb876a5f7377b1aaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boxCollider: {fileID: 7644818216315726723}
+  objectName: 
+  jsonOutput: "{\n  \"position\" : [\n    0,\n    0.013,\n    0.008\n  ],\n  \"size\"
+    : [\n    1,\n    0.419,\n    0.946\n  ],\n  \"rotation\" : [\n    0,\n    0,\n   
+    0\n  ],\n  \"properties\" : [\n    \"sensor\",\n    \"movable\"\n  ],\n  \"sensor\"
+    : {\n    \"sensorType\" : \"IMU\",\n    \"showVisualization\" : false,\n    \"showDataGraph\"
+    : false\n  }\n}"
+  movable: 0
+  renderer: {fileID: 3906933210968128536}
+  _sensor: {fileID: 1124141162710048664}
 --- !u!1 &3647916376492028452
 GameObject:
   m_ObjectHideFlags: 0
@@ -2007,6 +2030,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 90
       objectReference: {fileID: 0}
+    - target: {fileID: 5168339746943940182, guid: 9033c473331fd3e47a0b9300d5b74c36, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2018,6 +2045,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 8616836477773099567}
   m_SourcePrefab: {fileID: 7446590082972375451, guid: 9033c473331fd3e47a0b9300d5b74c36, type: 3}
+--- !u!23 &3906933210968128536 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 5168339746943940182, guid: 9033c473331fd3e47a0b9300d5b74c36, type: 3}
+  m_PrefabInstance: {fileID: 8178983960140728910}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5512371729597289500 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4467138112451190354, guid: 9033c473331fd3e47a0b9300d5b74c36, type: 3}

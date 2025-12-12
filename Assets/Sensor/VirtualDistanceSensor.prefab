@@ -295,7 +295,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _boxCollider: {fileID: 5227760456242919622}
   objectName: 
-  jsonOutput: 
+  jsonOutput: "{\n  \"position\" : [\n    0,\n    0.01,\n    -0.004\n  ],\n  \"size\"
+    : [\n    1,\n    0.436,\n    0.643\n  ],\n  \"rotation\" : [\n    0,\n    0,\n   
+    0\n  ],\n  \"properties\" : [\n    \"sensor\",\n    \"movable\"\n  ],\n  \"sensor\"
+    : {\n    \"sensorType\" : \"DISTANCE\",\n    \"showVisualization\" : false,\n   
+    \"showDataGraph\" : false,\n    \"validDistance\" : 3,\n    \"value\" : 1.5,\n   
+    \"lookRay\" : [\n      0,\n      0,\n      1\n    ],\n    \"startPoint\" : [\n     
+    0,\n      0,\n      0\n    ]\n  }\n}"
+  movable: 0
+  renderer: {fileID: 516209650322923193}
   _sensor: {fileID: 5322648215080773538}
 --- !u!1 &4215862516616444306
 GameObject:
@@ -541,6 +549,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5168339746943940182, guid: 33255de47277aee4885246195c22f43e, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -561,6 +573,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 3253226743854265087}
   m_SourcePrefab: {fileID: 7446590082972375451, guid: 33255de47277aee4885246195c22f43e, type: 3}
+--- !u!23 &516209650322923193 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 5168339746943940182, guid: 33255de47277aee4885246195c22f43e, type: 3}
+  m_PrefabInstance: {fileID: 4652306843115219183}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4672932115587974848 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -9202605092671148497, guid: 33255de47277aee4885246195c22f43e, type: 3}

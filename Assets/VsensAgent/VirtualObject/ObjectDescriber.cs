@@ -13,6 +13,7 @@ public class ObjectDescriber : MonoBehaviour
     
     [Header("Object Properties")]
     [SerializeField] private bool movable;
+    [SerializeField] private Renderer renderer;
     
     public string ObjectName => objectName;
 
@@ -20,6 +21,13 @@ public class ObjectDescriber : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(objectName)) return objectName;
         return gameObject.name;
+    }
+
+    public Renderer GetObjectRenderer()
+    {
+        if (renderer != null) return renderer;
+        renderer = GetComponent<Renderer>();
+        return renderer;
     }
     
     protected void Awake()

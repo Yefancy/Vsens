@@ -161,6 +161,31 @@ public class WsClient : MonoBehaviour
         }
     }
 
+    public static void ClearHistory()
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new ResetRequest()
+            {
+                type = "reset",
+            };
+
+            string json = JsonConvert.SerializeObject(payload);
+            websocket.SendText(json);
+            
+            // 开始思考状态 - 启动呼吸动画
+            var wsClient = FindFirstObjectByType<WsClient>();
+            if (wsClient != null && wsClient.agentBehaviorController != null)
+            {
+                wsClient.agentBehaviorController.StartThinking();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send text message.");
+        }
+    }
+
     public static void SendTextChatRequest(string message)
     {
         if (websocket != null && websocket.State == WebSocketState.Open)
@@ -265,6 +290,12 @@ public class WsClient : MonoBehaviour
         public string message;
         public string scene_snapshot;
         public bool request_audio;
+    }
+    
+    [Serializable]
+    public class ResetRequest
+    {
+        public string type;
     }
 
     [Serializable]

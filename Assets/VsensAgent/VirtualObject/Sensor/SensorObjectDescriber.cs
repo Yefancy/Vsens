@@ -11,6 +11,8 @@ public class SensorObjectDescriber : ObjectDescriber
     // 用于生成唯一序号的静态计数器
     private static Dictionary<string, int> sensorCounters = new Dictionary<string, int>();
     
+    public VirtualSensor Sesnor => _sensor;
+    
     protected new void Awake()
     {
         if (_sensor == null)

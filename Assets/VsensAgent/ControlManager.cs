@@ -1,15 +1,19 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using VsensAgent.VirtualObject.Sensor;
 using Sensor;
+using Unity.XR.CoreUtils;
+using UnityEngine.Pool;
 
 namespace VsensAgent
 {
     public class ControlManager : MonoBehaviour
     {
+        [SerializeField] private Material highlightMaterial;
         void OnEnable()
         {
             WsClient.OnControl += HandleControlBatch; // 统一处理批量控制
@@ -289,37 +293,37 @@ namespace VsensAgent
         private void HandleHighlightAction(GameObject obj, WsClient.ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] ✨ Highlighting '{obj.name}'");
-            
-            Renderer renderer = obj.GetComponent<Renderer>();
-            if (renderer != null)
+
+            var describer = obj.GetComponent<ObjectDescriber>();
+            if (describer == null)
             {
-                // 保存原始颜色
-                Color originalColor = renderer.material.color;
-                
-                // 设置高亮颜色
-                Color highlightColor = Color.yellow;
-                
-                // 如果参数中指定了颜色
-                if (ctrl.parameters != null && ctrl.parameters.ContainsKey("color"))
-                {
-                    string colorString = ParseStringFromParameter(ctrl.parameters["color"]);
-                    if (ColorUtility.TryParseHtmlString(colorString, out Color customColor))
-                    {
-                        highlightColor = customColor;
-                    }
-                }
-                
-                // 应用高亮颜色
-                renderer.material.color = highlightColor;
-                Debug.Log($"[ControlManager] ✅ Highlighted '{obj.name}' with color {highlightColor}, will restore to {originalColor} in 5 seconds");
-                
-                // 启动协程在5秒后恢复原始颜色
-                StartCoroutine(RestoreColorAfterDelay(renderer, originalColor, 5.0f, obj.name));
+                Debug.LogWarning($"[ControlManager] ⚠️ Object '{obj.name}' has no ObjectDescriber component.");
+                return;
             }
-            else
+
+            var targetRenderer = describer.GetObjectRenderer();
+            if (targetRenderer == null)
             {
-                Debug.LogWarning($"[ControlManager] ⚠️ Cannot highlight '{obj.name}' - no Renderer component found.");
+                Debug.LogWarning($"[ControlManager] ⚠️ Cannot highlight '{obj.name}' - ObjectDescriber has no Renderer.");
+                return;
             }
+
+            // 1. 备份原始 sharedMaterials
+            var originalMaterials = new List<Material>();
+            targetRenderer.GetSharedMaterials(originalMaterials);
+
+            // 2. 构造高亮用的材质列表（拷贝一份，不直接改 original）
+            var highlightMaterials = new List<Material>(originalMaterials);
+            if (!highlightMaterials.Contains(highlightMaterial))
+            {
+                highlightMaterials.Add(highlightMaterial);
+            }
+
+            // 3. 应用高亮材质
+            targetRenderer.SetSharedMaterials(highlightMaterials);
+
+            // 4. 延时恢复
+            StartCoroutine(RestoreMaterialAfterDelay(targetRenderer, originalMaterials, 5.0f));
         }
 
         /// <summary>
@@ -329,19 +333,13 @@ namespace VsensAgent
         /// <param name="originalColor">原始颜色</param>
         /// <param name="delay">延迟时间（秒）</param>
         /// <param name="objectName">物体名称（用于日志）</param>
-        private System.Collections.IEnumerator RestoreColorAfterDelay(Renderer renderer, Color originalColor, float delay, string objectName)
+        private System.Collections.IEnumerator RestoreMaterialAfterDelay(Renderer renderer, List<Material> originalMaterials, float delay)
         {
             yield return new WaitForSeconds(delay);
-            
-            // 检查渲染器是否仍然存在（物体可能已被销毁）
-            if (renderer != null && renderer.material != null)
+
+            if (renderer != null)
             {
-                renderer.material.color = originalColor;
-                Debug.Log($"[ControlManager] 🔄 Restored original color {originalColor} for '{objectName}' after {delay} seconds");
-            }
-            else
-            {
-                Debug.LogWarning($"[ControlManager] ⚠️ Cannot restore color for '{objectName}' - renderer or material no longer exists");
+                renderer.SetSharedMaterials(originalMaterials);
             }
         }
 
@@ -532,6 +530,7 @@ namespace VsensAgent
                 bool showVis = bool.Parse(showVisString);
                 Debug.Log($"[ControlManager] 👁️ Setting show_visualization to {showVis} for {sensorObj.name}");
                 // 这里可以添加具体的可视化控制逻辑
+                sensorDescriber.Sesnor.ShowPreview = showVis;
             }
 
             // 处理show_data_graph参数
@@ -541,6 +540,7 @@ namespace VsensAgent
                 bool showData = bool.Parse(showDataString);
                 Debug.Log($"[ControlManager] 📊 Setting show_data_graph to {showData} for {sensorObj.name}");
                 // 这里可以添加具体的数据图表控制逻辑
+                sensorDescriber.Sesnor.ShowGraph = showData;
             }
 
             // 处理validDistance参数 (仅用于DISTANCE传感器)
@@ -550,6 +550,10 @@ namespace VsensAgent
                 float distance = float.Parse(distanceString);
                 Debug.Log($"[ControlManager] 📏 Setting validDistance to {distance} for {sensorObj.name}");
                 // 这里可以添加具体的距离设置逻辑
+                if (sensorDescriber.Sesnor is VirtualDistanceSensor distanceSensor)
+                {
+                    distanceSensor.validDistance = distance;
+                }
             }
 
             // 处理lookDirection参数 (仅用于DISTANCE传感器)
