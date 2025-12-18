@@ -20,7 +20,7 @@ public class AudioRecorder : MonoBehaviour
     private AudioClip recordedClip;
     private string filePath;
     private bool isRecording = false;
-    private bool inputEnabled = true;  // 控制是否响应键盘输入
+    private bool inputEnabled = true; 
 
     void Start()
     {
@@ -39,10 +39,10 @@ public class AudioRecorder : MonoBehaviour
 
     void Update()
     {
-        // 只有在输入启用时才响应R键
+        // only respond to R key if input is enabled
         if (!inputEnabled) 
         {
-            // 在输入被禁用时检测R键按下并显示警告
+            // when input is disabled, ignore R key presses and releases warning.
             if (Input.GetKeyDown(KeyCode.R))
             {
                 Debug.LogWarning("[AudioRecorder] ⚠️ R key pressed but input is DISABLED (chat focused)");

@@ -128,7 +128,7 @@ namespace VsensAgent
             if (textInputField != null)
             {
                 textInputField.text = "";
-                textInputField.placeholder.GetComponent<TextMeshProUGUI>().text = "输入消息或按住R键录音...";
+                textInputField.placeholder.GetComponent<TextMeshProUGUI>().text = "Type your message here... Or R to record voice.";
             }
 
             if (messageContainer != null)
