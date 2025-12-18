@@ -32,7 +32,7 @@ namespace Scenes.UserStudy
             var inspector = (US2_Data_Inspector)target;
             if (GUILayout.Button("Find IMU"))
             {
-                inspector.imuSensors = FindObjectsOfType<VirtualIMUSensor>().Where(sensor => sensor.gameObject.activeInHierarchy).ToArray();
+                inspector.imuSensors = FindObjectsByType<VirtualIMUSensor>(FindObjectsSortMode.None).Where(sensor => sensor.gameObject.activeInHierarchy).ToArray();
             }
             var controller = inspector.controller;
             var imuSensors = inspector.imuSensors;

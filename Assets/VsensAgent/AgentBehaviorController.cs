@@ -220,6 +220,20 @@ public class AgentBehaviorController : MonoBehaviour
             }
         }
     }
+    
+    /// <summary>
+    /// 延迟停止思考动画
+    /// </summary>
+    public void StopThinkingAfterDelay(float seconds)
+    {
+        StartCoroutine(StopThinkingDelayCoroutine(seconds));
+    }
+    
+    private System.Collections.IEnumerator StopThinkingDelayCoroutine(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        StopThinking();
+    }
 
     /// <summary>
     /// 呼吸动画协程 - Pupil缩放和颜色动画

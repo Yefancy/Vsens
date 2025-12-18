@@ -173,11 +173,22 @@ public class WsClient : MonoBehaviour
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
             
-            // 开始思考状态 - 启动呼吸动画
             var wsClient = FindFirstObjectByType<WsClient>();
-            if (wsClient != null && wsClient.agentBehaviorController != null)
+            if (wsClient != null)
             {
-                wsClient.agentBehaviorController.StartThinking();
+                // 开始思考状态 - 启动呼吸动画，2秒后自动停止
+                if (wsClient.agentBehaviorController != null)
+                {
+                    wsClient.agentBehaviorController.StartThinking();
+                    wsClient.agentBehaviorController.StopThinkingAfterDelay(2f);
+                }
+                
+                // 清空聊天历史
+                var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+                if (chatUI != null)
+                {
+                    chatUI.ClearChatHistory();
+                }
             }
         }
         else

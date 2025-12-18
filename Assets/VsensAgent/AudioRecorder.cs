@@ -126,9 +126,9 @@ public class AudioRecorder : MonoBehaviour
 
     void SaveToWav()
     {
-        string folderPath = string.IsNullOrEmpty(customSavePath)
-            ? Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "UnityRecordings")
-            : customSavePath;
+        // 使用项目根目录的相对路径
+        string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+        string folderPath = Path.Combine(projectRoot, "AudioRecordings", "input");
 
         if (!Directory.Exists(folderPath))
         {
@@ -136,9 +136,12 @@ public class AudioRecorder : MonoBehaviour
         }
 
         string fileName = "recorded_audio_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".wav";
-        filePath = Path.Combine(folderPath, fileName);
+        string absolutePath = Path.Combine(folderPath, fileName);
+        
+        // 保存相对路径用于WebSocket传输
+        filePath = Path.Combine("AudioRecordings", "input", fileName);
 
-        WavUtility.FromAudioClip(recordedClip, filePath, true);
+        WavUtility.FromAudioClip(recordedClip, absolutePath, true);
     }
 
     public string GetLatestFilePath()

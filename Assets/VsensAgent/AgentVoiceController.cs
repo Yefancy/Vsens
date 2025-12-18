@@ -1,4 +1,7 @@
 using UnityEngine;
+using UnityEngine.Networking;
+using System.Collections;
+using System.IO;
 
 public class AgentVoiceController : MonoBehaviour
 {
@@ -32,21 +35,48 @@ public class AgentVoiceController : MonoBehaviour
 
     private System.Collections.IEnumerator LoadAndPlay(string path)
     {
-        string url = "file://" + path;
+        // 将相对路径转换为绝对路径
+        string absolutePath = Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(Directory.GetParent(Application.dataPath).FullName, path);
 
-        using (var www = new WWW(url))
+        if (!File.Exists(absolutePath))
         {
-            yield return www;
+            Debug.LogError($"[TTS] File not found: {absolutePath}");
+            yield break;
+        }
 
-            if (!string.IsNullOrEmpty(www.error))
+        string url = "file://" + absolutePath;
+        AudioType audioType = GetAudioType(Path.GetExtension(absolutePath));
+
+        using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError("[TTS] Load error: " + www.error);
+                Debug.LogError("[TTS] Load error: " + request.error);
                 yield break;
             }
 
-            AudioClip clip = www.GetAudioClip(false, false);
+            AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
             audioSource.clip = clip;
             audioSource.Play();
+        }
+    }
+
+    private AudioType GetAudioType(string extension)
+    {
+        switch (extension.ToLower())
+        {
+            case ".wav":
+                return AudioType.WAV;
+            case ".mp3":
+                return AudioType.MPEG;
+            case ".ogg":
+                return AudioType.OGGVORBIS;
+            default:
+                return AudioType.UNKNOWN;
         }
     }
 }

@@ -30,7 +30,7 @@ namespace Scenes.UserStudy
             // button to detech all IMU sensors in the scene
             if (GUILayout.Button("Detect IMU Sensors"))
             {
-                userStudy.imuSensors = FindObjectsOfType<VirtualIMUSensor>().Where(imu => imu.canSelected).ToArray();
+                userStudy.imuSensors = FindObjectsByType<VirtualIMUSensor>(FindObjectsSortMode.None).Where(imu => imu.canSelected).ToArray();
                 // move the IMU sensors to the same parent as this component
                 foreach (var sensor in userStudy.imuSensors)
                 {

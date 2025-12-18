@@ -101,7 +101,7 @@ namespace VsensAgent
         {
             Debug.Log("[SensorCommandTest] 📊 Listing all sensors in scene:");
             
-            var sensors = FindObjectsOfType<SensorObjectDescriber>();
+            var sensors = FindObjectsByType<SensorObjectDescriber>(FindObjectsSortMode.None);
             if (sensors.Length == 0)
             {
                 Debug.Log("[SensorCommandTest] 📭 No sensors found in scene");
@@ -119,7 +119,7 @@ namespace VsensAgent
         {
             Debug.Log("[SensorCommandTest] 🧹 Clearing all test sensors");
             
-            var sensors = FindObjectsOfType<SensorObjectDescriber>();
+            var sensors = FindObjectsByType<SensorObjectDescriber>(FindObjectsSortMode.None);
             int cleared = 0;
             
             foreach (var sensor in sensors)

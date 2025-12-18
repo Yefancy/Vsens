@@ -592,7 +592,7 @@ namespace VsensAgent
             messageUIObjects.Clear();
 
             // 添加清空提示
-            AddSystemMessage("💬 Chat history cleared");
+            AddSystemMessage("💬 Chat history cleared...");
         }
 
         /// <summary>
