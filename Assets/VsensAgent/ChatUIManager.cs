@@ -166,7 +166,7 @@ namespace VsensAgent
             }
             
             // 添加欢迎消息
-            AddSystemMessage("Chat system ready, say hi! Or press R to record voice.");
+            AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
         }
 
         // ========== 消息处理方法 ==========

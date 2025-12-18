@@ -11748,7 +11748,7 @@ MonoBehaviour:
   voiceInputIndicator: {fileID: 1777246956}
   userMessagePrefab: {fileID: 7932764858619200345, guid: 6622e710fd1ed45a4a52a249479965dc, type: 3}
   agentMessagePrefab: {fileID: 8201682760192588162, guid: 8ad41b5fcc7be48a0aca8e230bbba66c, type: 3}
-  systemMessagePrefab: {fileID: 6755223004928707662, guid: e8ac318fa5d664adca6364bef9172d98, type: 3}
+  systemMessagePrefab: {fileID: 7932764858619200345, guid: f25fd16cdf97d401892a0d24ef227d08, type: 3}
   maxMessageHistory: 100
   autoScrollSpeed: 1
   autoFocusInput: 0
@@ -30994,7 +30994,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.89434814, y: 0}
+  m_AnchoredPosition: {x: -0.89434814, y: -0.00012207031}
   m_SizeDelta: {x: -505.69727, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2143088190
