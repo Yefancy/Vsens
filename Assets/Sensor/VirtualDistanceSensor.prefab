@@ -303,7 +303,7 @@ MonoBehaviour:
     \"lookRay\" : [\n      0,\n      0,\n      1\n    ],\n    \"startPoint\" : [\n     
     0,\n      0,\n      0\n    ]\n  }\n}"
   movable: 0
-  renderer: {fileID: 516209650322923193}
+  ObjectRenderer: {fileID: 516209650322923193}
   _sensor: {fileID: 5322648215080773538}
 --- !u!1 &4215862516616444306
 GameObject:

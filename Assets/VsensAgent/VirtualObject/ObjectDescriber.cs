@@ -13,7 +13,7 @@ public class ObjectDescriber : MonoBehaviour
     
     [Header("Object Properties")]
     [SerializeField] private bool movable;
-    [SerializeField] private Renderer renderer;
+    [SerializeField] private Renderer ObjectRenderer;
     
     public string ObjectName => objectName;
 
@@ -25,9 +25,9 @@ public class ObjectDescriber : MonoBehaviour
 
     public Renderer GetObjectRenderer()
     {
-        if (renderer != null) return renderer;
-        renderer = GetComponent<Renderer>();
-        return renderer;
+        if (ObjectRenderer != null) return ObjectRenderer;
+        ObjectRenderer = GetComponent<Renderer>();
+        return ObjectRenderer;
     }
     
     protected void Awake()

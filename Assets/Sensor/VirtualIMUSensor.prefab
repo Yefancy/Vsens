@@ -286,7 +286,7 @@ MonoBehaviour:
     : {\n    \"sensorType\" : \"IMU\",\n    \"showVisualization\" : false,\n    \"showDataGraph\"
     : false\n  }\n}"
   movable: 0
-  renderer: {fileID: 3906933210968128536}
+  ObjectRenderer: {fileID: 3906933210968128536}
   _sensor: {fileID: 1124141162710048664}
 --- !u!1 &3647916376492028452
 GameObject:

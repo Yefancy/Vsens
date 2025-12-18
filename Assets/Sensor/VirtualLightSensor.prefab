@@ -232,7 +232,7 @@ MonoBehaviour:
     0\n  ],\n  \"isSensor\" : true,\n  \"sensor\" : {\n    \"sensorType\" : \"OPTICAL\",\n   
     \"value\" : 0\n  }\n}"
   movable: 0
-  renderer: {fileID: 8083498938541556433}
+  ObjectRenderer: {fileID: 8083498938541556433}
   _sensor: {fileID: 5988207486985688187}
 --- !u!1 &4215862516616444306
 GameObject:
