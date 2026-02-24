@@ -1,0 +1,13 @@
+﻿<Solution>
+  <Project Path="UniGLTF.Editor.csproj" />
+  <Project Path="UniGLTF.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="UniHumanoid.csproj" />
+  <Project Path="SpringBoneJobs.csproj" />
+  <Project Path="UniGLTF.UniUnlit.csproj" />
+  <Project Path="UniGLTF.Utils.csproj" />
+  <Project Path="UniHumanoid.Editor.csproj" />
+  <Project Path="endel.nativewebsocket.csproj" />
+  <Project Path="RuntimePreviewGenerator.Runtime.csproj" />
+  <Project Path="UniGLTF.UniUnlit.Editor.csproj" />
+</Solution>

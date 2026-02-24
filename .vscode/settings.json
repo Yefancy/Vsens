@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "VsensAgent.sln"
+    "dotnet.defaultSolution": "VsensAgent.slnx"
 }
