@@ -2,8 +2,12 @@ using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
 using System.IO;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
-public class AgentVoiceController : MonoBehaviour
+namespace VsensAgent.Agent
+{
+    public class AgentVoiceController : MonoBehaviour
 {
     public AudioSource audioSource;
     void OnEnable()
@@ -19,7 +23,7 @@ public class AgentVoiceController : MonoBehaviour
     /// <summary>
     /// 处理Agent回复，如果有音频则播放
     /// </summary>
-    private void OnAgentReplyReceived(WsClient.AgentReplyMessage reply)
+    private void OnAgentReplyReceived(AgentReplyMessage reply)
     {
         // 只有当有音频路径时才播放
         if (!string.IsNullOrEmpty(reply.audio_path))
@@ -79,4 +83,5 @@ public class AgentVoiceController : MonoBehaviour
                 return AudioType.UNKNOWN;
         }
     }
+}
 }

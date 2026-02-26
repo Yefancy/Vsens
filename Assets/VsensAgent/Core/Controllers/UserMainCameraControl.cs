@@ -1,4 +1,5 @@
 using UnityEngine;
+using VsensAgent.Core;
 
 namespace VsensAgent
 {
@@ -13,23 +14,23 @@ namespace VsensAgent
         
         [Header("相机模式设置")]
         public CameraMode currentMode = CameraMode.FirstPerson;
-        public KeyCode toggleModeKey = KeyCode.Tab;  // 切换视角快捷键
+        public KeyCode toggleModeKey = Constants.InputKeys.TOGGLE_VIEW;  // 切换视角快捷键
         
         [Header("第一人称设置")]
-        public float firstPersonMovementSpeed = 5f;
-        public float firstPersonLookSpeed = 2f;
+        public float firstPersonMovementSpeed = Constants.Camera.FIRST_PERSON_MOVEMENT_SPEED;
+        public float firstPersonLookSpeed = Constants.Camera.FIRST_PERSON_LOOK_SPEED;
         
         [Header("上帝视角设置")]
-        public float godViewMovementSpeed = 10f;
-        public float godViewLookSpeed = 2f;
-        public float godViewDistance = 15f;         // 上帝视角默认距离
-        public float godViewAngle = 45f;            // 俯视角度
-        public float godViewScrollSpeed = 2f;       // 鼠标滚轮缩放速度
-        public float godViewMinDistance = 5f;       // 最小距离
-        public float godViewMaxDistance = 40f;      // 最大距离
+        public float godViewMovementSpeed = Constants.Camera.GOD_VIEW_MOVEMENT_SPEED;
+        public float godViewLookSpeed = Constants.Camera.GOD_VIEW_LOOK_SPEED;
+        public float godViewDistance = Constants.Camera.GOD_VIEW_DISTANCE;         // 上帝视角默认距离
+        public float godViewAngle = Constants.Camera.GOD_VIEW_ANGLE;            // 俯视角度
+        public float godViewScrollSpeed = Constants.Camera.GOD_VIEW_SCROLL_SPEED;       // 鼠标滚轮缩放速度
+        public float godViewMinDistance = Constants.Camera.GOD_VIEW_MIN_DISTANCE;       // 最小距离
+        public float godViewMaxDistance = Constants.Camera.GOD_VIEW_MAX_DISTANCE;      // 最大距离
         
         [Header("模式切换设置")]
-        public float transitionSpeed = 5f;          // 模式切换过渡速度
+        public float transitionSpeed = Constants.Camera.TRANSITION_SPEED;          // 模式切换过渡速度
         public bool smoothTransition = true;        // 是否启用平滑过渡
         
         [Header("输入控制")]
@@ -57,6 +58,9 @@ namespace VsensAgent
         
         void Start()
         {
+            // 注册到服务定位器
+            ServiceLocator.Register<UserMainCameraControl>(this);
+            
             // 初始化当前距离
             currentGodViewDistance = godViewDistance;
             

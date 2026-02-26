@@ -3,6 +3,7 @@ using System.Linq;
 using JetBrains.Annotations;
 using Sensor;
 using UnityEngine;
+using VsensAgent.Core;
 
 namespace VsensAgent.VirtualObject.Sensor
 {
@@ -19,7 +20,8 @@ namespace VsensAgent.VirtualObject.Sensor
             if (Instance == null)
             {
                 Instance = this;
-                Debug.Log("[VsensAgentSensorManager] 🔧 Singleton instance initialized");
+                ServiceLocator.Register<VsensAgentSensorManager>(this);
+                Debug.Log("[VsensAgentSensorManager] 🔧 Singleton instance initialized and registered to ServiceLocator");
             }
             else if (Instance != this)
             {

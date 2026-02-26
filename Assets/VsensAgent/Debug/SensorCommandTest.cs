@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
 namespace VsensAgent
 {
@@ -16,7 +18,7 @@ namespace VsensAgent
             Debug.Log("[SensorCommandTest] 🧪 Testing OPTICAL sensor creation command");
             
             // 模拟AI Agent发送的传感器创建命令 - parent回到parameters中
-            var testCommand = new WsClient.ControlObject
+            var testCommand = new ControlObject
             {
                 target = "OPTICAL-1", // 传感器对象的命名格式：SENSORNAME-NUMBER
                 action = "set_sensor",
@@ -40,7 +42,7 @@ namespace VsensAgent
         {
             Debug.Log("[SensorCommandTest] 🧪 Testing DISTANCE sensor creation command");
             
-            var testCommand = new WsClient.ControlObject
+            var testCommand = new ControlObject
             {
                 target = "DISTANCE-1",
                 action = "set_sensor", 
@@ -67,7 +69,7 @@ namespace VsensAgent
         {
             Debug.Log("[SensorCommandTest] 🧪 Testing sensor modification command");
             
-            var testCommand = new WsClient.ControlObject
+            var testCommand = new ControlObject
             {
                 target = "OPTICAL-1", // 现有传感器名称
                 action = "set_sensor",
@@ -84,7 +86,7 @@ namespace VsensAgent
             TestSensorCommand(testCommand);
         }
 
-        private void TestSensorCommand(WsClient.ControlObject command)
+        private void TestSensorCommand(ControlObject command)
         {
             // 将命令转换为JSON以验证序列化
             string jsonCommand = JsonConvert.SerializeObject(command, Formatting.Indented);

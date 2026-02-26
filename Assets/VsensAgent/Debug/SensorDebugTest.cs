@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
+using VsensAgent.VirtualObject.Sensor;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
 namespace VsensAgent
 {
@@ -14,7 +17,7 @@ namespace VsensAgent
             Debug.Log("[SensorDebugTest] 🌍 Testing sensor creation with global coordinates workflow");
             
             // 模拟Agent发送的命令：全局坐标 + parent设置
-            var testCommand = new WsClient.ControlObject
+            var testCommand = new ControlObject
             {
                 target = "", // 空target，创建新传感器
                 action = "set_sensor",
@@ -43,7 +46,7 @@ namespace VsensAgent
             {
                 Debug.Log("[SensorDebugTest] ✅ ControlManager found, executing command...");
                 
-                var commands = new WsClient.ControlObject[] { testCommand };
+                var commands = new ControlObject[] { testCommand };
                 try
                 {
                     // 使用反射调用private方法进行测试
@@ -78,7 +81,7 @@ namespace VsensAgent
             Debug.Log("[SensorDebugTest] 🧪 Testing sensor creation with empty target (simulating AI Agent command)");
             
             // 模拟AI Agent发送的命令，target为空字符串
-            var testCommand = new WsClient.ControlObject
+            var testCommand = new ControlObject
             {
                 target = "", // 空target，应该创建新传感器
                 action = "set_sensor",
@@ -110,7 +113,7 @@ namespace VsensAgent
                 Debug.Log("[SensorDebugTest] ✅ ControlManager found");
                 
                 // 模拟调用HandleControlBatch
-                var commands = new WsClient.ControlObject[] { testCommand };
+                var commands = new ControlObject[] { testCommand };
                 try
                 {
                     // 通过反射调用私有方法进行测试

@@ -1,17 +1,21 @@
 using UnityEngine;
 using System.IO;
+using VsensAgent.Network;
+using VsensAgent.Core;
 
-public class AudioRecorder : MonoBehaviour
+namespace VsensAgent.Audio
+{
+    public class AudioRecorder : MonoBehaviour
 {
     [Header("Recording Settings")]
     [Tooltip("Leave empty to use the default microphone.")]
     public string micDevice = null;
 
     [Tooltip("Max duration to allocate for recording (in seconds).")]
-    public int maxDuration = 60;
+    public int maxDuration = Constants.Audio.MAX_RECORDING_DURATION;
 
     [Tooltip("Sample rate (Hz) — 16000 is good for STT.")]
-    public int sampleRate = 16000;
+    public int sampleRate = Constants.Audio.DEFAULT_SAMPLE_RATE;
 
     [Header("Save Settings")]
     [Tooltip("Optional: Set a custom folder to save the .wav file.")]
@@ -24,6 +28,9 @@ public class AudioRecorder : MonoBehaviour
 
     void Start()
     {
+        // 注册到服务定位器
+        ServiceLocator.Register<AudioRecorder>(this);
+        
         if (Microphone.devices.Length > 0)
         {
             if (string.IsNullOrEmpty(micDevice))
@@ -43,19 +50,19 @@ public class AudioRecorder : MonoBehaviour
         if (!inputEnabled) 
         {
             // when input is disabled, ignore R key presses and releases warning.
-            if (Input.GetKeyDown(KeyCode.R))
+            if (Input.GetKeyDown(Constants.InputKeys.VOICE_RECORD))
             {
                 Debug.LogWarning("[AudioRecorder] ⚠️ R key pressed but input is DISABLED (chat focused)");
             }
             return;
         }
         
-        if (Input.GetKeyDown(KeyCode.R) && !isRecording)
+        if (Input.GetKeyDown(Constants.InputKeys.VOICE_RECORD) && !isRecording)
         {
             StartRecording();
         }
 
-        if (Input.GetKeyUp(KeyCode.R) && isRecording)
+        if (Input.GetKeyUp(Constants.InputKeys.VOICE_RECORD) && isRecording)
         {
             StopRecording();
         }
@@ -66,8 +73,8 @@ public class AudioRecorder : MonoBehaviour
         recordedClip = Microphone.Start(micDevice, false, maxDuration, sampleRate);
         isRecording = true;
         
-        // 🔥 通知ChatUI显示录音指示器
-        var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+        // 🔥 从服务定位器获取ChatUI并显示录音指示器
+        var chatUI = ServiceLocator.Get<VsensAgent.UI.ChatUIManager>();
         if (chatUI != null)
         {
             chatUI.ShowVoiceRecording(true);
@@ -80,8 +87,8 @@ public class AudioRecorder : MonoBehaviour
         Microphone.End(micDevice);
         isRecording = false;
         
-        // 🔥 获取ChatUI引用（在方法开头获取一次）
-        var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+        // 🔥 从服务定位器获取ChatUI（在方法开头获取一次）
+        var chatUI = ServiceLocator.Get<VsensAgent.UI.ChatUIManager>();
         
         // 通知ChatUI隐藏录音指示器
         if (chatUI != null)
@@ -170,4 +177,5 @@ public class AudioRecorder : MonoBehaviour
     {
         return inputEnabled;
     }
+}
 }

@@ -1,6 +1,10 @@
 using UnityEngine;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
-public class AgentBehaviorController : MonoBehaviour
+namespace VsensAgent.Agent
+{
+    public class AgentBehaviorController : MonoBehaviour
 {
     [Header("Idle Float Settings")]
     public Transform agentRoot;
@@ -104,7 +108,7 @@ public class AgentBehaviorController : MonoBehaviour
     /// <summary>
     /// 行为指令回调
     /// </summary>
-    public void PerformBehavior(WsClient.AgentBehavior msg)
+    public void PerformBehavior(AgentBehavior msg)
     {
 
         // 根据不同的行为执行相应的动作
@@ -327,7 +331,7 @@ public class AgentBehaviorController : MonoBehaviour
     [ContextMenu("Test Wave Behavior")]
     public void TestWaveBehavior()
     {
-        var testBehavior = new WsClient.AgentBehavior
+        var testBehavior = new AgentBehavior
         {
             type = "agent_behavior",
             action = "wave",
@@ -340,7 +344,7 @@ public class AgentBehaviorController : MonoBehaviour
     [ContextMenu("Test Look At User")]
     public void TestLookAtUser()
     {
-        var testBehavior = new WsClient.AgentBehavior
+        var testBehavior = new AgentBehavior
         {
             type = "agent_behavior",
             action = "look_at",
@@ -363,4 +367,5 @@ public class AgentBehaviorController : MonoBehaviour
     }
 
     #endregion
+}
 }

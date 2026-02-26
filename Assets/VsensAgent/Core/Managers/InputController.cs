@@ -1,4 +1,6 @@
 using UnityEngine;
+using VsensAgent.Audio;
+using VsensAgent.Core;
 
 namespace VsensAgent
 {
@@ -6,7 +8,7 @@ namespace VsensAgent
     /// 输入管理器 - 管理相机控制和语音录音的启用/禁用
     /// 不需要作为MonoBehaviour挂在场景中，由ChatUIManager内部使用
     /// </summary>
-    public class InputManager
+    public class InputController
     {
         private bool enableCameraControl = true;
         private bool enableVoiceRecording = true;
@@ -18,8 +20,8 @@ namespace VsensAgent
             // 查找相机控制器
             AutoFindCameraControllers();
             
-            // 查找语音录音器
-            audioRecorder = Object.FindFirstObjectByType<AudioRecorder>();
+            // 从服务定位器查找语音录音器
+            audioRecorder = ServiceLocator.Get<AudioRecorder>();
             if (audioRecorder == null)
             {
                 Debug.LogWarning("[InputManager] ⚠️ AudioRecorder not found");
@@ -77,7 +79,7 @@ namespace VsensAgent
         {
             var controllers = new System.Collections.Generic.List<MonoBehaviour>();
             
-            UserMainCameraControl userCameraControl = Object.FindFirstObjectByType<UserMainCameraControl>();
+            UserMainCameraControl userCameraControl = ServiceLocator.Get<UserMainCameraControl>();
             if (userCameraControl != null)
             {
                 controllers.Add(userCameraControl);

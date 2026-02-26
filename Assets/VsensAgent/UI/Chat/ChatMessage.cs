@@ -1,8 +1,10 @@
 using System;
 using UnityEngine;
 
-[Serializable]
-public class ChatMessage
+namespace VsensAgent.Data
+{
+    [Serializable]
+    public class ChatMessage
 {
     public enum MessageType 
     { 
@@ -54,4 +56,5 @@ public class ChatMessage
     {
         return type == MessageType.Agent && !string.IsNullOrEmpty(audioPath);
     }
+}
 }

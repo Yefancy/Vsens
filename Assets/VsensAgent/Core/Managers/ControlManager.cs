@@ -8,6 +8,9 @@ using VsensAgent.VirtualObject.Sensor;
 using Sensor;
 using Unity.XR.CoreUtils;
 using UnityEngine.Pool;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
+using VsensAgent.Core;
 
 namespace VsensAgent
 {
@@ -26,7 +29,7 @@ namespace VsensAgent
             Debug.Log("[ControlManager] 🔌 ControlManager disabled.");
         }
 
-        private void HandleControlBatch(WsClient.ControlObject[] controlActions)
+        private void HandleControlBatch(ControlObject[] controlActions)
         {
             if (controlActions == null || controlActions.Length == 0)
             {
@@ -44,7 +47,7 @@ namespace VsensAgent
             }
         }
 
-        private void HandleSingleControl(WsClient.ControlObject ctrl)
+        private void HandleSingleControl(ControlObject ctrl)
         {
             if (ctrl == null)
             {
@@ -89,7 +92,7 @@ namespace VsensAgent
             }
         }
 
-        private void HandleControlWithProperties(GameObject targetObj, ObjectDescriber describer, WsClient.ControlObject ctrl)
+        private void HandleControlWithProperties(GameObject targetObj, ObjectDescriber describer, ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] 📋 Object '{ctrl.target}' has properties: [{string.Join(", ", describer.GetProperties().ToArray())}]");
 
@@ -142,7 +145,7 @@ namespace VsensAgent
             }
         }
 
-        private void HandleControlWithoutProperties(GameObject targetObj, WsClient.ControlObject ctrl)
+        private void HandleControlWithoutProperties(GameObject targetObj, ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] 🔄 Object '{ctrl.target}' has no ObjectDescriber, using legacy detection.");
 
@@ -158,7 +161,7 @@ namespace VsensAgent
             Debug.LogWarning($"[ControlManager] ⚠️ Target '{ctrl.target}' has no supported components for action '{ctrl.action}'.");
         }
 
-        private void HandleStateObjectControl(StateObject obj, WsClient.ControlObject ctrl)
+        private void HandleStateObjectControl(StateObject obj, ControlObject ctrl)
         {
             switch (ctrl.action)
             {
@@ -181,7 +184,7 @@ namespace VsensAgent
             }
         }
 
-        private void HandleTransformAction(GameObject obj, WsClient.ControlObject ctrl)
+        private void HandleTransformAction(GameObject obj, ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] 🔄 Performing transform action on '{obj.name}'");
             
@@ -290,7 +293,7 @@ namespace VsensAgent
             return "";
         }
 
-        private void HandleHighlightAction(GameObject obj, WsClient.ControlObject ctrl)
+        private void HandleHighlightAction(GameObject obj, ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] ✨ Highlighting '{obj.name}'");
 
@@ -349,7 +352,7 @@ namespace VsensAgent
         /// 处理传感器创建和修改命令
         /// </summary>
         /// <param name="ctrl">传感器控制命令</param>
-        private void HandleSetSensorAction(WsClient.ControlObject ctrl)
+        private void HandleSetSensorAction(ControlObject ctrl)
         {
             Debug.Log($"[ControlManager] 🔧 Processing sensor command: {ctrl.action}");
 
@@ -402,11 +405,11 @@ namespace VsensAgent
                     {
                         Debug.LogError("[ControlManager] ❌ VsensAgentSensorManager.Instance is null! Make sure VsensAgentSensorManager is in the scene.");
                         
-                        // 尝试查找场景中的VsensAgentSensorManager
-                        var sensorManagerInScene = FindFirstObjectByType<VsensAgentSensorManager>();
+                        // 尝试从服务定位器查找 VsensAgentSensorManager
+                        var sensorManagerInScene = ServiceLocator.Get<VsensAgentSensorManager>();
                         if (sensorManagerInScene != null)
                         {
-                            Debug.LogWarning("[ControlManager] 🔧 Found VsensAgentSensorManager in scene but Instance is null. This suggests initialization issue.");
+                            Debug.LogWarning("[ControlManager] 🔧 Found VsensAgentSensorManager via ServiceLocator but Instance is null. This suggests initialization issue.");
                         }
                         else
                         {

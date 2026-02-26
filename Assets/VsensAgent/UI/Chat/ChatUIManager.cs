@@ -3,8 +3,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using VsensAgent.Data;
+using VsensAgent.Audio;
+using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
+using VsensAgent.Core;
 
-namespace VsensAgent
+namespace VsensAgent.UI
 {
     public class ChatUIManager : MonoBehaviour
     {
@@ -23,13 +28,13 @@ namespace VsensAgent
         public GameObject systemMessagePrefab;         // 系统消息预制件
 
         [Header("设置")]
-        public int maxMessageHistory = 100;            // 最大消息历史数量
+        public int maxMessageHistory = Constants.UI.MAX_CHAT_HISTORY;            // 最大消息历史数量
         public float autoScrollSpeed = 1f;             // 自动滚动速度
         public bool autoFocusInput = true;             // 是否自动聚焦输入框
 
         [Header("交互控制")]
         public bool disableCameraWhenFocused = true;    // 聚焦时禁用相机控制
-        public KeyCode unfocusKey = KeyCode.Escape;     // 取消聚焦的快捷键
+        public KeyCode unfocusKey = Constants.InputKeys.UNFOCUS;     // 取消聚焦的快捷键
 
         // 私有变量
         private List<ChatMessage> messageHistory = new List<ChatMessage>();
@@ -38,8 +43,8 @@ namespace VsensAgent
         private AudioRecorder audioRecorder;
         private bool isRecording = false;
         private bool wasInputFocused = false;  // 跟踪输入框聚焦状态
-        private Canvas chatCanvas;              // 用于点击检测
-        private InputManager inputManager;      // 输入管理器
+        private Canvas MainCanvas;              // 用于点击检测
+        private InputController inputController;      // 输入管理器
 
         // 事件定义
         public static System.Action<string> OnUserMessageSent;          // 用户发送消息事件
@@ -60,11 +65,14 @@ namespace VsensAgent
             InitializeUI();
             
             // 获取Canvas引用用于点击检测
-            chatCanvas = GetComponentInParent<Canvas>();
+            MainCanvas = GetComponentInParent<Canvas>();
             
             // 初始化输入管理器
-            inputManager = new InputManager();
-            inputManager.Initialize();
+            inputController = new InputController();
+            inputController.Initialize();
+            
+            // 注册到服务定位器
+            ServiceLocator.Register<ChatUIManager>(this);
         }
 
         void OnEnable()
@@ -72,10 +80,11 @@ namespace VsensAgent
             // 订阅WebSocket事件
             WsClient.OnAgentReply += OnAgentReplyReceived;
             
-            // 查找AudioRecorder引用
-            audioRecorder = FindFirstObjectByType<AudioRecorder>();
+            // 从服务定位器获取AudioRecorder引用
+            audioRecorder = ServiceLocator.Get<AudioRecorder>();
             if (audioRecorder != null)
             {
+                Debug.Log("[ChatUIManager] ✅ AudioRecorder service found");
             }
             else
             {
@@ -332,7 +341,7 @@ namespace VsensAgent
                 wasInputFocused = isCurrentlyFocused;
                 
                 // 通知输入管理器聊天焦点状态变化
-                inputManager?.OnChatFocusChanged(isCurrentlyFocused);
+                inputController?.OnChatFocusChanged(isCurrentlyFocused);
                 
                 // 通知其他组件聚焦状态变化
                 OnInputFocusChanged?.Invoke(isCurrentlyFocused);
@@ -369,16 +378,16 @@ namespace VsensAgent
             Vector2 mousePos = Input.mousePosition;
             
             // 检测是否点击在聊天窗口内
-            if (chatCanvas != null && chatWindow != null && RectTransformUtility.RectangleContainsScreenPoint(
+            if (MainCanvas != null && chatWindow != null && RectTransformUtility.RectangleContainsScreenPoint(
                 chatWindow.GetComponent<RectTransform>(), 
                 mousePos, 
-                chatCanvas.worldCamera))
+                MainCanvas.worldCamera))
             {
                 // 点击在聊天窗口内，检查是否点击在输入框上
                 if (!RectTransformUtility.RectangleContainsScreenPoint(
                     textInputField.GetComponent<RectTransform>(), 
                     mousePos, 
-                    chatCanvas.worldCamera))
+                    MainCanvas.worldCamera))
                 {
                     // 点击在聊天窗口内但不在输入框上，取消聚焦
                     UnfocusInputField();
@@ -489,7 +498,7 @@ namespace VsensAgent
         /// <summary>
         /// 统一处理Agent回复（语音+文字）
         /// </summary>
-        private void OnAgentReplyReceived(WsClient.AgentReplyMessage response)
+        private void OnAgentReplyReceived(AgentReplyMessage response)
         {
             if (response.status != "success")
             {
@@ -610,15 +619,15 @@ namespace VsensAgent
         /// </summary>
         private void OnToggleViewClicked()
         {
-            UserMainCameraControl cameraControl = FindFirstObjectByType<UserMainCameraControl>();
+            UserMainCameraControl cameraControl = ServiceLocator.Get<UserMainCameraControl>();
             if (cameraControl != null)
             {
                 cameraControl.ToggleCameraMode();
                 
                 // 显示切换提示
                 string modeName = cameraControl.GetCurrentMode() == UserMainCameraControl.CameraMode.FirstPerson 
-                    ? "第一人称" : "上帝视角";
-                AddSystemMessage($"📷 已切换到{modeName}模式");
+                    ? "First Person" : "God View";
+                AddSystemMessage($"📷 Switched to {modeName} Mode");
             }
             else
             {

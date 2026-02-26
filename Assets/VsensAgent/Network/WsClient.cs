@@ -6,12 +6,17 @@ using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using VsensAgent.Agent;
+using VsensAgent.Network.Protocol;
+using VsensAgent.Core;
 
-public class WsClient : MonoBehaviour
+namespace VsensAgent.Network
 {
+    public class WsClient : MonoBehaviour
+    {
     private static WebSocket websocket;
     private static bool isTryingReconnect = false;
-    private static float reconnectInterval = 3f;
+    private static float reconnectInterval = Constants.Network.RECONNECT_INTERVAL;
 
     // Agent行为控制器引用
     public AgentBehaviorController agentBehaviorController;
@@ -23,12 +28,15 @@ public class WsClient : MonoBehaviour
 
     async void Start()
     {
+        // 注册到服务定位器
+        ServiceLocator.Register<WsClient>(this);
+        
         await ConnectWebSocket();
     }
 
     async Task ConnectWebSocket()
     {
-        websocket = new WebSocket("ws://localhost:8765");
+        websocket = new WebSocket(Constants.Network.WS_SERVER_URL);
 
         websocket.OnOpen += () =>
         {
@@ -102,7 +110,7 @@ public class WsClient : MonoBehaviour
                     OnAgentReply?.Invoke(replyMsg);
                     
                     // 停止思考状态 - 结束呼吸动画
-                    var wsClient = FindFirstObjectByType<WsClient>();
+                    var wsClient = ServiceLocator.Get<WsClient>();
                     if (wsClient != null && wsClient.agentBehaviorController != null)
                     {
                         wsClient.agentBehaviorController.StopThinking();
@@ -149,7 +157,7 @@ public class WsClient : MonoBehaviour
             websocket.SendText(json);
             
             // 开始思考状态 - 启动呼吸动画
-            var wsClient = FindFirstObjectByType<WsClient>();
+            var wsClient = ServiceLocator.Get<WsClient>();
             if (wsClient != null && wsClient.agentBehaviorController != null)
             {
                 wsClient.agentBehaviorController.StartThinking();
@@ -173,7 +181,7 @@ public class WsClient : MonoBehaviour
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
             
-            var wsClient = FindFirstObjectByType<WsClient>();
+            var wsClient = ServiceLocator.Get<WsClient>();
             if (wsClient != null)
             {
                 // 开始思考状态 - 启动呼吸动画，2秒后自动停止
@@ -184,7 +192,7 @@ public class WsClient : MonoBehaviour
                 }
                 
                 // 清空聊天历史
-                var chatUI = FindFirstObjectByType<VsensAgent.ChatUIManager>();
+                var chatUI = ServiceLocator.Get<VsensAgent.UI.ChatUIManager>();
                 if (chatUI != null)
                 {
                     chatUI.ClearChatHistory();
@@ -216,7 +224,7 @@ public class WsClient : MonoBehaviour
             websocket.SendText(json);
             
             // 开始思考状态 - 启动呼吸动画
-            var wsClient = FindFirstObjectByType<WsClient>();
+            var wsClient = ServiceLocator.Get<WsClient>();
             if (wsClient != null && wsClient.agentBehaviorController != null)
             {
                 wsClient.agentBehaviorController.StartThinking();
@@ -254,88 +262,5 @@ public class WsClient : MonoBehaviour
             await websocket.Close();
         }
     }
-
-    // 数据结构定义
-    [Serializable]
-    public class MessageTypeWrapper
-    {
-        public string type;
-    }
-
-    [Serializable]
-    public class AgentReplyMessage
-    {
-        public string type;
-        public string status;
-        public string transcription;
-        public string reply;
-        public string audio_path;
-        [JsonProperty("control")]
-        public ControlActions control; // 使用包装类来处理 actions 字段
-    }
-
-    [Serializable]
-    public class ControlActions
-    {
-        [JsonProperty("actions")]
-        public ControlObject[] actions;
-        
-        public ControlActions()
-        {
-            actions = new ControlObject[0];
-        }
-    }
-
-    [Serializable]
-    public class TranscribeRequest
-    {
-        public string type;
-        public string audio_path;
-        public string scene_snapshot;
-    }
-
-    [Serializable]
-    public class TextChatRequest
-    {
-        public string type;
-        public string message;
-        public string scene_snapshot;
-        public bool request_audio;
-    }
-    
-    [Serializable]
-    public class ResetRequest
-    {
-        public string type;
-    }
-
-    [Serializable]
-    public class ControlObject
-    {
-        public string target;
-        public string action;
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public Dictionary<string, object> parameters;
-        
-        public ControlObject()
-        {
-            parameters = new Dictionary<string, object>();
-        }
-    }
-
-    [Serializable]
-    public class AgentBehavior
-    {
-        public string type;
-        public string action;
-        public string target;
-        public string emotion;
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public Dictionary<string, object> parameters;
-        
-        public AgentBehavior()
-        {
-            parameters = new Dictionary<string, object>();
-        }
-    }
+}
 }
