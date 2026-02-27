@@ -22,11 +22,14 @@ namespace VsensAgent.Audio
     private bool isRecording = false;
     private bool inputEnabled = true; 
 
+    void Awake()
+    {
+        // 在Awake中注册，确保在其他组件的OnEnable之前就可用
+        ServiceLocator.Register<AudioRecorder>(this);
+    }
+
     void Start()
     {
-        // 注册到服务定位器
-        ServiceLocator.Register<AudioRecorder>(this);
-        
         if (Microphone.devices.Length > 0)
         {
             if (string.IsNullOrEmpty(micDevice))
