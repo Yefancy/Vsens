@@ -85,6 +85,8 @@ namespace VsensAgent.UI
             if (audioRecorder != null)
             {
                 Debug.Log("[ChatUIManager] ✅ AudioRecorder service found");
+                // 🔥 同步更新InputController中的AudioRecorder引用
+                inputController?.UpdateAudioRecorder(audioRecorder);
             }
             else
             {

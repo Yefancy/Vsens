@@ -17,10 +17,6 @@ namespace VsensAgent.Audio
     [Tooltip("Sample rate (Hz) — 16000 is good for STT.")]
     public int sampleRate = Constants.Audio.DEFAULT_SAMPLE_RATE;
 
-    [Header("Save Settings")]
-    [Tooltip("Optional: Set a custom folder to save the .wav file.")]
-    public string customSavePath;
-
     private AudioClip recordedClip;
     private string filePath;
     private bool isRecording = false;
@@ -133,7 +129,8 @@ namespace VsensAgent.Audio
 
     void SaveToWav()
     {
-        // 使用项目根目录的相对路径
+        // Unity项目在VsensAgent文件夹下，音频保存在 VsensAgent/AudioRecordings/input/
+        // 绝对路径：G:/LCLab/VsensAgent/VsensAgent/AudioRecordings/input/xxx.wav
         string projectRoot = Directory.GetParent(Application.dataPath).FullName;
         string folderPath = Path.Combine(projectRoot, "AudioRecordings", "input");
 
@@ -145,10 +142,14 @@ namespace VsensAgent.Audio
         string fileName = "recorded_audio_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".wav";
         string absolutePath = Path.Combine(folderPath, fileName);
         
-        // 保存相对路径用于WebSocket传输
-        filePath = Path.Combine("AudioRecordings", "input", fileName);
+        // 相对路径用于WebSocket传输（相对于VseneAgent外层目录）
+        // 格式：VsensAgent/AudioRecordings/input/xxx.wav
+        filePath = Path.Combine("VsensAgent", "AudioRecordings", "input", fileName).Replace("\\", "/");
 
         WavUtility.FromAudioClip(recordedClip, absolutePath, true);
+        
+        Debug.Log($"[AudioRecorder] 💾 Audio saved to: {absolutePath}");
+        Debug.Log($"[AudioRecorder] 📤 Relative path for WebSocket: {filePath}");
     }
 
     public string GetLatestFilePath()
@@ -162,10 +163,12 @@ namespace VsensAgent.Audio
     public void SetInputEnabled(bool enabled)
     {
         inputEnabled = enabled;
+        Debug.Log($"[AudioRecorder] 🎙️ Input {(enabled ? "ENABLED" : "DISABLED")} - R key recording is now {(enabled ? "active" : "blocked")}");
         
         // 如果在禁用输入时正在录音，停止录音
         if (!enabled && isRecording)
         {
+            Debug.LogWarning("[AudioRecorder] ⚠️ Recording stopped due to input being disabled");
             StopRecording();
         }
     }

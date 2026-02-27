@@ -20,11 +20,23 @@ namespace VsensAgent
             // 查找相机控制器
             AutoFindCameraControllers();
             
-            // 从服务定位器查找语音录音器
+            // 从服务定位器查找语音录音器（可能为null，稍后会通过UpdateAudioRecorder更新）
             audioRecorder = ServiceLocator.Get<AudioRecorder>();
             if (audioRecorder == null)
             {
-                Debug.LogWarning("[InputManager] ⚠️ AudioRecorder not found");
+                Debug.LogWarning("[InputController] ⚠️ AudioRecorder not found during Initialize, will retry later");
+            }
+        }
+        
+        /// <summary>
+        /// 更新AudioRecorder引用（由ChatUIManager在OnEnable时调用）
+        /// </summary>
+        public void UpdateAudioRecorder(AudioRecorder recorder)
+        {
+            audioRecorder = recorder;
+            if (audioRecorder != null)
+            {
+                Debug.Log("[InputController] ✅ AudioRecorder reference updated successfully");
             }
         }
         
@@ -68,10 +80,11 @@ namespace VsensAgent
             if (audioRecorder != null)
             {
                 audioRecorder.SetInputEnabled(enabled);
+                Debug.Log($"[InputController] 🎙️ Voice recording {(enabled ? "ENABLED" : "DISABLED")}");
             }
             else
             {
-                Debug.LogWarning("[InputManager] ⚠️ AudioRecorder is null, cannot control voice recording!");
+                Debug.LogWarning("[InputController] ⚠️ AudioRecorder is null, cannot control voice recording!");
             }
         }
         
