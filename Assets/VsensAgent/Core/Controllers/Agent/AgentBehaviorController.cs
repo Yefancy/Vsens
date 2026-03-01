@@ -80,11 +80,13 @@ namespace VsensAgent.Agent
     void OnEnable()
     {
         WsClient.OnAgentBehavior += PerformBehavior;
+        WsClient.OnAgentStatus  += HandleAgentStatus;
     }
 
     void OnDisable()
     {
         WsClient.OnAgentBehavior -= PerformBehavior;
+        WsClient.OnAgentStatus  -= HandleAgentStatus;
     }
 
     void Update()
@@ -103,6 +105,38 @@ namespace VsensAgent.Agent
 
         // 轻微自转
         transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
+    }
+
+    /// <summary>
+    /// 处理Python端主动推送的Agent状态（Phase 1）
+    /// 状态: idle | listening | transcribing | thinking | planning |
+    ///         executing | speaking | waiting | scripting
+    /// </summary>
+    private void HandleAgentStatus(AgentStatusMessage msg)
+    {
+        if (msg == null) return;
+
+        switch (msg.state)
+        {
+            // 计算密集型状态 — 开启呼吸动画
+            case "thinking":
+            case "planning":
+            case "scripting":
+            case "transcribing":
+            case "executing":
+                StartThinking();
+                break;
+
+            // 空闲/播放语音 — 恢复正常状态
+            case "idle":
+            case "speaking":
+                StopThinking();
+                break;
+
+            // listening / waiting — 保持当前状态（无需改变动画）
+            default:
+                break;
+        }
     }
 
     /// <summary>

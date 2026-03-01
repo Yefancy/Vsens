@@ -42,4 +42,27 @@ namespace VsensAgent.Network.Protocol
             actions = new ControlObject[0];
         }
     }
+
+    /// <summary>
+    /// Agent状态广播消息 - Python端主动推送的Agent运行状态
+    /// 状态值: idle | listening | transcribing | thinking | planning |
+    ///         executing | speaking | waiting | scripting
+    /// </summary>
+    [Serializable]
+    public class AgentStatusMessage
+    {
+        public string type;
+        public string state;
+        public string detail;
+    }
+
+    /// <summary>
+    /// 中断确认消息 - 响应 agent_interrupt 或 plan_interrupt 请求的回复
+    /// </summary>
+    [Serializable]
+    public class InterruptAckMessage
+    {
+        public string type;
+        public string message;
+    }
 }

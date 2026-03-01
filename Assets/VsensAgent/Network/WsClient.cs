@@ -25,6 +25,7 @@ namespace VsensAgent.Network
     public static event Action<AgentReplyMessage> OnAgentReply;  // 统一的Agent回复事件（语音+文字）
     public static event Action<ControlObject[]> OnControl; // 统一使用数组
     public static event Action<AgentBehavior> OnAgentBehavior;
+    public static event Action<AgentStatusMessage> OnAgentStatus; // Python端主动推送的Agent状态
 
     async void Start()
     {
@@ -128,8 +129,21 @@ namespace VsensAgent.Network
                     OnAgentBehavior?.Invoke(behaviorMsg);
                     break;
 
+                case "agent_status":
+                    // Phase 1: Python端主动推送的Agent状态变更（无需Unity请求）
+                    var statusMsg = JsonConvert.DeserializeObject<AgentStatusMessage>(json);
+                    OnAgentStatus?.Invoke(statusMsg);
+                    break;
+
+                case "interrupt_ack":
+                    // Phase 1: 收到中断确认（agent_interrupt 或 plan_interrupt 的响应）
+                    var ackMsg = JsonConvert.DeserializeObject<InterruptAckMessage>(json);
+                    Debug.Log($"[WS] ✅ Interrupt acknowledged: {ackMsg.message}");
+                    break;
+
                 default:
-                    Debug.LogWarning($"[WS] Unknown message type: {typeWrapper.type}");
+                    // 静默忽略未知消息类型，保持前向兼容性（不崩溃）
+                    Debug.Log($"[WS] Ignoring unknown message type: '{typeWrapper.type}'");
                     break;
             }
         }
@@ -233,6 +247,42 @@ namespace VsensAgent.Network
         else
         {
             Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send text message.");
+        }
+    }
+
+    /// <summary>
+    /// 硬中断 — 取消正在进行的LLM调用，清除活动计划，Agent回到idle状态
+    /// Python端返回: { "type": "interrupt_ack", "message": "Stopped." }
+    /// </summary>
+    public static void SendAgentInterrupt()
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new AgentInterruptRequest();
+            websocket.SendText(JsonConvert.SerializeObject(payload));
+            Debug.Log("[WS] 🛑 Sent agent_interrupt (hard stop)");
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send agent_interrupt.");
+        }
+    }
+
+    /// <summary>
+    /// 软中断 — 清除活动计划，但允许当前LLM调用完成
+    /// Python端返回: { "type": "interrupt_ack", "message": "Stopped." }
+    /// </summary>
+    public static void SendPlanInterrupt()
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new PlanInterruptRequest();
+            websocket.SendText(JsonConvert.SerializeObject(payload));
+            Debug.Log("[WS] ⏸️ Sent plan_interrupt (soft stop)");
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send plan_interrupt.");
         }
     }
 

@@ -57,7 +57,15 @@ public class ObjectDescriber : MonoBehaviour
             properties.Add(property);
         }
         data["properties"] = properties;
-        
+
+        // 添加 transform scale (Phase 2: Python 场景相关性过滤需要完整字段)
+        var lossyScale = transform.lossyScale;
+        var scaleArr = new JSONArray();
+        scaleArr.Add(new JSONNumber((float)System.Math.Round(lossyScale.x, 3)));
+        scaleArr.Add(new JSONNumber((float)System.Math.Round(lossyScale.y, 3)));
+        scaleArr.Add(new JSONNumber((float)System.Math.Round(lossyScale.z, 3)));
+        data["scale"] = scaleArr;
+
         if (TryGetComponent<IStateHolder>(out var stateHolder))
         {
             data["state"] = stateHolder.getCurrentState();
