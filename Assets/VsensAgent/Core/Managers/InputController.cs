@@ -77,6 +77,16 @@ namespace VsensAgent
         {
             enableVoiceRecording = enabled;
             
+            // Lazy-resolve: AudioRecorder may not have been registered yet when
+            // Initialize()/UpdateAudioRecorder() were called (Unity Awake/OnEnable
+            // order across GameObjects is not guaranteed).
+            if (audioRecorder == null)
+            {
+                audioRecorder = ServiceLocator.Get<AudioRecorder>();
+                if (audioRecorder != null)
+                    Debug.Log("[InputController] ✅ AudioRecorder resolved via lazy lookup.");
+            }
+            
             if (audioRecorder != null)
             {
                 audioRecorder.SetInputEnabled(enabled);
@@ -84,7 +94,7 @@ namespace VsensAgent
             }
             else
             {
-                Debug.LogWarning("[InputController] ⚠️ AudioRecorder is null, cannot control voice recording!");
+                Debug.LogWarning("[InputController] ⚠️ AudioRecorder still null during lazy lookup — R key block will not apply.");
             }
         }
         
