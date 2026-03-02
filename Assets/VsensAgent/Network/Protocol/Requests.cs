@@ -53,4 +53,16 @@ namespace VsensAgent.Network.Protocol
     {
         public string type = "plan_interrupt";
     }
+
+    /// <summary>
+    /// 场景心跳请求 (Phase 3) - 定期发送场景快照供 Python 端 SceneDiff / EventClassifier 使用
+    /// 发送间隔由 HeartbeatManager 控制（默认 1 秒）。
+    /// Python 端仅在检测到高显著性事件时返回 agent_push 消息；无事件时静默。
+    /// </summary>
+    [Serializable]
+    public class HeartbeatRequest
+    {
+        public string type = "scene_heartbeat";
+        public string scene_snapshot;
+    }
 }

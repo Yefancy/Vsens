@@ -36,6 +36,9 @@ namespace VsensAgent.UI
         public bool disableCameraWhenFocused = true;    // 聚焦时禁用相机控制
         public KeyCode unfocusKey = Constants.InputKeys.UNFOCUS;     // 取消聚焦的快捷键
 
+        [Header("Agent状态显示")]
+        public TMP_Text agentStatusText;               // 聊天窗口顶部的状态标签
+
         // 私有变量
         private List<ChatMessage> messageHistory = new List<ChatMessage>();
         private Dictionary<string, GameObject> messageUIObjects = new Dictionary<string, GameObject>();
@@ -45,6 +48,7 @@ namespace VsensAgent.UI
         private bool wasInputFocused = false;  // 跟踪输入框聚焦状态
         private Canvas MainCanvas;              // 用于点击检测
         private InputController inputController;      // 输入管理器
+        private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
 
         // 事件定义
         public static System.Action<string> OnUserMessageSent;          // 用户发送消息事件
@@ -78,7 +82,9 @@ namespace VsensAgent.UI
         void OnEnable()
         {
             // 订阅WebSocket事件
-            WsClient.OnAgentReply += OnAgentReplyReceived;
+            WsClient.OnAgentReply  += OnAgentReplyReceived;
+            WsClient.OnAgentStatus += HandleAgentStatusUI;
+            WsClient.OnAgentPush   += OnAgentPushReceived;  // Phase 3: 心跳触发的主动推送
             
             // 从服务定位器获取AudioRecorder引用
             audioRecorder = ServiceLocator.Get<AudioRecorder>();
@@ -95,7 +101,7 @@ namespace VsensAgent.UI
 
             // 订阅输入事件
             if (sendButton != null)
-                sendButton.onClick.AddListener(SendTextMessage);
+                sendButton.onClick.AddListener(OnSendButtonClicked);
             if (textInputField != null)
                 textInputField.onSubmit.AddListener(OnTextInputSubmit);
             if (toggleViewButton != null)
@@ -105,10 +111,12 @@ namespace VsensAgent.UI
         void OnDisable()
         {
             // 取消订阅
-            WsClient.OnAgentReply -= OnAgentReplyReceived;
+            WsClient.OnAgentReply  -= OnAgentReplyReceived;
+            WsClient.OnAgentStatus -= HandleAgentStatusUI;
+            WsClient.OnAgentPush   -= OnAgentPushReceived;  // Phase 3
             
             if (sendButton != null)
-                sendButton.onClick.RemoveListener(SendTextMessage);
+                sendButton.onClick.RemoveListener(OnSendButtonClicked);
             if (textInputField != null)
                 textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
             if (toggleViewButton != null)
@@ -176,6 +184,13 @@ namespace VsensAgent.UI
                 }
             }
             
+            // 初始化状态标签（顶部HUD）
+            if (agentStatusText != null)
+                agentStatusText.text = "";
+
+            // 初始化发送/停止按钮标签
+            UpdateSendButtonLabel();
+
             // 添加欢迎消息
             AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
         }
@@ -301,6 +316,18 @@ namespace VsensAgent.UI
         }
 
         // ========== 输入处理方法 ==========
+
+        /// <summary>
+        /// 统一的发送/停止按钮点击处理。
+        /// 当Agent空闲时发送消息；当Agent忙碌时发送硬中断。
+        /// </summary>
+        private void OnSendButtonClicked()
+        {
+            if (_agentIsIdle)
+                SendTextMessage();
+            else
+                WsClient.SendAgentInterrupt();
+        }
 
         private void SendTextMessage()
         {
@@ -486,6 +513,55 @@ namespace VsensAgent.UI
             AddUserMessage("[🎤 Voice Message]");
         }
 
+        // ========== Agent状态UI ==========
+
+        /// <summary>
+        /// 处理Python端主动推送的Agent状态变化（Phase 1）。
+        /// 更新顶部状态标签，并在空闲/忙碌之间切换发送/停止按钮。
+        /// </summary>
+        private void HandleAgentStatusUI(AgentStatusMessage msg)
+        {
+            if (msg == null) return;
+
+            _agentIsIdle = msg.state == "idle";
+
+            if (agentStatusText != null)
+                agentStatusText.text = AgentStateToDisplayString(msg.state);
+
+            UpdateSendButtonLabel();
+        }
+
+        /// <summary>
+        /// 更新发送/停止按钮上的标签文字。
+        /// </summary>
+        private void UpdateSendButtonLabel()
+        {
+            if (sendButton == null) return;
+            var label = sendButton.GetComponentInChildren<TMP_Text>();
+            if (label == null) return;
+            label.text = _agentIsIdle ? "OK" : "Stop";
+        }
+
+        /// <summary>
+        /// 将Python端的状态字符串映射为UI友好的显示文本。
+        /// </summary>
+        private static string AgentStateToDisplayString(string state)
+        {
+            switch (state)
+            {
+                case "idle":         return "";
+                case "listening":    return "🎤 Listening...";
+                case "transcribing": return "✍️ Transcribing...";
+                case "thinking":     return "💭 Thinking...";
+                case "planning":     return "📋 Planning...";
+                case "executing":    return "⚙️ Executing...";
+                case "speaking":     return "🔊 Speaking...";
+                case "waiting":      return "⏳ Waiting...";
+                case "scripting":    return "📝 Scripting...";
+                default:             return state;
+            }
+        }
+
         // ========== WebSocket集成方法 ==========
 
         private void SendMessageToAgent(string message)
@@ -538,6 +614,23 @@ namespace VsensAgent.UI
             
             // 这里需要调用现有的音频播放系统
             // 可能是AgentVoiceController的PlayAudio方法
+        }
+
+        /// <summary>
+        /// Phase 3: 处理 HeartbeatHandler 心跳触发的主动推送。
+        /// Python 端仅在 severity >= 0.5 时才发送，所以此处收到的消息必然是具有实际意义的事件。
+        /// </summary>
+        private void OnAgentPushReceived(AgentPushMessage push)
+        {
+            if (push == null) return;
+
+            // 显示 Agent 主动说话内容（无转录脸）
+            if (!string.IsNullOrEmpty(push.reply))
+            {
+                // 前缀 🔔 让用户能区分主动推送和普通回复
+                // Pass audio_path when Python TTS is active (tts_in_push=true in server_config)
+                AddAgentMessage("🔔 " + push.reply, push.audio_path ?? "");
+            }
         }
 
         // ========== 滚动控制方法 ==========

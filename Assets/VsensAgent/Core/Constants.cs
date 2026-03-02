@@ -136,5 +136,17 @@ namespace VsensAgent.Core
             /// </summary>
             public const float TRANSITION_SPEED = 5f;
         }
+
+        /// <summary>
+        /// 心跳配置常量 (Phase 3)
+        /// </summary>
+        public static class Heartbeat
+        {
+            /// <summary>
+            /// Python 端 SceneDiff / EventClassifier 所需的场景心跳发送间隔（秒）
+            /// 建议范围: 0.5s – 2.0s。默认 1.0s。
+            /// </summary>
+            public const float HEARTBEAT_INTERVAL = 1.0f;
+        }
     }
 }

@@ -7,6 +7,12 @@ public class RoomDescriber : MonoBehaviour
 {
     [SerializeField]
     public List<ObjectDescriber> additionalDescribers = new List<ObjectDescriber>();
+
+    [Tooltip("Camera whose world-space position is reported as the 'user' entry in every scene snapshot. " +
+             "Leave blank to fall back to Camera.main.")]
+    [SerializeField]
+    private Camera userCamera;
+
     [TextArea(5, 20)] // Inspector 中多行显示
     public string jsonOutput;
 
@@ -22,9 +28,30 @@ public class RoomDescriber : MonoBehaviour
 
         foreach (var additionalDescriber in additionalDescribers)
         {
+            if (additionalDescriber == null)
+            {
+                Debug.LogWarning("[RoomDescriber] additionalDescribers list contains a missing (null) entry — skipping. Remove the broken reference in the Inspector.");
+                continue;
+            }
             var data = additionalDescriber.GetDescription();
             var objectName = additionalDescriber.GetObjectName();
             objects.Add(objectName, data);
+        }
+
+        // Phase 3 — include head-tracked user position for USER_PROXIMITY events.
+        // Python's SceneDiff fires USER_PROXIMITY when the user moves > 0.5 m per heartbeat.
+        var cam = userCamera != null ? userCamera : Camera.main;
+        if (cam != null)
+        {
+            var pos = cam.transform.position;
+            var userNode = new JSONObject();
+            var posArray = new JSONArray();
+            posArray.Add(pos.x);
+            posArray.Add(pos.y);
+            posArray.Add(pos.z);
+            userNode.Add("position", posArray);
+            userNode.Add("properties", new JSONArray());
+            objects.Add("user", userNode);
         }
 
         return objects;

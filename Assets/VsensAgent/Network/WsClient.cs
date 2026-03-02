@@ -26,6 +26,8 @@ namespace VsensAgent.Network
     public static event Action<ControlObject[]> OnControl; // 统一使用数组
     public static event Action<AgentBehavior> OnAgentBehavior;
     public static event Action<AgentStatusMessage> OnAgentStatus; // Python端主动推送的Agent状态
+    public static event Action<AgentPushMessage> OnAgentPush;    // Phase 3: 心跳触发的主动推送
+    public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
     async void Start()
     {
@@ -139,6 +141,24 @@ namespace VsensAgent.Network
                     // Phase 1: 收到中断确认（agent_interrupt 或 plan_interrupt 的响应）
                     var ackMsg = JsonConvert.DeserializeObject<InterruptAckMessage>(json);
                     Debug.Log($"[WS] ✅ Interrupt acknowledged: {ackMsg.message}");
+                    break;
+
+                case "agent_push":
+                    // Phase 3: HeartbeatHandler 在检测到显著场景事件时主动推送
+                    var pushMsg = JsonConvert.DeserializeObject<AgentPushMessage>(json);
+                    OnAgentPush?.Invoke(pushMsg);
+                    // 控制指令走同一条控制管线（与 agent_ready 行为一致）
+                    if (pushMsg.control != null && pushMsg.control.actions != null)
+                    {
+                        OnControl?.Invoke(pushMsg.control.actions);
+                    }
+                    break;
+
+                case "server_config":
+                    // Phase 3: 连接时由 Python 服务器立即发送，包含心跳间隔等配置
+                    var cfgMsg = JsonConvert.DeserializeObject<ServerConfigMessage>(json);
+                    OnServerConfig?.Invoke(cfgMsg);
+                    Debug.Log($"[WS] ⚙️ Server config received: heartbeat={cfgMsg.heartbeat_interval_s}s, tts_in_push={cfgMsg.tts_in_push}");
                     break;
 
                 default:
@@ -287,6 +307,20 @@ namespace VsensAgent.Network
     }
 
     public static bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
+
+    /// <summary>
+    /// 发送场景心跳消息 (Phase 3)
+    /// 由 HeartbeatManager 定时调用，Python 端用于 SceneDiff / EventClassifier。
+    /// 仅在 WebSocket 已连接时发送；断线时静默跳过（不产生警告，避免日志污染）。
+    /// </summary>
+    public static void SendHeartbeat(string sceneSnapshot)
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new HeartbeatRequest { scene_snapshot = sceneSnapshot };
+            websocket.SendText(JsonConvert.SerializeObject(payload));
+        }
+    }
 
     /// <summary>
     /// 获取当前场景描述的统一方法

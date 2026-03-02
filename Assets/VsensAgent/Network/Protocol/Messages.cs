@@ -65,4 +65,63 @@ namespace VsensAgent.Network.Protocol
         public string type;
         public string message;
     }
+
+    /// <summary>
+    /// Agent 主动推送消息 (Phase 3) - 由 Python HeartbeatHandler 在检测到显著场景事件时主动发送
+    /// （无需 Unity 请求）。可包含语音回复和/或控制指令。
+    /// Python 端 severity >= 0.5 才触发此消息，所以 Unity 端不会收到噪声推送。
+    /// 
+    /// triggered_by: 触发此推送的事件列表（如 "SENSOR_TRIGGER:OPTICAL-01"），可用于 Debug / HUD 显示
+    /// </summary>
+    [Serializable]
+    public class AgentPushMessage
+    {
+        public string type;
+
+        /// <summary>Primary event type that triggered this push (e.g. SENSOR_TRIGGER).</summary>
+        public string trigger;
+
+        /// <summary>Agent reply text. Never empty — Python suppresses the push if LLM returned nothing.</summary>
+        public string reply;
+
+        /// <summary>
+        /// Absolute path to a pre-generated MP3 file (Python TTS).
+        /// Present only when server_config.tts_in_push == true.
+        /// Always null-check before use.
+        /// </summary>
+        [JsonProperty("audio_path")]
+        public string audio_path;
+
+        [JsonProperty("control")]
+        public ControlActions control;
+
+        /// <summary>
+        /// Human-readable list of events that crossed the attention threshold,
+        /// e.g. ["SENSOR_TRIGGER:OPTICAL-01 (severity 0.8)"]. For debug / HUD display only.
+        /// </summary>
+        [JsonProperty("triggered_by")]
+        public string[] triggered_by;
+    }
+
+    /// <summary>
+    /// 服务器配置消息 (Phase 3) - 客户端连接成功后由 Python 服务器立即推送。
+    /// Unity 应进行以下操作：
+    ///   - 使用 heartbeat_interval_s 覆盖 HeartbeatManager 的默认间隔
+    ///   - 了解 tts_in_push (是否显示音频播放按鈕)
+    ///   - 了解 attention_threshold (供 HUD 显示，无需 Unity 处理)
+    /// </summary>
+    [Serializable]
+    public class ServerConfigMessage
+    {
+        public string type;
+
+        [JsonProperty("heartbeat_interval_s")]
+        public float heartbeat_interval_s;
+
+        [JsonProperty("tts_in_push")]
+        public bool tts_in_push;
+
+        [JsonProperty("attention_threshold")]
+        public float attention_threshold;
+    }
 }

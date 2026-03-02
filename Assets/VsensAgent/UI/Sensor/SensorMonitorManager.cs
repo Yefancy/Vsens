@@ -26,7 +26,7 @@ namespace VsensAgent.UI
         public float listRefreshInterval = 2f;          // 列表刷新间隔（秒）
         
         [Header("Debug")]
-        public bool showDebugInfo = true;               // 显示调试信息
+        public bool showDebugInfo = false;               // 显示调试信息
         
         // 私有变量
         private VsensAgentSensorManager sensorManager;
@@ -64,7 +64,8 @@ namespace VsensAgent.UI
             // 初始化传感器列表
             RefreshSensorList();
             
-            Debug.Log("[SensorMonitorManager] ✅ Sensor Monitor initialized");
+            if (showDebugInfo)
+                Debug.Log("[SensorMonitorManager] ✅ Sensor Monitor initialized");
         }
 
         void Update()
@@ -329,7 +330,8 @@ namespace VsensAgent.UI
             }
             sensorUIItems.Clear();
             
-            Debug.Log("[SensorMonitorManager] 🗑️ Cleared all sensor UI items");
+            if (showDebugInfo)
+                Debug.Log("[SensorMonitorManager] 🗑️ Cleared all sensor UI items");
         }
     }
 }
