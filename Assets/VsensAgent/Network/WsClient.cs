@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using VsensAgent.Agent;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
+using VsensAgent.SceneApi.V2;
 
 namespace VsensAgent.Network
 {
@@ -26,6 +27,7 @@ namespace VsensAgent.Network
     public static event Action<ControlObject[]> OnControl; // 统一使用数组
     public static event Action<AgentBehavior> OnAgentBehavior;
     public static event Action<AgentStatusMessage> OnAgentStatus; // Python端主动推送的Agent状态
+    public static event Action<string> OnSceneApiRequest; // Scene API v2 request raw payload
     public static event Action<AgentPushMessage> OnAgentPush;    // Phase 3: 心跳触发的主动推送
     public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
@@ -33,6 +35,12 @@ namespace VsensAgent.Network
     {
         // 注册到服务定位器
         ServiceLocator.Register<WsClient>(this);
+
+        // Scene API v2 默认启用，避免依赖手动场景挂载
+        if (GetComponent<SceneApiManager>() == null)
+        {
+            gameObject.AddComponent<SceneApiManager>();
+        }
         
         await ConnectWebSocket();
     }
@@ -141,6 +149,17 @@ namespace VsensAgent.Network
                     // Phase 1: 收到中断确认（agent_interrupt 或 plan_interrupt 的响应）
                     var ackMsg = JsonConvert.DeserializeObject<InterruptAckMessage>(json);
                     Debug.Log($"[WS] ✅ Interrupt acknowledged: {ackMsg.message}");
+                    break;
+
+                case "scene.query_summary":
+                case "scene.query_objects":
+                case "scene.query_relations":
+                case "scene.query_surfaces":
+                case "scene.find_sensor_placements":
+                case "scene.validate_placement":
+                case "scene.validate_actions":
+                case "scene.execute_actions":
+                    OnSceneApiRequest?.Invoke(json);
                     break;
 
                 case "agent_push":
@@ -307,6 +326,17 @@ namespace VsensAgent.Network
     }
 
     public static bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
+
+    public static void SendMessage(object payload)
+    {
+        if (websocket == null || websocket.State != WebSocketState.Open)
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send message.");
+            return;
+        }
+
+        websocket.SendText(JsonConvert.SerializeObject(payload));
+    }
 
     /// <summary>
     /// 发送场景心跳消息 (Phase 3)

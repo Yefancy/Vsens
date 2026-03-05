@@ -29,6 +29,110 @@ namespace VsensAgent
             Debug.Log("[ControlManager] 🔌 ControlManager disabled.");
         }
 
+        public bool TryValidateControlAction(ControlObject ctrl, out string errorCode, out string errorMessage)
+        {
+            errorCode = null;
+            errorMessage = null;
+
+            if (ctrl == null)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                errorMessage = "Control action is null.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(ctrl.action))
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                errorMessage = "Missing action field.";
+                return false;
+            }
+
+            if (ctrl.action == "set_sensor")
+            {
+                if (ctrl.parameters == null || !ctrl.parameters.ContainsKey("sensor_type"))
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                    errorMessage = "set_sensor requires 'sensor_type'.";
+                    return false;
+                }
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(ctrl.target))
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.TARGET_NOT_FOUND;
+                errorMessage = "Missing target for non-sensor action.";
+                return false;
+            }
+
+            var targetObj = GameObject.Find(ctrl.target);
+            if (targetObj == null)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.TARGET_NOT_FOUND;
+                errorMessage = $"Target '{ctrl.target}' not found.";
+                return false;
+            }
+
+            switch (ctrl.action)
+            {
+                case "set_state":
+                    if (ctrl.parameters == null || !ctrl.parameters.ContainsKey("state"))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "set_state requires 'state'.";
+                        return false;
+                    }
+                    if (!targetObj.TryGetComponent<StateObject>(out _))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.UNSUPPORTED_ACTION;
+                        errorMessage = $"Target '{ctrl.target}' does not support set_state.";
+                        return false;
+                    }
+                    return true;
+
+                case "set_transform":
+                    if (ctrl.parameters == null ||
+                        (!ctrl.parameters.ContainsKey("position") &&
+                         !ctrl.parameters.ContainsKey("rotation") &&
+                         !ctrl.parameters.ContainsKey("scale")))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "set_transform requires one of position/rotation/scale.";
+                        return false;
+                    }
+                    return true;
+
+                case "highlight":
+                    return true;
+
+                default:
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.UNSUPPORTED_ACTION;
+                    errorMessage = $"Unsupported action '{ctrl.action}'.";
+                    return false;
+            }
+        }
+
+        public bool TryExecuteControlAction(ControlObject ctrl, out string errorCode, out string errorMessage)
+        {
+            if (!TryValidateControlAction(ctrl, out errorCode, out errorMessage))
+            {
+                return false;
+            }
+
+            try
+            {
+                HandleSingleControl(ctrl);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                errorMessage = ex.Message;
+                return false;
+            }
+        }
+
         private void HandleControlBatch(ControlObject[] controlActions)
         {
             if (controlActions == null || controlActions.Length == 0)
