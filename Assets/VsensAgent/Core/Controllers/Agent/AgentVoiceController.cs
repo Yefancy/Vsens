@@ -1,87 +1,33 @@
 using UnityEngine;
-using UnityEngine.Networking;
-using System.Collections;
-using System.IO;
-using VsensAgent.Network;
-using VsensAgent.Network.Protocol;
+using VsensAgent.Audio;
+using VsensAgent.Core;
 
 namespace VsensAgent.Agent
 {
-    public class AgentVoiceController : MonoBehaviour
-{
-    public AudioSource audioSource;
-    void OnEnable()
-    {
-        WsClient.OnAgentReply += OnAgentReplyReceived;
-    }
-
-    void OnDisable()
-    {
-        WsClient.OnAgentReply -= OnAgentReplyReceived;
-    }
-
     /// <summary>
-    /// 处理Agent回复，如果有音频则播放
+    /// Thin compatibility wrapper kept so that existing prefab references remain valid.
+    /// All audio logic has moved to <see cref="AgentAudioManager"/> (VsensAgent/Audio/).
+    /// AgentAudioManager subscribes to OnAgentReply and OnAgentPush directly —
+    /// this component no longer needs to do anything on its own.
     /// </summary>
-    private void OnAgentReplyReceived(AgentReplyMessage reply)
+    public class AgentVoiceController : MonoBehaviour
     {
-        // 只有当有音频路径时才播放
-        if (!string.IsNullOrEmpty(reply.audio_path))
+        // Kept for prefab Inspector compatibility; not used directly.
+        [HideInInspector]
+        public AudioSource audioSource;
+
+        /// <summary>
+        /// Delegates manual TTS playback to AgentAudioManager (e.g. called from tests
+        /// or Editor tooling). Uses the queue so it never collides with live audio.
+        /// </summary>
+        public void PlayTTSFromPath(string path)
         {
-            PlayTTSFromPath(reply.audio_path);
-        }
-    }
-
-    public void PlayTTSFromPath(string path)
-    {
-        StartCoroutine(LoadAndPlay(path));
-    }
-
-    private System.Collections.IEnumerator LoadAndPlay(string path)
-    {
-        // 将相对路径转换为绝对路径
-        string absolutePath = Path.IsPathRooted(path)
-            ? path
-            : Path.Combine(Directory.GetParent(Application.dataPath).FullName, path);
-
-        if (!File.Exists(absolutePath))
-        {
-            Debug.LogError($"[TTS] File not found: {absolutePath}");
-            yield break;
-        }
-
-        string url = "file://" + absolutePath;
-        AudioType audioType = GetAudioType(Path.GetExtension(absolutePath));
-
-        using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
-        {
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError("[TTS] Load error: " + request.error);
-                yield break;
-            }
-
-            AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
-            audioSource.clip = clip;
-            audioSource.Play();
-        }
-    }
-
-    private AudioType GetAudioType(string extension)
-    {
-        switch (extension.ToLower())
-        {
-            case ".wav":
-                return AudioType.WAV;
-            case ".mp3":
-                return AudioType.MPEG;
-            case ".ogg":
-                return AudioType.OGGVORBIS;
-            default:
-                return AudioType.UNKNOWN;
+            var mgr = ServiceLocator.Get<AgentAudioManager>();
+            if (mgr != null)
+                mgr.PlayNow(path);
+            else
+                Debug.LogWarning("[AgentVoiceController] AgentAudioManager not found in ServiceLocator.");
         }
     }
 }
-}
+

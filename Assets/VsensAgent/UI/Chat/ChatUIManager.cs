@@ -549,15 +549,15 @@ namespace VsensAgent.UI
         {
             switch (state)
             {
-                case "idle":         return "";
-                case "listening":    return "🎤 Listening...";
-                case "transcribing": return "✍️ Transcribing...";
-                case "thinking":     return "💭 Thinking...";
-                case "planning":     return "📋 Planning...";
-                case "executing":    return "⚙️ Executing...";
-                case "speaking":     return "🔊 Speaking...";
-                case "waiting":      return "⏳ Waiting...";
-                case "scripting":    return "📝 Scripting...";
+                case "idle":         return "✅ Idle";
+                case "listening":    return "🎤 Listening";
+                case "transcribing": return "✍️ Transcribing";
+                case "thinking":     return "💭 Thinking";
+                case "planning":     return "📋 Planning";
+                case "executing":    return "⚙️ Executing";
+                case "speaking":     return "🔊 Speaking";
+                case "waiting":      return "⏳ Waiting";
+                case "scripting":    return "📝 Scripting";
                 default:             return state;
             }
         }
@@ -611,9 +611,11 @@ namespace VsensAgent.UI
         private void PlayAgentAudio(ChatMessage message)
         {
             if (!message.HasAudio()) return;
-            
-            // 这里需要调用现有的音频播放系统
-            // 可能是AgentVoiceController的PlayAudio方法
+            var audioMgr = ServiceLocator.Get<AgentAudioManager>();
+            if (audioMgr != null)
+                audioMgr.PlayNow(message.audioPath);
+            else
+                Debug.LogWarning("[ChatUI] AgentAudioManager not found — cannot replay audio.");
         }
 
         /// <summary>
