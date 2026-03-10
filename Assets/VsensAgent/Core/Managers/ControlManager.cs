@@ -11,15 +11,18 @@ using UnityEngine.Pool;
 using VsensAgent.Network;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
+using VsensAgent.SceneApi.V2;
 
 namespace VsensAgent
 {
     public class ControlManager : MonoBehaviour
     {
         [SerializeField] private Material highlightMaterial;
+        [SerializeField] private SceneRegistry sceneRegistry;
         void OnEnable()
         {
             WsClient.OnControl += HandleControlBatch; // 统一处理批量控制
+            ResolveSceneRegistry();
             Debug.Log("[ControlManager] 🔌 ControlManager enabled and listening for control events.");
         }
 
@@ -141,13 +144,30 @@ namespace VsensAgent
                 return;
             }
 
-            Debug.Log($"[ControlManager] 📦 Processing {controlActions.Length} control action(s)");
-            
-            for (int i = 0; i < controlActions.Length; i++)
+            ResolveSceneRegistry();
+            bool openedBatch = sceneRegistry != null;
+            if (openedBatch)
             {
-                var ctrl = controlActions[i];
-                Debug.Log($"[ControlManager] 🎯 Processing action {i + 1}/{controlActions.Length}: target='{ctrl?.target}', action='{ctrl?.action}'");
-                HandleSingleControl(ctrl);
+                sceneRegistry.BeginMutationBatch("legacy_control_batch");
+            }
+
+            Debug.Log($"[ControlManager] 📦 Processing {controlActions.Length} control action(s)");
+
+            try
+            {
+                for (int i = 0; i < controlActions.Length; i++)
+                {
+                    var ctrl = controlActions[i];
+                    Debug.Log($"[ControlManager] 🎯 Processing action {i + 1}/{controlActions.Length}: target='{ctrl?.target}', action='{ctrl?.action}'");
+                    HandleSingleControl(ctrl);
+                }
+            }
+            finally
+            {
+                if (openedBatch)
+                {
+                    sceneRegistry.CommitMutationBatch();
+                }
             }
         }
 
@@ -273,8 +293,16 @@ namespace VsensAgent
                     if (ctrl.parameters != null && ctrl.parameters.ContainsKey("state"))
                     {
                         string newState = ParseStringFromParameter(ctrl.parameters["state"]);
+                        string previousState = obj.getCurrentState();
+                        if (previousState == newState)
+                        {
+                            Debug.Log($"[ControlManager] ℹ️ State for '{obj.name}' already '{newState}', skipping mutation.");
+                            return;
+                        }
+
                         obj.setCurrentState(newState);
                         Debug.Log($"[ControlManager] ✅ Set '{obj.name}' to state '{newState}'");
+                        RegisterMutation("control.local", obj.gameObject, ctrl.action);
                     }
                     else
                     {
@@ -339,6 +367,7 @@ namespace VsensAgent
             if (transformChanged)
             {
                 Debug.Log($"[ControlManager] ✅ Successfully transformed '{obj.name}'");
+                RegisterMutation("control.local", obj, ctrl.action);
             }
             else
             {
@@ -558,11 +587,14 @@ namespace VsensAgent
                 }
 
                 // 4. 应用Agent的global变换参数 (必须在设置parent之前)
+                bool transformChanged = false;
+                bool sensorSpecificChanged = false;
+                bool createdNewSensor = existingSensor == null;
                 Debug.Log("[ControlManager] 🌍 Applying Agent's global transform parameters...");
                 if (sensorObj != null)
                 {
                     Debug.Log($"[ControlManager] 📍 sensorObj is valid: {sensorObj.name} (active: {sensorObj.activeInHierarchy})");
-                    ApplyTransformParameters(sensorObj, ctrl.parameters);
+                    transformChanged = ApplyTransformParameters(sensorObj, ctrl.parameters);
                 }
                 else
                 {
@@ -574,7 +606,12 @@ namespace VsensAgent
                 Debug.Log("[ControlManager] 🔧 Applying sensor-specific parameters (including parent setup)...");
                 if (sensorObj != null && ctrl.parameters != null)
                 {
-                    ApplySensorSpecificParameters(sensorObj, ctrl.parameters);
+                    sensorSpecificChanged = ApplySensorSpecificParameters(sensorObj, ctrl.parameters);
+
+                    if (createdNewSensor || transformChanged || sensorSpecificChanged)
+                    {
+                        RegisterMutation("control.local", sensorObj, ctrl.action);
+                    }
                 }
                 else
                 {
@@ -606,28 +643,29 @@ namespace VsensAgent
         /// </summary>
         /// <param name="sensorObj">传感器游戏对象</param>
         /// <param name="parameters">参数字典</param>
-        private void ApplySensorSpecificParameters(GameObject sensorObj, System.Collections.Generic.Dictionary<string, object> parameters)
+        private bool ApplySensorSpecificParameters(GameObject sensorObj, System.Collections.Generic.Dictionary<string, object> parameters)
         {
             if (sensorObj == null)
             {
                 Debug.LogError("[ControlManager] ❌ ApplySensorSpecificParameters: sensorObj is null");
-                return;
+                return false;
             }
             
             if (parameters == null)
             {
                 Debug.LogWarning("[ControlManager] ⚠️ ApplySensorSpecificParameters: parameters is null");
-                return;
+                return false;
             }
 
             Debug.Log($"[ControlManager] 🔧 Applying sensor-specific parameters to {sensorObj.name}");
+            bool changed = false;
 
             // 获取SensorObjectDescriber组件
             SensorObjectDescriber sensorDescriber = sensorObj.GetComponent<SensorObjectDescriber>();
             if (sensorDescriber == null)
             {
                 Debug.LogWarning($"[ControlManager] ⚠️ No SensorObjectDescriber found on {sensorObj.name}");
-                return;
+                return false;
             }
 
             // 处理show_visualization参数
@@ -637,6 +675,10 @@ namespace VsensAgent
                 bool showVis = bool.Parse(showVisString);
                 Debug.Log($"[ControlManager] 👁️ Setting show_visualization to {showVis} for {sensorObj.name}");
                 // 这里可以添加具体的可视化控制逻辑
+                if (sensorDescriber.Sesnor.ShowPreview != showVis)
+                {
+                    changed = true;
+                }
                 sensorDescriber.Sesnor.ShowPreview = showVis;
             }
 
@@ -647,6 +689,10 @@ namespace VsensAgent
                 bool showData = bool.Parse(showDataString);
                 Debug.Log($"[ControlManager] 📊 Setting show_data_graph to {showData} for {sensorObj.name}");
                 // 这里可以添加具体的数据图表控制逻辑
+                if (sensorDescriber.Sesnor.ShowGraph != showData)
+                {
+                    changed = true;
+                }
                 sensorDescriber.Sesnor.ShowGraph = showData;
             }
 
@@ -659,6 +705,10 @@ namespace VsensAgent
                 // 这里可以添加具体的距离设置逻辑
                 if (sensorDescriber.Sesnor is VirtualDistanceSensor distanceSensor)
                 {
+                    if (!Mathf.Approximately(distanceSensor.validDistance, distance))
+                    {
+                        changed = true;
+                    }
                     distanceSensor.validDistance = distance;
                 }
             }
@@ -671,7 +721,12 @@ namespace VsensAgent
                 // 应用朝向
                 if (lookDir != Vector3.zero)
                 {
-                    sensorObj.transform.rotation = Quaternion.LookRotation(lookDir);
+                    Quaternion newRotation = Quaternion.LookRotation(lookDir);
+                    if (sensorObj.transform.rotation != newRotation)
+                    {
+                        changed = true;
+                        sensorObj.transform.rotation = newRotation;
+                    }
                 }
             }
 
@@ -685,6 +740,10 @@ namespace VsensAgent
                     GameObject parentObj = GameObject.Find(parentName);
                     if (parentObj != null)
                     {
+                        if (sensorObj.transform.parent != parentObj.transform)
+                        {
+                            changed = true;
+                        }
                         Debug.Log($"[ControlManager] 🌍➡️👨‍👧‍👦 Converting from global to local space by setting parent '{parentName}' for {sensorObj.name}");
                         Debug.Log($"[ControlManager] 📍 Before parent: position={sensorObj.transform.position}, rotation={sensorObj.transform.eulerAngles}");
                         
@@ -701,10 +760,16 @@ namespace VsensAgent
                 else
                 {
                     // 空字符串表示移除父对象 (回到global space)
+                    if (sensorObj.transform.parent != null)
+                    {
+                        changed = true;
+                    }
                     Debug.Log($"[ControlManager] 🆓 Removing parent from {sensorObj.name} (back to global space)");
                     sensorObj.transform.SetParent(null);
                 }
             }
+
+            return changed;
         }
 
         /// <summary>
@@ -713,39 +778,79 @@ namespace VsensAgent
         /// </summary>
         /// <param name="obj">目标游戏对象</param>
         /// <param name="parameters">参数字典</param>
-        private void ApplyTransformParameters(GameObject obj, System.Collections.Generic.Dictionary<string, object> parameters)
+        private bool ApplyTransformParameters(GameObject obj, System.Collections.Generic.Dictionary<string, object> parameters)
         {
             if (obj == null)
             {
                 Debug.LogError("[ControlManager] ❌ ApplyTransformParameters: obj is null");
-                return;
+                return false;
             }
             
             if (parameters == null)
             {
                 Debug.LogWarning("[ControlManager] ⚠️ ApplyTransformParameters: parameters is null");
-                return;
+                return false;
             }
 
             Debug.Log($"[ControlManager] 🌍 Applying Agent's global transform parameters to {obj.name}");
+            bool changed = false;
 
             // 处理位置参数 - Agent给出的是global坐标
             if (parameters.ContainsKey("position"))
             {
                 Vector3 newPosition = ParseVector3FromArray(parameters["position"], obj.transform.position);
-                obj.transform.position = newPosition;
-                Debug.Log($"[ControlManager] 📍 Set global position of '{obj.name}' to {newPosition}");
+                if (newPosition != obj.transform.position)
+                {
+                    obj.transform.position = newPosition;
+                    Debug.Log($"[ControlManager] 📍 Set global position of '{obj.name}' to {newPosition}");
+                    changed = true;
+                }
             }
 
             // 处理旋转参数 - Agent给出的是global旋转
             if (parameters.ContainsKey("rotation"))
             {
                 Vector3 newRotation = ParseVector3FromArray(parameters["rotation"], obj.transform.eulerAngles);
-                obj.transform.rotation = Quaternion.Euler(newRotation);
-                Debug.Log($"[ControlManager] 🔄 Set global rotation of '{obj.name}' to {newRotation}");
+                Quaternion rotation = Quaternion.Euler(newRotation);
+                if (rotation != obj.transform.rotation)
+                {
+                    obj.transform.rotation = rotation;
+                    Debug.Log($"[ControlManager] 🔄 Set global rotation of '{obj.name}' to {newRotation}");
+                    changed = true;
+                }
             }
 
             // 注意：根据用户反馈，删除了scale参数支持，因为用户不太会去调整传感器的大小
+            return changed;
+        }
+
+        private void ResolveSceneRegistry()
+        {
+            if (sceneRegistry != null)
+            {
+                return;
+            }
+
+            if (ServiceLocator.IsRegistered<SceneRegistry>())
+            {
+                sceneRegistry = ServiceLocator.Get<SceneRegistry>();
+            }
+            if (sceneRegistry == null)
+            {
+                sceneRegistry = FindFirstObjectByType<SceneRegistry>();
+            }
+        }
+
+        private void RegisterMutation(string source, GameObject target, string actionType)
+        {
+            ResolveSceneRegistry();
+            if (sceneRegistry == null)
+            {
+                return;
+            }
+
+            string targetId = target != null ? target.name : string.Empty;
+            sceneRegistry.RegisterMutation(source, targetId, actionType);
         }
 
         // ===================== END SENSOR CONTROL METHODS =====================

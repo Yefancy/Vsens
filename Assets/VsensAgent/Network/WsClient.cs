@@ -28,6 +28,10 @@ namespace VsensAgent.Network
     public static event Action<AgentBehavior> OnAgentBehavior;
     public static event Action<AgentStatusMessage> OnAgentStatus; // Python端主动推送的Agent状态
     public static event Action<string> OnSceneApiRequest; // Scene API v2 request raw payload
+    public static event Action<ConversationReplyMessage> OnConversationReply;
+    public static event Action<ClarificationRequestMessage> OnClarificationRequest;
+    public static event Action<ProposalReadyMessage> OnProposalReady;
+    public static event Action<JobLifecycleMessage> OnJobLifecycle;
     public static event Action<AgentPushMessage> OnAgentPush;    // Phase 3: 心跳触发的主动推送
     public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
@@ -119,18 +123,63 @@ namespace VsensAgent.Network
                     
                     // 触发统一的回复事件
                     OnAgentReply?.Invoke(replyMsg);
-                    
-                    // 停止思考状态 - 结束呼吸动画
-                    var wsClient = ServiceLocator.Get<WsClient>();
-                    if (wsClient != null && wsClient.agentBehaviorController != null)
-                    {
-                        wsClient.agentBehaviorController.StopThinking();
-                    }
+                    StopThinkingAnimation();
                     
                     // 处理控制指令
                     if (replyMsg.control != null && replyMsg.control.actions != null)
                     {
                         OnControl?.Invoke(replyMsg.control.actions);
+                    }
+                    break;
+
+                case "conversation.reply":
+                    var conversationMsg = JsonConvert.DeserializeObject<ConversationReplyMessage>(json);
+                    OnConversationReply?.Invoke(conversationMsg);
+                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                        conversationMsg.type,
+                        conversationMsg.status,
+                        conversationMsg.transcription,
+                        conversationMsg.reply,
+                        conversationMsg.audio_path,
+                        conversationMsg.control));
+                    StopThinkingAnimation();
+                    if (conversationMsg.control != null && conversationMsg.control.actions != null)
+                    {
+                        OnControl?.Invoke(conversationMsg.control.actions);
+                    }
+                    break;
+
+                case "clarification.request":
+                    var clarificationMsg = JsonConvert.DeserializeObject<ClarificationRequestMessage>(json);
+                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                        clarificationMsg.type,
+                        clarificationMsg.status,
+                        clarificationMsg.transcription,
+                        clarificationMsg.reply,
+                        clarificationMsg.audio_path,
+                        clarificationMsg.control));
+                    StopThinkingAnimation();
+                    OnClarificationRequest?.Invoke(clarificationMsg);
+                    if (clarificationMsg.control != null && clarificationMsg.control.actions != null)
+                    {
+                        OnControl?.Invoke(clarificationMsg.control.actions);
+                    }
+                    break;
+
+                case "proposal.ready":
+                    var proposalMsg = JsonConvert.DeserializeObject<ProposalReadyMessage>(json);
+                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                        proposalMsg.type,
+                        proposalMsg.status,
+                        proposalMsg.transcription,
+                        proposalMsg.reply,
+                        proposalMsg.audio_path,
+                        proposalMsg.control));
+                    StopThinkingAnimation();
+                    OnProposalReady?.Invoke(proposalMsg);
+                    if (proposalMsg.control != null && proposalMsg.control.actions != null)
+                    {
+                        OnControl?.Invoke(proposalMsg.control.actions);
                     }
                     break;
 
@@ -160,6 +209,13 @@ namespace VsensAgent.Network
                 case "scene.validate_actions":
                 case "scene.execute_actions":
                     OnSceneApiRequest?.Invoke(json);
+                    break;
+
+                case "job.started":
+                case "job.status":
+                case "job.cancelled":
+                    var jobMsg = JsonConvert.DeserializeObject<JobLifecycleMessage>(json);
+                    OnJobLifecycle?.Invoke(jobMsg);
                     break;
 
                 case "agent_push":
@@ -192,6 +248,25 @@ namespace VsensAgent.Network
         }
     }
 
+    private static AgentReplyMessage ToAgentReplyMessage(
+        string type,
+        string status,
+        string transcription,
+        string reply,
+        string audioPath,
+        ControlActions control)
+    {
+        return new AgentReplyMessage
+        {
+            type = type,
+            status = string.IsNullOrEmpty(status) ? "success" : status,
+            transcription = transcription,
+            reply = reply,
+            audio_path = audioPath,
+            control = control ?? new ControlActions()
+        };
+    }
+
     public static void SendTranscribeRequest(string audioPath)
     {
         if (websocket != null && websocket.State == WebSocketState.Open)
@@ -201,20 +276,15 @@ namespace VsensAgent.Network
             
             var payload = new TranscribeRequest()
             {
-                type = "transcribe_and_reply",
+                type = "conversation.transcribe",
                 audio_path = audioPath,
                 scene_snapshot = sceneDescription,
             };
 
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
-            
-            // 开始思考状态 - 启动呼吸动画
-            var wsClient = ServiceLocator.Get<WsClient>();
-            if (wsClient != null && wsClient.agentBehaviorController != null)
-            {
-                wsClient.agentBehaviorController.StartThinking();
-            }
+
+            StartThinkingAnimation();
         }
         else
         {
@@ -254,7 +324,7 @@ namespace VsensAgent.Network
         }
         else
         {
-            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send text message.");
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send reset request.");
         }
     }
 
@@ -265,9 +335,8 @@ namespace VsensAgent.Network
             // 获取场景描述
             string sceneDescription = GetCurrentSceneDescription();
             
-            var payload = new TextChatRequest()
+            var payload = new ConversationAskRequest()
             {
-                type = "text_chat",
                 message = message,
                 scene_snapshot = sceneDescription,
                 request_audio = false
@@ -275,13 +344,50 @@ namespace VsensAgent.Network
 
             string json = JsonConvert.SerializeObject(payload);
             websocket.SendText(json);
-            
-            // 开始思考状态 - 启动呼吸动画
-            var wsClient = ServiceLocator.Get<WsClient>();
-            if (wsClient != null && wsClient.agentBehaviorController != null)
+
+            StartThinkingAnimation();
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send proposal selection.");
+        }
+    }
+
+    public static void SendClarificationReply(string questionId, string[] selectedIds, string freeText)
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new ClarificationReplyRequest()
             {
-                wsClient.agentBehaviorController.StartThinking();
-            }
+                question_id = questionId,
+                selected_ids = selectedIds ?? Array.Empty<string>(),
+                free_text = freeText,
+                scene_snapshot = GetCurrentSceneDescription(),
+            };
+
+            websocket.SendText(JsonConvert.SerializeObject(payload));
+            StartThinkingAnimation();
+        }
+        else
+        {
+            Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send clarification reply.");
+        }
+    }
+
+    public static void SendProposalSelect(string proposalId, string[] selectedOptionIds, string note)
+    {
+        if (websocket != null && websocket.State == WebSocketState.Open)
+        {
+            var payload = new ProposalSelectRequest()
+            {
+                proposal_id = proposalId,
+                selected_option_ids = selectedOptionIds ?? Array.Empty<string>(),
+                note = note,
+                scene_snapshot = GetCurrentSceneDescription(),
+            };
+
+            websocket.SendText(JsonConvert.SerializeObject(payload));
+            StartThinkingAnimation();
         }
         else
         {
@@ -366,6 +472,24 @@ namespace VsensAgent.Network
         {
             Debug.LogWarning("[WsClient] No RoomDescriber found in scene.");
             return "{}";
+        }
+    }
+
+    private static void StartThinkingAnimation()
+    {
+        var wsClient = ServiceLocator.Get<WsClient>();
+        if (wsClient != null && wsClient.agentBehaviorController != null)
+        {
+            wsClient.agentBehaviorController.StartThinking();
+        }
+    }
+
+    private static void StopThinkingAnimation()
+    {
+        var wsClient = ServiceLocator.Get<WsClient>();
+        if (wsClient != null && wsClient.agentBehaviorController != null)
+        {
+            wsClient.agentBehaviorController.StopThinking();
         }
     }
 

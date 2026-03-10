@@ -28,6 +28,21 @@ namespace VsensAgent.Network.Protocol
         public ControlActions control;
     }
 
+    [Serializable]
+    public class ConversationReplyMessage
+    {
+        public string type;
+        public string status;
+        public string turn_id;
+        public string transcription;
+        public string reply;
+        public string audio_path;
+        public string legacy_type;
+
+        [JsonProperty("control")]
+        public ControlActions control;
+    }
+
     /// <summary>
     /// 控制动作包装器 - 包含一组控制指令
     /// </summary>
@@ -41,6 +56,66 @@ namespace VsensAgent.Network.Protocol
         {
             actions = new ControlObject[0];
         }
+    }
+
+    [Serializable]
+    public class ClarificationOption
+    {
+        public string id;
+        public string label;
+        public string description;
+    }
+
+    [Serializable]
+    public class ClarificationRequestMessage
+    {
+        public string type;
+        public string status;
+        public string question_id;
+        public string prompt;
+        public string selection_mode;
+        public string transcription;
+        public string reply;
+        public string audio_path;
+        public ClarificationOption[] options;
+
+        [JsonProperty("control")]
+        public ControlActions control;
+    }
+
+    [Serializable]
+    public class ProposalOption
+    {
+        public string id;
+        public string label;
+        public string description;
+    }
+
+    [Serializable]
+    public class ProposalReadyMessage
+    {
+        public string type;
+        public string status;
+        public string proposal_id;
+        public string title;
+        public string summary;
+        public string transcription;
+        public string reply;
+        public string audio_path;
+        public ProposalOption[] options;
+
+        [JsonProperty("control")]
+        public ControlActions control;
+    }
+
+    [Serializable]
+    public class JobLifecycleMessage
+    {
+        public string type;
+        public string job_id;
+        public string job_kind;
+        public string status;
+        public string reason;
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.meta.xr.sdk.all": "74.0.3",
     "com.monitor1394.xcharts": "https://github.com/XCharts-Team/XCharts.git",
     "com.unity.2d.sprite": "1.0.0",

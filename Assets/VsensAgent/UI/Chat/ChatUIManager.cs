@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using System;
 using VsensAgent.Data;
 using VsensAgent.Audio;
 using VsensAgent.Network;
@@ -49,6 +50,9 @@ namespace VsensAgent.UI
         private Canvas MainCanvas;              // 用于点击检测
         private InputController inputController;      // 输入管理器
         private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
+        private ClarificationRequestMessage _pendingClarification;
+        private ProposalReadyMessage _pendingProposal;
+        private const string DefaultInputPlaceholder = "Type your message here... Or R to record voice.";
 
         // 事件定义
         public static System.Action<string> OnUserMessageSent;          // 用户发送消息事件
@@ -84,6 +88,9 @@ namespace VsensAgent.UI
             // 订阅WebSocket事件
             WsClient.OnAgentReply  += OnAgentReplyReceived;
             WsClient.OnAgentStatus += HandleAgentStatusUI;
+            WsClient.OnClarificationRequest += OnClarificationRequestReceived;
+            WsClient.OnProposalReady += OnProposalReadyReceived;
+            WsClient.OnJobLifecycle += OnJobLifecycleReceived;
             WsClient.OnAgentPush   += OnAgentPushReceived;  // Phase 3: 心跳触发的主动推送
             
             // 从服务定位器获取AudioRecorder引用
@@ -113,6 +120,9 @@ namespace VsensAgent.UI
             // 取消订阅
             WsClient.OnAgentReply  -= OnAgentReplyReceived;
             WsClient.OnAgentStatus -= HandleAgentStatusUI;
+            WsClient.OnClarificationRequest -= OnClarificationRequestReceived;
+            WsClient.OnProposalReady -= OnProposalReadyReceived;
+            WsClient.OnJobLifecycle -= OnJobLifecycleReceived;
             WsClient.OnAgentPush   -= OnAgentPushReceived;  // Phase 3
             
             if (sendButton != null)
@@ -147,7 +157,7 @@ namespace VsensAgent.UI
             if (textInputField != null)
             {
                 textInputField.text = "";
-                textInputField.placeholder.GetComponent<TextMeshProUGUI>().text = "Type your message here... Or R to record voice.";
+                UpdateInputPlaceholder();
             }
 
             if (messageContainer != null)
@@ -339,12 +349,16 @@ namespace VsensAgent.UI
             // 添加用户消息到聊天界面
             AddUserMessage(messageContent);
 
-            // 发送到WebSocket (这里需要根据实际的WebSocket接口来调整)
-            SendMessageToAgent(messageContent);
+            // 优先响应待处理的结构化交互；否则走常规聊天消息
+            if (!TrySendPendingInteraction(messageContent))
+            {
+                SendMessageToAgent(messageContent);
+            }
 
             // 清空输入框
             textInputField.text = "";
             textInputField.Select();
+            UpdateInputPlaceholder();
         }
 
         private void OnTextInputSubmit(string text)
@@ -635,6 +649,216 @@ namespace VsensAgent.UI
             }
         }
 
+        private void OnClarificationRequestReceived(ClarificationRequestMessage request)
+        {
+            if (request == null)
+            {
+                return;
+            }
+
+            _pendingClarification = request;
+            _pendingProposal = null;
+            AddSystemMessage(FormatClarificationRequest(request));
+            UpdateInputPlaceholder();
+            FocusInputField();
+        }
+
+        private void OnProposalReadyReceived(ProposalReadyMessage proposal)
+        {
+            if (proposal == null)
+            {
+                return;
+            }
+
+            _pendingProposal = proposal;
+            _pendingClarification = null;
+            AddSystemMessage(FormatProposalReady(proposal));
+            UpdateInputPlaceholder();
+            FocusInputField();
+        }
+
+        private void OnJobLifecycleReceived(JobLifecycleMessage job)
+        {
+            if (job == null)
+            {
+                return;
+            }
+
+            AddSystemMessage(FormatJobLifecycle(job));
+        }
+
+        private bool TrySendPendingInteraction(string messageContent)
+        {
+            if (_pendingClarification != null)
+            {
+                var selectedIds = TryParseClarificationSelection(messageContent);
+                var freeText = selectedIds.Length > 0 ? string.Empty : messageContent;
+                WsClient.SendClarificationReply(_pendingClarification.question_id, selectedIds, freeText);
+                _pendingClarification = null;
+                UpdateInputPlaceholder();
+                return true;
+            }
+
+            if (_pendingProposal != null)
+            {
+                var selectedIds = TryParseProposalSelection(messageContent);
+                var note = selectedIds.Length > 0 ? string.Empty : messageContent;
+                WsClient.SendProposalSelect(_pendingProposal.proposal_id, selectedIds, note);
+                _pendingProposal = null;
+                UpdateInputPlaceholder();
+                return true;
+            }
+
+            return false;
+        }
+
+        private string[] TryParseClarificationSelection(string input)
+        {
+            if (_pendingClarification == null || _pendingClarification.options == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var optionIds = new string[_pendingClarification.options.Length];
+            var optionLabels = new string[_pendingClarification.options.Length];
+            for (var index = 0; index < _pendingClarification.options.Length; index++)
+            {
+                optionIds[index] = _pendingClarification.options[index].id;
+                optionLabels[index] = _pendingClarification.options[index].label;
+            }
+
+            return ChatProtocolInputParser.TryParseSelection(
+                input,
+                optionIds,
+                optionLabels,
+                string.Equals(_pendingClarification.selection_mode, "multiple", StringComparison.OrdinalIgnoreCase),
+                out var selectedIds
+            ) ? selectedIds : Array.Empty<string>();
+        }
+
+        private string[] TryParseProposalSelection(string input)
+        {
+            if (_pendingProposal == null || _pendingProposal.options == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var optionIds = new string[_pendingProposal.options.Length];
+            var optionLabels = new string[_pendingProposal.options.Length];
+            for (var index = 0; index < _pendingProposal.options.Length; index++)
+            {
+                optionIds[index] = _pendingProposal.options[index].id;
+                optionLabels[index] = _pendingProposal.options[index].label;
+            }
+
+            return ChatProtocolInputParser.TryParseSelection(
+                input,
+                optionIds,
+                optionLabels,
+                false,
+                out var selectedIds
+            ) ? selectedIds : Array.Empty<string>();
+        }
+
+        private string FormatClarificationRequest(ClarificationRequestMessage request)
+        {
+            var lines = new List<string>
+            {
+                $"Clarification requested: {request.prompt}"
+            };
+
+            if (request.options != null)
+            {
+                for (var index = 0; index < request.options.Length; index++)
+                {
+                    var option = request.options[index];
+                    var suffix = string.IsNullOrWhiteSpace(option.description)
+                        ? string.Empty
+                        : $" - {option.description}";
+                    lines.Add($"{index + 1}. {option.label}{suffix}");
+                }
+            }
+
+            lines.Add(
+                string.Equals(request.selection_mode, "multiple", StringComparison.OrdinalIgnoreCase)
+                    ? "Reply with option numbers, ids, or labels. You can separate multiple choices with commas."
+                    : "Reply with an option number, id, label, or type your own answer."
+            );
+
+            return string.Join("\n", lines);
+        }
+
+        private string FormatProposalReady(ProposalReadyMessage proposal)
+        {
+            var lines = new List<string>
+            {
+                $"Proposal ready: {proposal.title}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(proposal.summary))
+            {
+                lines.Add(proposal.summary);
+            }
+
+            if (proposal.options != null)
+            {
+                for (var index = 0; index < proposal.options.Length; index++)
+                {
+                    var option = proposal.options[index];
+                    var suffix = string.IsNullOrWhiteSpace(option.description)
+                        ? string.Empty
+                        : $" - {option.description}";
+                    lines.Add($"{index + 1}. {option.label}{suffix}");
+                }
+            }
+
+            lines.Add("Reply with an option number, id, label, or type a note to refine the proposal.");
+            return string.Join("\n", lines);
+        }
+
+        private void UpdateInputPlaceholder()
+        {
+            if (textInputField == null || textInputField.placeholder == null)
+            {
+                return;
+            }
+
+            var placeholderText = textInputField.placeholder.GetComponent<TextMeshProUGUI>();
+            if (placeholderText == null)
+            {
+                return;
+            }
+
+            if (_pendingClarification != null)
+            {
+                placeholderText.text = "Choose a clarification option or type an alternative.";
+                return;
+            }
+
+            if (_pendingProposal != null)
+            {
+                placeholderText.text = "Choose a proposal option or type a note.";
+                return;
+            }
+
+            placeholderText.text = DefaultInputPlaceholder;
+        }
+
+        private string FormatJobLifecycle(JobLifecycleMessage job)
+        {
+            switch (job.type)
+            {
+                case "job.started":
+                    return $"Job started: {job.job_kind} ({job.job_id})";
+                case "job.cancelled":
+                    return string.IsNullOrWhiteSpace(job.reason)
+                        ? $"Job cancelled: {job.job_kind} ({job.job_id})"
+                        : $"Job cancelled: {job.job_kind} ({job.job_id}) - {job.reason}";
+                default:
+                    return $"Job status: {job.job_kind} ({job.job_id}) - {job.status}";
+            }
+        }
+
         // ========== 滚动控制方法 ==========
 
         private void StartAutoScroll()
@@ -688,6 +912,9 @@ namespace VsensAgent.UI
         {
             // 清空消息历史
             messageHistory.Clear();
+            _pendingClarification = null;
+            _pendingProposal = null;
+            UpdateInputPlaceholder();
             
             // 销毁所有消息UI对象
             foreach (var kvp in messageUIObjects)

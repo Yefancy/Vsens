@@ -5,6 +5,7 @@ using System.Text;
 using Sensor;
 using UnityEngine;
 using VsensAgent;
+using VsensAgent.Core;
 
 namespace VsensAgent.SceneApi.V2
 {
@@ -15,8 +16,28 @@ namespace VsensAgent.SceneApi.V2
 
         private readonly Dictionary<string, ObjectDescriber> _idToDescriber = new Dictionary<string, ObjectDescriber>();
         private readonly Dictionary<string, string> _aliasToId = new Dictionary<string, string>();
+        private int _mutationBatchDepth;
+        private bool _mutationBatchDirty;
+        private int _pendingMutationCount;
+        private string _lastMutationSource = string.Empty;
 
         public int CurrentVersion => sceneVersion;
+        public bool IsMutationBatchOpen => _mutationBatchDepth > 0;
+        public int PendingMutationCount => _pendingMutationCount;
+        public string LastMutationSource => _lastMutationSource;
+
+        private void Awake()
+        {
+            ServiceLocator.Register<SceneRegistry>(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (ServiceLocator.IsRegistered<SceneRegistry>() && ServiceLocator.Get<SceneRegistry>() == this)
+            {
+                ServiceLocator.Unregister<SceneRegistry>();
+            }
+        }
 
         public SceneSnapshot BuildSnapshot(bool includeRelations = true)
         {
@@ -74,7 +95,80 @@ namespace VsensAgent.SceneApi.V2
 
         public void IncrementVersion()
         {
+            RegisterMutation("legacy.increment_version");
+        }
+
+        public void BeginMutationBatch(string source)
+        {
+            _mutationBatchDepth += 1;
+            if (_mutationBatchDepth == 1)
+            {
+                _mutationBatchDirty = false;
+                _pendingMutationCount = 0;
+                _lastMutationSource = source ?? string.Empty;
+            }
+        }
+
+        public void RegisterMutation(string source, string targetId = "", string actionType = "")
+        {
+            _lastMutationSource = BuildMutationLabel(source, targetId, actionType);
+
+            if (_mutationBatchDepth > 0)
+            {
+                _mutationBatchDirty = true;
+                _pendingMutationCount += 1;
+                return;
+            }
+
             sceneVersion += 1;
+        }
+
+        public void CommitMutationBatch()
+        {
+            if (_mutationBatchDepth == 0)
+            {
+                return;
+            }
+
+            _mutationBatchDepth -= 1;
+            if (_mutationBatchDepth > 0)
+            {
+                return;
+            }
+
+            if (_mutationBatchDirty)
+            {
+                sceneVersion += 1;
+            }
+
+            _mutationBatchDirty = false;
+            _pendingMutationCount = 0;
+        }
+
+        public void RollbackMutationBatch()
+        {
+            _mutationBatchDepth = 0;
+            _mutationBatchDirty = false;
+            _pendingMutationCount = 0;
+        }
+
+        private static string BuildMutationLabel(string source, string targetId, string actionType)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(source))
+            {
+                parts.Add(source);
+            }
+            if (!string.IsNullOrWhiteSpace(actionType))
+            {
+                parts.Add(actionType);
+            }
+            if (!string.IsNullOrWhiteSpace(targetId))
+            {
+                parts.Add(targetId);
+            }
+
+            return parts.Count > 0 ? string.Join(":", parts) : "mutation";
         }
 
         private SceneObjectModel BuildObjectModel(ObjectDescriber describer)

@@ -123,6 +123,7 @@ namespace VsensAgent.SceneApi.V2
 
             var snapshots = new List<RollbackSnapshot>();
             bool strict = request.strict;
+            _registry.BeginMutationBatch("scene.execute_actions");
 
             for (int i = 0; i < request.actions.Count; i++)
             {
@@ -158,7 +159,16 @@ namespace VsensAgent.SceneApi.V2
                                 message = "Rollback did not complete for all snapshots",
                                 action_index = i
                             });
+                            _registry.CommitMutationBatch();
                         }
+                        else
+                        {
+                            _registry.RollbackMutationBatch();
+                        }
+                    }
+                    else
+                    {
+                        _registry.CommitMutationBatch();
                     }
 
                     report.duration_ms = sw.ElapsedMilliseconds;
@@ -169,7 +179,7 @@ namespace VsensAgent.SceneApi.V2
                 report.applied_actions.Add(i);
             }
 
-            _registry.IncrementVersion();
+            _registry.CommitMutationBatch();
             report.scene_version_after = _registry.CurrentVersion;
             report.status = "success";
             report.failed_action_index = -1;

@@ -24,6 +24,18 @@ namespace VsensAgent.Network.Protocol
         public string scene_snapshot;
         public bool request_audio;
     }
+
+    /// <summary>
+    /// 协作协议文本请求 - 语义上等同于 text_chat，用于逐步迁移到新的消息族。
+    /// </summary>
+    [Serializable]
+    public class ConversationAskRequest
+    {
+        public string type = "conversation.ask";
+        public string message;
+        public string scene_snapshot;
+        public bool request_audio;
+    }
     
     /// <summary>
     /// 重置请求 - 清空对话历史（不清除LanceDB情节记忆）
@@ -63,6 +75,32 @@ namespace VsensAgent.Network.Protocol
     public class HeartbeatRequest
     {
         public string type = "scene_heartbeat";
+        public string scene_snapshot;
+    }
+
+    /// <summary>
+    /// 对 clarification.request 的响应。当前仅作协议占位，后续由 UI 驱动发送。
+    /// </summary>
+    [Serializable]
+    public class ClarificationReplyRequest
+    {
+        public string type = "clarification.reply";
+        public string question_id;
+        public string[] selected_ids;
+        public string free_text;
+        public string scene_snapshot;
+    }
+
+    /// <summary>
+    /// 对 proposal.ready 的响应。当前仅作协议占位，后续由 UI 驱动发送。
+    /// </summary>
+    [Serializable]
+    public class ProposalSelectRequest
+    {
+        public string type = "proposal.select";
+        public string proposal_id;
+        public string[] selected_option_ids;
+        public string note;
         public string scene_snapshot;
     }
 }
