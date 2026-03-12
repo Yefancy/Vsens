@@ -52,6 +52,9 @@ namespace VsensAgent.UI
         private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
         private ClarificationRequestMessage _pendingClarification;
         private ProposalReadyMessage _pendingProposal;
+        private ChatInteractionOptionsView _activeInteractionOptionsView;
+        private Action<string, string[], string> _clarificationReplySender = WsClient.SendClarificationReply;
+        private Action<string, string[], string> _proposalSelectSender = WsClient.SendProposalSelect;
         private const string DefaultInputPlaceholder = "Type your message here... Or R to record voice.";
 
         // 事件定义
@@ -656,9 +659,11 @@ namespace VsensAgent.UI
                 return;
             }
 
+            DisableActiveInteractionOptions();
             _pendingClarification = request;
             _pendingProposal = null;
             AddSystemMessage(FormatClarificationRequest(request));
+            AttachClarificationOptionsToLatestMessage(request);
             UpdateInputPlaceholder();
             FocusInputField();
         }
@@ -670,9 +675,11 @@ namespace VsensAgent.UI
                 return;
             }
 
+            DisableActiveInteractionOptions();
             _pendingProposal = proposal;
             _pendingClarification = null;
             AddSystemMessage(FormatProposalReady(proposal));
+            AttachProposalOptionsToLatestMessage(proposal);
             UpdateInputPlaceholder();
             FocusInputField();
         }
@@ -693,8 +700,9 @@ namespace VsensAgent.UI
             {
                 var selectedIds = TryParseClarificationSelection(messageContent);
                 var freeText = selectedIds.Length > 0 ? string.Empty : messageContent;
-                WsClient.SendClarificationReply(_pendingClarification.question_id, selectedIds, freeText);
+                _clarificationReplySender(_pendingClarification.question_id, selectedIds, freeText);
                 _pendingClarification = null;
+                DisableActiveInteractionOptions();
                 UpdateInputPlaceholder();
                 return true;
             }
@@ -703,8 +711,9 @@ namespace VsensAgent.UI
             {
                 var selectedIds = TryParseProposalSelection(messageContent);
                 var note = selectedIds.Length > 0 ? string.Empty : messageContent;
-                WsClient.SendProposalSelect(_pendingProposal.proposal_id, selectedIds, note);
+                _proposalSelectSender(_pendingProposal.proposal_id, selectedIds, note);
                 _pendingProposal = null;
+                DisableActiveInteractionOptions();
                 UpdateInputPlaceholder();
                 return true;
             }
@@ -816,6 +825,129 @@ namespace VsensAgent.UI
             return string.Join("\n", lines);
         }
 
+        private void AttachClarificationOptionsToLatestMessage(ClarificationRequestMessage request)
+        {
+            if (request.options == null || request.options.Length == 0)
+            {
+                return;
+            }
+
+            var optionsView = AttachInteractionOptionsViewToLatestMessage();
+            if (optionsView == null)
+            {
+                return;
+            }
+
+            var optionData = new ChatInteractionOptionData[request.options.Length];
+            for (var index = 0; index < request.options.Length; index++)
+            {
+                var option = request.options[index];
+                optionData[index] = new ChatInteractionOptionData(option.id, option.label, option.description);
+            }
+
+            optionsView.Initialize(
+                optionData,
+                string.Equals(request.selection_mode, "multiple", StringComparison.OrdinalIgnoreCase),
+                OnClarificationOptionsSubmitted,
+                ResolveMessageFontAsset(optionsView.transform.parent));
+            _activeInteractionOptionsView = optionsView;
+        }
+
+        private void AttachProposalOptionsToLatestMessage(ProposalReadyMessage proposal)
+        {
+            if (proposal.options == null || proposal.options.Length == 0)
+            {
+                return;
+            }
+
+            var optionsView = AttachInteractionOptionsViewToLatestMessage();
+            if (optionsView == null)
+            {
+                return;
+            }
+
+            var optionData = new ChatInteractionOptionData[proposal.options.Length];
+            for (var index = 0; index < proposal.options.Length; index++)
+            {
+                var option = proposal.options[index];
+                optionData[index] = new ChatInteractionOptionData(option.id, option.label, option.description);
+            }
+
+            optionsView.Initialize(
+                optionData,
+                allowMultiple: false,
+                OnProposalOptionsSubmitted,
+                ResolveMessageFontAsset(optionsView.transform.parent));
+            _activeInteractionOptionsView = optionsView;
+        }
+
+        private ChatInteractionOptionsView AttachInteractionOptionsViewToLatestMessage()
+        {
+            if (messageContainer == null || messageContainer.childCount == 0)
+            {
+                return null;
+            }
+
+            var latestMessage = messageContainer.GetChild(messageContainer.childCount - 1);
+            var optionsRoot = new GameObject("InteractionOptions", typeof(RectTransform));
+            optionsRoot.transform.SetParent(latestMessage, false);
+
+            var rectTransform = optionsRoot.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 0f);
+            rectTransform.anchorMax = new Vector2(1f, 0f);
+            rectTransform.sizeDelta = Vector2.zero;
+
+            return optionsRoot.AddComponent<ChatInteractionOptionsView>();
+        }
+
+        private TMP_FontAsset ResolveMessageFontAsset(Transform messageRoot)
+        {
+            if (messageRoot == null)
+            {
+                return TMP_Settings.defaultFontAsset;
+            }
+
+            var text = messageRoot.GetComponentInChildren<TextMeshProUGUI>();
+            return text != null ? text.font : TMP_Settings.defaultFontAsset;
+        }
+
+        private void OnClarificationOptionsSubmitted(string[] selectedIds)
+        {
+            if (_pendingClarification == null)
+            {
+                return;
+            }
+
+            _clarificationReplySender(_pendingClarification.question_id, selectedIds ?? Array.Empty<string>(), string.Empty);
+            _pendingClarification = null;
+            DisableActiveInteractionOptions();
+            UpdateInputPlaceholder();
+        }
+
+        private void OnProposalOptionsSubmitted(string[] selectedIds)
+        {
+            if (_pendingProposal == null)
+            {
+                return;
+            }
+
+            _proposalSelectSender(_pendingProposal.proposal_id, selectedIds ?? Array.Empty<string>(), string.Empty);
+            _pendingProposal = null;
+            DisableActiveInteractionOptions();
+            UpdateInputPlaceholder();
+        }
+
+        private void DisableActiveInteractionOptions()
+        {
+            if (_activeInteractionOptionsView == null)
+            {
+                return;
+            }
+
+            _activeInteractionOptionsView.SetInteractable(false);
+            _activeInteractionOptionsView = null;
+        }
+
         private void UpdateInputPlaceholder()
         {
             if (textInputField == null || textInputField.placeholder == null)
@@ -914,6 +1046,7 @@ namespace VsensAgent.UI
             messageHistory.Clear();
             _pendingClarification = null;
             _pendingProposal = null;
+            _activeInteractionOptionsView = null;
             UpdateInputPlaceholder();
             
             // 销毁所有消息UI对象

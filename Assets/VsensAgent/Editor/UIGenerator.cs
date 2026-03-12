@@ -41,7 +41,7 @@ namespace VsensAgent.Editor
             EditorGUILayout.Space(10);
             if (GUILayout.Button("📖 打开设置指南"))
             {
-                Application.OpenURL("file://" + Application.dataPath + "/../SENSOR_MONITOR_SETUP_GUIDE.md");
+                Application.OpenURL("file://" + Application.dataPath + "/../docs/legacy/guides/SENSOR_MONITOR_SETUP_GUIDE.md");
             }
         }
 

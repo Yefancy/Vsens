@@ -59,10 +59,12 @@ namespace VsensAgent.SceneApi.V2
 
         private void HandleSceneApiRequest(string rawJson)
         {
+            string requestId = string.Empty;
             try
             {
                 var node = JObject.Parse(rawJson);
                 string type = node.Value<string>("type") ?? string.Empty;
+                requestId = node.Value<string>("request_id") ?? string.Empty;
 
                 object response = type switch
                 {
@@ -92,17 +94,34 @@ namespace VsensAgent.SceneApi.V2
                     }
                 };
 
-                WsClient.SendMessage(response);
+                var responseObject = response as JObject ?? JObject.FromObject(response);
+                WsClient.SendMessage(AddRequestId(responseObject, requestId));
             }
             catch (Exception ex)
             {
-                WsClient.SendMessage(new
+                var errorObject = JObject.FromObject(new
                 {
                     type = "scene.error",
                     code = SceneApiErrorCodes.INVALID_PARAM,
                     message = ex.Message
                 });
+                WsClient.SendMessage(AddRequestId(errorObject, requestId));
             }
+        }
+
+        public static JObject AddRequestId(JObject response, string requestId)
+        {
+            if (response == null)
+            {
+                return new JObject();
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestId))
+            {
+                response["request_id"] = requestId;
+            }
+
+            return response;
         }
 
         private object HandleFindPlacements(JObject node)
