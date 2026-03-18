@@ -19,6 +19,7 @@ namespace VsensAgent
     {
         [SerializeField] private Material highlightMaterial;
         [SerializeField] private SceneRegistry sceneRegistry;
+        [SerializeField] private AvatarRuntimeManager avatarRuntimeManager;
         void OnEnable()
         {
             WsClient.OnControl += HandleControlBatch; // 统一处理批量控制
@@ -60,6 +61,11 @@ namespace VsensAgent
                     return false;
                 }
                 return true;
+            }
+
+            if (IsAvatarAction(ctrl.action))
+            {
+                return TryValidateAvatarAction(ctrl, out errorCode, out errorMessage);
             }
 
             if (string.IsNullOrWhiteSpace(ctrl.target))
@@ -121,6 +127,11 @@ namespace VsensAgent
             if (!TryValidateControlAction(ctrl, out errorCode, out errorMessage))
             {
                 return false;
+            }
+
+            if (IsAvatarAction(ctrl.action))
+            {
+                return TryExecuteAvatarAction(ctrl, out errorCode, out errorMessage);
             }
 
             try
@@ -185,6 +196,12 @@ namespace VsensAgent
             if (ctrl.action == "set_sensor")
             {
                 HandleSetSensorAction(ctrl);
+                return;
+            }
+
+            if (IsAvatarAction(ctrl.action))
+            {
+                TryExecuteAvatarAction(ctrl, out _, out _);
                 return;
             }
 
@@ -841,7 +858,29 @@ namespace VsensAgent
             }
         }
 
+        private void ResolveAvatarRuntimeManager()
+        {
+            if (avatarRuntimeManager != null)
+            {
+                return;
+            }
+
+            if (ServiceLocator.IsRegistered<AvatarRuntimeManager>())
+            {
+                avatarRuntimeManager = ServiceLocator.Get<AvatarRuntimeManager>();
+            }
+            if (avatarRuntimeManager == null)
+            {
+                avatarRuntimeManager = FindFirstObjectByType<AvatarRuntimeManager>();
+            }
+        }
+
         private void RegisterMutation(string source, GameObject target, string actionType)
+        {
+            RegisterMutation(source, target != null ? target.name : string.Empty, actionType);
+        }
+
+        private void RegisterMutation(string source, string targetId, string actionType)
         {
             ResolveSceneRegistry();
             if (sceneRegistry == null)
@@ -849,8 +888,282 @@ namespace VsensAgent
                 return;
             }
 
-            string targetId = target != null ? target.name : string.Empty;
             sceneRegistry.RegisterMutation(source, targetId, actionType);
+        }
+
+        private static bool IsAvatarAction(string action)
+        {
+            switch (action)
+            {
+                case "spawn_avatar":
+                case "remove_avatar":
+                case "set_avatar_transform":
+                case "load_avatar_motion":
+                case "play_avatar_motion":
+                case "pause_avatar_motion":
+                case "stop_avatar_motion":
+                case "clear_avatar_motion":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private bool TryValidateAvatarAction(ControlObject ctrl, out string errorCode, out string errorMessage)
+        {
+            errorCode = null;
+            errorMessage = null;
+
+            ResolveAvatarRuntimeManager();
+            if (avatarRuntimeManager == null)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                errorMessage = "AvatarRuntimeManager not found.";
+                return false;
+            }
+
+            switch (ctrl.action)
+            {
+                case "spawn_avatar":
+                    if (ctrl.parameters == null || !ctrl.parameters.ContainsKey("prefab_key"))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "spawn_avatar requires 'prefab_key'.";
+                        return false;
+                    }
+                    return true;
+
+                case "set_avatar_transform":
+                    if (ctrl.parameters == null ||
+                        (!ctrl.parameters.ContainsKey("position") &&
+                         !ctrl.parameters.ContainsKey("rotation") &&
+                         !ctrl.parameters.ContainsKey("scale")))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "set_avatar_transform requires one of position/rotation/scale.";
+                        return false;
+                    }
+                    return true;
+
+                case "load_avatar_motion":
+                    if (ctrl.parameters == null || !ctrl.parameters.ContainsKey("motion_json"))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "load_avatar_motion requires 'motion_json'.";
+                        return false;
+                    }
+                    return true;
+
+                case "remove_avatar":
+                case "play_avatar_motion":
+                case "pause_avatar_motion":
+                case "stop_avatar_motion":
+                case "clear_avatar_motion":
+                    return true;
+
+                default:
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.UNSUPPORTED_ACTION;
+                    errorMessage = $"Unsupported avatar action '{ctrl.action}'.";
+                    return false;
+            }
+        }
+
+        private bool TryExecuteAvatarAction(ControlObject ctrl, out string errorCode, out string errorMessage)
+        {
+            errorCode = null;
+            errorMessage = null;
+
+            ResolveAvatarRuntimeManager();
+            if (avatarRuntimeManager == null)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                errorMessage = "AvatarRuntimeManager not found.";
+                return false;
+            }
+
+            string avatarId = string.IsNullOrWhiteSpace(ctrl.target) ? "avatar_main" : ctrl.target;
+            bool ok;
+
+            switch (ctrl.action)
+            {
+                case "spawn_avatar":
+                    ok = avatarRuntimeManager.TrySpawnAvatar(
+                        avatarId,
+                        ParseStringParameter(ctrl.parameters, "prefab_key", "smplx_male"),
+                        ParseVector3Parameter(ctrl.parameters, "position", Vector3.zero),
+                        ParseVector3Parameter(ctrl.parameters, "rotation", Vector3.zero),
+                        out errorMessage
+                    );
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "remove_avatar":
+                    ok = avatarRuntimeManager.TryRemoveAvatar(avatarId, out errorMessage);
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "set_avatar_transform":
+                    ok = avatarRuntimeManager.TrySetAvatarTransform(
+                        avatarId,
+                        TryParseVector3Parameter(ctrl.parameters, "position"),
+                        TryParseVector3Parameter(ctrl.parameters, "rotation"),
+                        TryParseVector3Parameter(ctrl.parameters, "scale"),
+                        out errorMessage
+                    );
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "load_avatar_motion":
+                    ok = avatarRuntimeManager.TryLoadAvatarMotion(
+                        avatarId,
+                        ParseStringParameter(ctrl.parameters, "motion_id", "motion_inline"),
+                        ParseStringParameter(ctrl.parameters, "motion_name", "avatar_motion"),
+                        ParseStringParameter(ctrl.parameters, "motion_json", string.Empty),
+                        ParseStringParameter(ctrl.parameters, "source_text", string.Empty),
+                        out errorMessage
+                    );
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "play_avatar_motion":
+                    ok = avatarRuntimeManager.TryPlayAvatarMotion(
+                        avatarId,
+                        ParseFloatParameter(ctrl.parameters, "speed", 1f),
+                        ParseBoolParameter(ctrl.parameters, "loop", true),
+                        out errorMessage
+                    );
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "pause_avatar_motion":
+                    ok = avatarRuntimeManager.TryPauseAvatarMotion(avatarId, out errorMessage);
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "stop_avatar_motion":
+                    ok = avatarRuntimeManager.TryStopAvatarMotion(avatarId, out errorMessage);
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                case "clear_avatar_motion":
+                    ok = avatarRuntimeManager.TryClearAvatarMotion(avatarId, out errorMessage);
+                    if (ok)
+                    {
+                        RegisterMutation("control.local", avatarId, ctrl.action);
+                    }
+                    break;
+
+                default:
+                    ok = false;
+                    errorMessage = $"Unsupported avatar action '{ctrl.action}'.";
+                    break;
+            }
+
+            if (!ok)
+            {
+                errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+            }
+
+            return ok;
+        }
+
+        private Vector3 ParseVector3Parameter(Dictionary<string, object> parameters, string key, Vector3 defaultValue)
+        {
+            if (parameters == null || !parameters.ContainsKey(key))
+            {
+                return defaultValue;
+            }
+
+            return ParseVector3FromAny(parameters[key], defaultValue);
+        }
+
+        private Vector3? TryParseVector3Parameter(Dictionary<string, object> parameters, string key)
+        {
+            if (parameters == null || !parameters.ContainsKey(key))
+            {
+                return null;
+            }
+
+            return ParseVector3FromAny(parameters[key], Vector3.zero);
+        }
+
+        private float ParseFloatParameter(Dictionary<string, object> parameters, string key, float defaultValue)
+        {
+            if (parameters == null || !parameters.TryGetValue(key, out var value) || value == null)
+            {
+                return defaultValue;
+            }
+
+            if (value is float floatValue) return floatValue;
+            if (value is double doubleValue) return (float)doubleValue;
+            if (value is int intValue) return intValue;
+            if (float.TryParse(value.ToString(), out var parsed)) return parsed;
+            return defaultValue;
+        }
+
+        private bool ParseBoolParameter(Dictionary<string, object> parameters, string key, bool defaultValue)
+        {
+            if (parameters == null || !parameters.TryGetValue(key, out var value) || value == null)
+            {
+                return defaultValue;
+            }
+
+            if (value is bool boolValue) return boolValue;
+            if (bool.TryParse(value.ToString(), out var parsed)) return parsed;
+            return defaultValue;
+        }
+
+        private string ParseStringParameter(Dictionary<string, object> parameters, string key, string defaultValue)
+        {
+            if (parameters == null || !parameters.TryGetValue(key, out var value) || value == null)
+            {
+                return defaultValue;
+            }
+
+            return value.ToString();
+        }
+
+        private Vector3 ParseVector3FromAny(object paramValue, Vector3 defaultValue)
+        {
+            if (paramValue is float[] floatArray && floatArray.Length >= 3)
+            {
+                return new Vector3(floatArray[0], floatArray[1], floatArray[2]);
+            }
+            if (paramValue is int[] intArray && intArray.Length >= 3)
+            {
+                return new Vector3(intArray[0], intArray[1], intArray[2]);
+            }
+            if (paramValue is object[] objectArray && objectArray.Length >= 3)
+            {
+                return new Vector3(
+                    float.Parse(objectArray[0].ToString()),
+                    float.Parse(objectArray[1].ToString()),
+                    float.Parse(objectArray[2].ToString())
+                );
+            }
+
+            return ParseVector3FromArray(paramValue, defaultValue);
         }
 
         // ===================== END SENSOR CONTROL METHODS =====================

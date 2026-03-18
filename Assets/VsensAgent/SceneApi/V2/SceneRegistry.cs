@@ -214,6 +214,14 @@ namespace VsensAgent.SceneApi.V2
                 model.state["show_graph"] = sensor.ShowGraph;
             }
 
+            if (go.TryGetComponent<AvatarRuntimeState>(out var avatarState))
+            {
+                model.state["avatar_id"] = avatarState.avatarId;
+                model.state["motion_id"] = avatarState.motionId;
+                model.state["motion_name"] = avatarState.motionName;
+                model.state["is_playing"] = avatarState.isPlaying;
+            }
+
             return model;
         }
 
@@ -364,6 +372,17 @@ namespace VsensAgent.SceneApi.V2
             if (describer.HasProperty("with_state")) caps.Add("set_state");
             if (describer.HasProperty("movable")) caps.Add("set_transform");
             if (describer.HasProperty("sensor")) caps.Add("set_sensor");
+            if (describer.HasProperty("avatar"))
+            {
+                caps.Add("spawn_avatar");
+                caps.Add("remove_avatar");
+                caps.Add("set_avatar_transform");
+                caps.Add("load_avatar_motion");
+                caps.Add("play_avatar_motion");
+                caps.Add("pause_avatar_motion");
+                caps.Add("stop_avatar_motion");
+                caps.Add("clear_avatar_motion");
+            }
             return caps.ToList();
         }
 
@@ -378,6 +397,7 @@ namespace VsensAgent.SceneApi.V2
         {
             var go = describer.gameObject;
             if (go.GetComponent<VirtualSensor>() != null) return "sensor";
+            if (describer.HasProperty("avatar")) return "avatar";
             if (go.GetComponent<IStateHolder>() != null) return "state_object";
             if (describer.HasProperty("movable")) return "movable";
 

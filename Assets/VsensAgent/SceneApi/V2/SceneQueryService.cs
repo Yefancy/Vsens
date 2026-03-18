@@ -8,10 +8,12 @@ namespace VsensAgent.SceneApi.V2
     public class SceneQueryService
     {
         private readonly SceneRegistry _registry;
+        private readonly AvatarRuntimeManager _avatarRuntimeManager;
 
-        public SceneQueryService(SceneRegistry registry)
+        public SceneQueryService(SceneRegistry registry, AvatarRuntimeManager avatarRuntimeManager = null)
         {
             _registry = registry;
+            _avatarRuntimeManager = avatarRuntimeManager;
         }
 
         public object QuerySummary(int? clientVersion)
@@ -160,6 +162,34 @@ namespace VsensAgent.SceneApi.V2
                 method = "scene.query_surfaces",
                 scene_version = snapshot.scene_version,
                 surfaces = surfaces.ToList()
+            };
+        }
+
+        public object QueryAvatars()
+        {
+            var avatars = _avatarRuntimeManager != null
+                ? _avatarRuntimeManager.GetAvatarQueryModels(_registry)
+                : new List<AvatarQueryModel>();
+            return new
+            {
+                type = "scene.query_response",
+                method = "scene.query_avatars",
+                scene_version = _registry.CurrentVersion,
+                avatars
+            };
+        }
+
+        public object QueryMotions()
+        {
+            var motions = _avatarRuntimeManager != null
+                ? _avatarRuntimeManager.GetMotionQueryModels()
+                : new List<AvatarMotionQueryModel>();
+            return new
+            {
+                type = "scene.query_response",
+                method = "scene.query_motions",
+                scene_version = _registry.CurrentVersion,
+                motions
             };
         }
 

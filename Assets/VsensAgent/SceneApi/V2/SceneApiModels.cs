@@ -98,6 +98,29 @@ namespace VsensAgent.SceneApi.V2
     }
 
     [Serializable]
+    public class AvatarQueryModel
+    {
+        public string avatar_id;
+        public string object_id;
+        public string prefab_key;
+        public Vector3Data position;
+        public Vector3Data rotation;
+        public string motion_id;
+        public string motion_name;
+        public bool is_playing;
+    }
+
+    [Serializable]
+    public class AvatarMotionQueryModel
+    {
+        public string motion_id;
+        public string motion_name;
+        public string source_text;
+        public bool has_inline_json;
+        public string loaded_to_avatar_id;
+    }
+
+    [Serializable]
     public class ActionBatchRequestV2
     {
         public string request_id;

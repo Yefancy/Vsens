@@ -206,7 +206,12 @@ namespace VsensAgent.SceneApi.V2
             }
 
             var targetName = ResolveTargetName(cmd.target_id);
-            if (string.IsNullOrWhiteSpace(targetName) && cmd.action_type != "set_sensor")
+            if (string.IsNullOrWhiteSpace(targetName) && IsAvatarAction(cmd.action_type))
+            {
+                targetName = ResolveAvatarTargetName(cmd.parameters);
+            }
+
+            if (string.IsNullOrWhiteSpace(targetName) && cmd.action_type != "set_sensor" && !IsAvatarAction(cmd.action_type))
             {
                 error = $"Cannot resolve target_id '{cmd.target_id}'";
                 return false;
@@ -222,6 +227,34 @@ namespace VsensAgent.SceneApi.V2
             };
 
             return true;
+        }
+
+        private static bool IsAvatarAction(string actionType)
+        {
+            switch (actionType)
+            {
+                case "spawn_avatar":
+                case "remove_avatar":
+                case "set_avatar_transform":
+                case "load_avatar_motion":
+                case "play_avatar_motion":
+                case "pause_avatar_motion":
+                case "stop_avatar_motion":
+                case "clear_avatar_motion":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static string ResolveAvatarTargetName(Dictionary<string, object> parameters)
+        {
+            if (parameters != null && parameters.TryGetValue("avatar_id", out var avatarId) && avatarId != null)
+            {
+                return avatarId.ToString();
+            }
+
+            return "avatar_main";
         }
 
         private string ResolveTargetName(string targetId)

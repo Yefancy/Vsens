@@ -3842,6 +3842,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   highlightMaterial: {fileID: 2100000, guid: ec26ab200afce4e1c9ab9209a1fc4af4, type: 2}
+  sceneRegistry: {fileID: 0}
+  avatarRuntimeManager: {fileID: 0}
 --- !u!114 &295013517
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11933,7 +11935,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1761666006}
   m_HandleRect: {fileID: 1761666005}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:

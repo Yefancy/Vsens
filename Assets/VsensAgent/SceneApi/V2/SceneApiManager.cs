@@ -12,6 +12,7 @@ namespace VsensAgent.SceneApi.V2
     {
         [SerializeField] private SceneRegistry sceneRegistry;
         [SerializeField] private ControlManager controlManager;
+        [SerializeField] private AvatarRuntimeManager avatarRuntimeManager;
 
         private SceneQueryService _queryService;
         private SceneTransactionExecutor _executor;
@@ -43,7 +44,16 @@ namespace VsensAgent.SceneApi.V2
                 return;
             }
 
-            _queryService = new SceneQueryService(sceneRegistry);
+            if (avatarRuntimeManager == null)
+            {
+                avatarRuntimeManager = GetComponent<AvatarRuntimeManager>();
+                if (avatarRuntimeManager == null)
+                {
+                    avatarRuntimeManager = gameObject.AddComponent<AvatarRuntimeManager>();
+                }
+            }
+
+            _queryService = new SceneQueryService(sceneRegistry, avatarRuntimeManager);
             _executor = new SceneTransactionExecutor(sceneRegistry, controlManager);
         }
 
@@ -82,6 +92,8 @@ namespace VsensAgent.SceneApi.V2
                         node.Value<string>("near_object_id") ?? string.Empty,
                         node.Value<string>("zone_id") ?? string.Empty,
                         node.Value<bool?>("mountable_only") ?? true),
+                    "scene.query_avatars" => _queryService.QueryAvatars(),
+                    "scene.query_motions" => _queryService.QueryMotions(),
                     "scene.find_sensor_placements" => HandleFindPlacements(node),
                     "scene.validate_placement" => HandleValidatePlacement(node),
                     "scene.validate_actions" => HandleValidateActions(node),
