@@ -58,6 +58,7 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(response.Value<string>("method"), Is.EqualTo("scene.query_avatars"));
                 Assert.That(avatars.Count, Is.EqualTo(1));
                 Assert.That(avatars[0].avatar_id, Is.EqualTo("avatar_main"));
+                Assert.That(avatars[0].pose_authority, Is.EqualTo("agent"));
 
                 var snapshot = registry.BuildSnapshot(includeRelations: false);
                 Assert.That(snapshot.objects.Exists(o => o.alias == "avatar_main"), Is.True);
@@ -69,6 +70,17 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
             }
+        }
+
+        [Test]
+        public void DeprecatedScoreValidationViews_ReturnsExplicitSceneError()
+        {
+            var response = ToObject(SceneApiManager.BuildDeprecatedSceneApiResponse("scene.score_validation_views"));
+
+            Assert.That(response.Value<string>("type"), Is.EqualTo("scene.error"));
+            Assert.That(response.Value<string>("code"), Is.EqualTo(SceneApiErrorCodes.INVALID_PARAM));
+            StringAssert.Contains("scene.score_validation_views", response.Value<string>("message"));
+            StringAssert.Contains("deprecated", response.Value<string>("message"));
         }
 
         [Test]
@@ -816,7 +828,7 @@ namespace VsensAgent.Tests.Editor.SceneApi
         }
 
         [Test]
-        public void CaptureValidationViews_ReturnsArtifacts()
+        public void CaptureValidationViews_ReturnsAvatarEyeAndUserCameraArtifacts()
         {
             ServiceLocator.Clear();
             var root = new GameObject("AvatarCaptureRoot");
@@ -844,391 +856,19 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
 
                 var validation = new SceneValidationService(registry, runtime);
-                var response = ToObject(validation.CaptureValidationViews("avatar_test", "avatar_main", string.Empty, "CoffeeMaker", 1));
+                var response = ToObject(validation.CaptureValidationViews("avatar_test", "avatar_main", string.Empty, "CoffeeMaker", 2));
 
                 var artifacts = response["artifacts"]!.ToObject<List<ValidationArtifactModel>>();
-                Assert.That(artifacts.Count, Is.EqualTo(1));
+                Assert.That(artifacts.Count, Is.EqualTo(2));
+                Assert.That(artifacts[0].label, Is.EqualTo("avatar_eye"));
+                Assert.That(artifacts[1].label, Is.EqualTo("user_camera"));
                 Assert.That(File.Exists(artifacts[0].file_path), Is.True);
+                Assert.That(File.Exists(artifacts[1].file_path), Is.True);
             }
             finally
             {
                 Object.DestroyImmediate(cameraGo);
                 Object.DestroyImmediate(target);
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [Test]
-        public void ScoreValidationViews_PassesForReasonableFraming()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarVisualScorePassRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
-            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            target.name = "CoffeeMaker";
-            target.transform.position = new Vector3(0f, 0.5f, 0f);
-            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
-            target.AddComponent<ObjectDescriber>();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-
-            try
-            {
-                var registry = root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
-
-                var validation = new SceneValidationService(registry, runtime);
-                var response = ToObject(validation.ScoreValidationViews("avatar_score_pass", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 1));
-
-                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.score_validation_views"));
-                Assert.That(response.Value<bool>("passed"), Is.True);
-                Assert.That(response.Value<string>("recommended_action"), Is.EqualTo("accept"));
-                Assert.That(response["artifacts"]!.ToObject<List<ValidationArtifactModel>>().Count, Is.EqualTo(1));
-            }
-            finally
-            {
-                Object.DestroyImmediate(target);
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [Test]
-        public void ScoreValidationViews_FailsWhenTargetIsOccluded()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarVisualScoreFailRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
-            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            target.name = "CoffeeMaker";
-            target.transform.position = new Vector3(0f, 0.5f, 0f);
-            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
-            target.AddComponent<ObjectDescriber>();
-            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            obstacle.name = "Occluder";
-            obstacle.transform.position = new Vector3(-1.6f, 1.0f, -0.6f);
-            obstacle.transform.localScale = new Vector3(2.4f, 2.2f, 1.4f);
-            obstacle.AddComponent<ObjectDescriber>();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-
-            try
-            {
-                var registry = root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
-
-                var validation = new SceneValidationService(registry, runtime);
-                var response = ToObject(validation.ScoreValidationViews("avatar_score_fail", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 1));
-
-                Assert.That(response.Value<bool>("passed"), Is.False);
-                Assert.That(response.Value<string>("recommended_action"), Is.EqualTo("retry_next_candidate"));
-                Assert.That(response["reasons"]!.ToObject<List<string>>().Count, Is.GreaterThan(0));
-            }
-            finally
-            {
-                Object.DestroyImmediate(target);
-                Object.DestroyImmediate(obstacle);
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [Test]
-        public void ScoreValidationViews_PublishesDebugSnapshotForSceneInspection()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarVisualDebugRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
-            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            target.name = "CoffeeMaker";
-            target.transform.position = new Vector3(0f, 0.5f, 0f);
-            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
-            target.AddComponent<ObjectDescriber>();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-
-            try
-            {
-                var registry = root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
-
-                var validation = new SceneValidationService(registry, runtime);
-                _ = validation.ScoreValidationViews("avatar_debug_state", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 2);
-
-                var debugStateType = System.Type.GetType("VsensAgent.SceneApi.V2.AvatarValidationDebugState, Assembly-CSharp");
-                Assert.That(debugStateType, Is.Not.Null, "AvatarValidationDebugState should exist after visual debug support is added.");
-
-                var latestProperty = debugStateType!.GetProperty("Latest", BindingFlags.Public | BindingFlags.Static);
-                Assert.That(latestProperty, Is.Not.Null);
-                var snapshot = latestProperty!.GetValue(null);
-                Assert.That(snapshot, Is.Not.Null, "Scoring should publish a latest debug snapshot.");
-
-                var snapshotType = snapshot!.GetType();
-                var avatarPosition = (Vector3)snapshotType.GetProperty("AvatarRootPosition")!.GetValue(snapshot);
-                var avatarForward = (Vector3)snapshotType.GetProperty("AvatarForward")!.GetValue(snapshot);
-                var cameraPoses = snapshotType.GetProperty("ValidationCameraPoses")!.GetValue(snapshot) as System.Collections.ICollection;
-                var expectedForward = AvatarRuntimeManager.GetLogicalForward(runtime.GetManagedAvatarObject().transform.rotation);
-
-                Assert.That(avatarPosition, Is.EqualTo(runtime.GetManagedAvatarObject().transform.position).Using(new Vector3EqualityComparer(0.0001f)));
-                Assert.That(Vector3.Dot(avatarForward.normalized, expectedForward.normalized), Is.GreaterThan(0.99f));
-                Assert.That(cameraPoses, Is.Not.Null);
-                Assert.That(cameraPoses!.Count, Is.GreaterThan(0));
-            }
-            finally
-            {
-                Object.DestroyImmediate(target);
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [UnityTest]
-        public System.Collections.IEnumerator HandleControlBatch_CapturesValidationViewsWhenRequested()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarBatchCaptureRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
-            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            target.name = "CoffeeMaker";
-            target.transform.position = new Vector3(0f, 0.5f, 0f);
-            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
-            target.AddComponent<ObjectDescriber>();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-            var cameraGo = new GameObject("Main Camera");
-            cameraGo.tag = "MainCamera";
-            cameraGo.AddComponent<Camera>();
-
-            string captureDir = Path.Combine(Application.persistentDataPath, "ValidationCaptures");
-            Directory.CreateDirectory(captureDir);
-            string validatorContext = $"avatar_batch_test_{System.Guid.NewGuid():N}";
-            int beforeCount = Directory.GetFiles(captureDir, $"{validatorContext}_*.png").Length;
-
-            try
-            {
-                root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-                var controlManager = root.AddComponent<ControlManager>();
-
-                var controls = new[]
-                {
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "spawn_avatar",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["avatar_id"] = "avatar_main",
-                            ["prefab_key"] = "smplx_male",
-                            ["position"] = new[] { -1f, 0f, 0f },
-                            ["rotation"] = new[] { 0f, 0f, 0f },
-                            ["validator_context"] = validatorContext,
-                            ["validation_target_alias"] = "CoffeeMaker",
-                        }
-                    },
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "load_avatar_motion",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["avatar_id"] = "avatar_main",
-                            ["motion_id"] = "motion_wave",
-                            ["motion_name"] = "wave_once",
-                            ["motion_json"] = "{\"model\":\"smplx\",\"gender\":\"male\",\"fps\":30.0,\"betas\":[],\"poses\":[],\"trans\":[]}",
-                            ["source_text"] = "wave once",
-                            ["validator_context"] = validatorContext,
-                            ["validation_target_alias"] = "CoffeeMaker",
-                        }
-                    },
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "play_avatar_motion",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["speed"] = 1.0f,
-                            ["loop"] = false,
-                            ["capture_validation_views"] = true,
-                            ["validator_context"] = validatorContext,
-                            ["validation_target_alias"] = "CoffeeMaker",
-                        }
-                    },
-                };
-
-                var method = typeof(ControlManager).GetMethod("HandleControlBatch", BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.That(method, Is.Not.Null);
-                method!.Invoke(controlManager, new object[] { controls });
-
-                yield return null;
-                yield return null;
-
-                int afterCount = Directory.GetFiles(captureDir, $"{validatorContext}_*.png").Length;
-                Assert.That(afterCount, Is.GreaterThan(beforeCount));
-            }
-            finally
-            {
-                Object.DestroyImmediate(cameraGo);
-                Object.DestroyImmediate(target);
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [UnityTest]
-        public System.Collections.IEnumerator HandleControlBatch_RetriesCandidateWhenVisualScoreFails()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarBatchRetryRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
-            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            target.name = "CoffeeMaker";
-            target.transform.position = new Vector3(0f, 0.5f, 0f);
-            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
-            target.AddComponent<ObjectDescriber>();
-            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            obstacle.name = "Occluder";
-            obstacle.transform.position = new Vector3(-1.6f, 1.0f, -0.6f);
-            obstacle.transform.localScale = new Vector3(2.4f, 2.2f, 1.4f);
-            obstacle.AddComponent<ObjectDescriber>();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-            var cameraGo = new GameObject("Main Camera");
-            cameraGo.tag = "MainCamera";
-            cameraGo.AddComponent<Camera>();
-
-            try
-            {
-                root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-                var controlManager = root.AddComponent<ControlManager>();
-
-                var candidateList = new object[]
-                {
-                    new Dictionary<string, object>
-                    {
-                        ["candidate_id"] = "avatar_cand_000",
-                        ["position"] = new[] { -1f, 0f, 0f },
-                        ["rotation"] = new[] { 0f, 0f, 0f },
-                    },
-                    new Dictionary<string, object>
-                    {
-                        ["candidate_id"] = "avatar_cand_001",
-                        ["position"] = new[] { 1f, 0f, 0f },
-                        ["rotation"] = new[] { 0f, 180f, 0f },
-                    },
-                };
-
-                var controls = new[]
-                {
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "spawn_avatar",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["avatar_id"] = "avatar_main",
-                            ["prefab_key"] = "smplx_male",
-                            ["position"] = new[] { -1f, 0f, 0f },
-                            ["rotation"] = new[] { 0f, 0f, 0f },
-                            ["validator_context"] = "avatar_retry_test",
-                            ["validation_target_alias"] = "CoffeeMaker",
-                            ["validation_task_hint"] = "make_coffee",
-                            ["validation_candidate_id"] = "avatar_cand_000",
-                            ["validation_candidates"] = candidateList,
-                        }
-                    },
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "load_avatar_motion",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["avatar_id"] = "avatar_main",
-                            ["motion_id"] = "motion_wave",
-                            ["motion_name"] = "wave_once",
-                            ["motion_json"] = "{\"model\":\"smplx\",\"gender\":\"male\",\"fps\":30.0,\"betas\":[],\"poses\":[],\"trans\":[]}",
-                            ["source_text"] = "wave once",
-                            ["validator_context"] = "avatar_retry_test",
-                            ["validation_target_alias"] = "CoffeeMaker",
-                            ["validation_task_hint"] = "make_coffee",
-                            ["validation_candidate_id"] = "avatar_cand_000",
-                            ["validation_candidates"] = candidateList,
-                        }
-                    },
-                    new ControlObject
-                    {
-                        target = "avatar_main",
-                        action = "play_avatar_motion",
-                        parameters = new Dictionary<string, object>
-                        {
-                            ["speed"] = 1.0f,
-                            ["loop"] = false,
-                            ["capture_validation_views"] = true,
-                            ["validator_context"] = "avatar_retry_test",
-                            ["validation_target_alias"] = "CoffeeMaker",
-                            ["validation_task_hint"] = "make_coffee",
-                            ["validation_candidate_id"] = "avatar_cand_000",
-                            ["validation_candidates"] = candidateList,
-                        }
-                    },
-                };
-
-                var method = typeof(ControlManager).GetMethod("HandleControlBatch", BindingFlags.Instance | BindingFlags.NonPublic);
-                Assert.That(method, Is.Not.Null);
-                method!.Invoke(controlManager, new object[] { controls });
-
-                yield return null;
-                yield return null;
-
-                var avatar = runtime.GetManagedAvatarObject();
-                Assert.That(avatar, Is.Not.Null);
-                Assert.That(avatar.transform.position.x, Is.GreaterThan(0.5f));
-            }
-            finally
-            {
-                Object.DestroyImmediate(cameraGo);
-                Object.DestroyImmediate(target);
-                Object.DestroyImmediate(obstacle);
                 Object.DestroyImmediate(floor);
                 Object.DestroyImmediate(prefab);
                 Object.DestroyImmediate(root);

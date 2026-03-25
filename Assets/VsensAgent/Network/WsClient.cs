@@ -227,14 +227,30 @@ namespace VsensAgent.Network
                 case "scene.query_objects":
                 case "scene.query_relations":
                 case "scene.query_surfaces":
+                case "scene.query_avatars":
+                case "scene.query_motions":
                 case "scene.query_avatar_candidates":
                 case "scene.validate_avatar_placement":
                 case "scene.capture_validation_views":
+                case "scene.score_validation_views":
                 case "scene.find_sensor_placements":
                 case "scene.validate_placement":
                 case "scene.validate_actions":
                 case "scene.execute_actions":
                     OnSceneApiRequest?.Invoke(json);
+                    break;
+
+                case "error":
+                    var errorMsg = JsonConvert.DeserializeObject<ErrorMessage>(json);
+                    if (errorMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize error payload: {json}");
+                        break;
+                    }
+                    Debug.LogWarning(
+                        string.IsNullOrWhiteSpace(errorMsg.details)
+                            ? $"[WS] Server error: {errorMsg.message}"
+                            : $"[WS] Server error: {errorMsg.message}\n{errorMsg.details}");
                     break;
 
                 case "job.started":

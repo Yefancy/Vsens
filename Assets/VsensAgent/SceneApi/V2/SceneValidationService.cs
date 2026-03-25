@@ -155,64 +155,11 @@ namespace VsensAgent.SceneApi.V2
                 };
             }
 
-            var artifacts = CaptureViews(
+            var artifacts = CaptureValidationArtifacts(
                 validatorContext ?? "validation",
                 avatar,
-                target,
-                Mathf.Clamp(maxViews ?? 2, 1, 3));
+                target);
 
-            return new
-            {
-                type = "scene.query_response",
-                method = "scene.capture_validation_views",
-                scene_version = snapshot.scene_version,
-                validator_context = validatorContext ?? string.Empty,
-                artifacts
-            };
-        }
-
-        public object ScoreValidationViews(
-            string validatorContext,
-            string avatarId,
-            string targetObjectId,
-            string targetAlias,
-            string taskHint,
-            int? maxViews)
-        {
-            var snapshot = _registry.BuildSnapshot(includeRelations: false);
-            var target = ResolveTarget(snapshot, targetObjectId, targetAlias);
-            var avatar = ResolveAvatarForValidation(avatarId);
-            if (avatar == null || target == null)
-            {
-                return new
-                {
-                    type = "scene.query_response",
-                    method = "scene.score_validation_views",
-                    scene_version = snapshot.scene_version,
-                    passed = false,
-                    score = 0f,
-                    recommended_action = "retry_next_candidate",
-                    reasons = new[] { "Avatar and target are required to score validation views." },
-                    metrics = new ValidationViewMetricsModel(),
-                    artifacts = new List<ValidationArtifactModel>(),
-                    errors = new[]
-                    {
-                        new ValidationIssueModel
-                        {
-                            code = SceneApiErrorCodes.INVALID_PARAM,
-                            message = "Avatar and target are required to score validation views."
-                        }
-                    }
-                };
-            }
-
-            Physics.SyncTransforms();
-            var artifacts = CaptureViews(
-                validatorContext ?? "validation",
-                avatar,
-                target,
-                Mathf.Clamp(maxViews ?? 1, 1, 3));
-            var scoreModel = EvaluateValidationViews(avatar, target, taskHint, artifacts);
             AvatarValidationDebugState.Publish(new AvatarValidationDebugSnapshot
             {
                 ValidatorContext = validatorContext ?? "validation",
@@ -221,9 +168,9 @@ namespace VsensAgent.SceneApi.V2
                 AvatarVisualForward = ResolveAvatarVisualForward(avatar),
                 TargetBoundsCenter = ToVector3(target.bounds_center),
                 TargetBoundsSize = ToVector3(target.bounds_size),
-                Passed = scoreModel.passed,
-                Score = scoreModel.score,
-                RecommendedAction = scoreModel.recommended_action,
+                Passed = false,
+                Score = 0f,
+                RecommendedAction = "captured",
                 ValidationCameraPoses = artifacts
                     .Select(artifact => new AvatarValidationCameraPose
                     {
@@ -237,15 +184,111 @@ namespace VsensAgent.SceneApi.V2
             return new
             {
                 type = "scene.query_response",
-                method = "scene.score_validation_views",
+                method = "scene.capture_validation_views",
                 scene_version = snapshot.scene_version,
-                passed = scoreModel.passed,
-                score = scoreModel.score,
-                recommended_action = scoreModel.recommended_action,
-                reasons = scoreModel.reasons,
-                metrics = scoreModel.metrics,
-                artifacts = scoreModel.artifacts
+                validator_context = validatorContext ?? string.Empty,
+                artifacts
             };
+        }
+
+        private List<ValidationArtifactModel> CaptureValidationArtifacts(
+            string validatorContext,
+            GameObject avatar,
+            SceneObjectModel target)
+        {
+            var artifacts = new List<ValidationArtifactModel>();
+            var avatarEyePose = ResolveAvatarEyePose(avatar);
+            var userCamera = ResolveUserCamera();
+
+            var avatarEyeArtifact = CaptureView(
+                validatorContext,
+                "avatar_eye",
+                avatarEyePose.position,
+                avatarEyePose.rotationEuler,
+                avatarEyePose.lookAt);
+            if (avatarEyeArtifact != null)
+            {
+                artifacts.Add(avatarEyeArtifact);
+            }
+
+            if (userCamera != null)
+            {
+                var userCameraArtifact = CaptureView(
+                    validatorContext,
+                    "user_camera",
+                    userCamera.transform.position,
+                    userCamera.transform.eulerAngles,
+                    userCamera.transform.position + userCamera.transform.forward * 2f);
+                if (userCameraArtifact != null)
+                {
+                    artifacts.Add(userCameraArtifact);
+                }
+            }
+
+            return artifacts;
+        }
+
+        private static (Vector3 position, Vector3 rotationEuler, Vector3 lookAt) ResolveAvatarEyePose(GameObject avatar)
+        {
+            var head = FindAvatarEyeTransform(avatar);
+            if (head != null)
+            {
+                var forward = AvatarRuntimeManager.GetLogicalForward(avatar.transform.rotation);
+                return (
+                    head.position,
+                    Quaternion.LookRotation(forward.sqrMagnitude > 0.0001f ? forward : head.forward, Vector3.up).eulerAngles,
+                    head.position + (forward.sqrMagnitude > 0.0001f ? forward.normalized : head.forward.normalized) * 2f
+                );
+            }
+
+            var logicalForward = AvatarRuntimeManager.GetLogicalForward(avatar.transform.rotation);
+            var root = avatar.transform.position;
+            var eyePosition = root + Vector3.up * 1.6f;
+            return (
+                eyePosition,
+                Quaternion.LookRotation(logicalForward.sqrMagnitude > 0.0001f ? logicalForward : Vector3.forward, Vector3.up).eulerAngles,
+                eyePosition + (logicalForward.sqrMagnitude > 0.0001f ? logicalForward.normalized : Vector3.forward) * 2f
+            );
+        }
+
+        private static Transform FindAvatarEyeTransform(GameObject avatar)
+        {
+            if (avatar == null)
+            {
+                return null;
+            }
+
+            var candidates = avatar.GetComponentsInChildren<Transform>(true);
+            foreach (var candidate in candidates)
+            {
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                var lower = candidate.name.ToLowerInvariant();
+                if (lower.Contains("eye") || lower == "head" || lower.EndsWith("head"))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static Camera ResolveUserCamera()
+        {
+            var controller = VsensAgent.Core.ServiceLocator.Get<VsensAgent.UserMainCameraControl>();
+            if (controller != null)
+            {
+                var controlledCamera = controller.GetComponent<Camera>();
+                if (controlledCamera != null)
+                {
+                    return controlledCamera;
+                }
+            }
+
+            return Camera.main ?? UnityEngine.Object.FindFirstObjectByType<Camera>();
         }
 
         private static object BuildValidationResponse(int sceneVersion, AvatarPlacementValidationModel report)
@@ -559,125 +602,7 @@ namespace VsensAgent.SceneApi.V2
             return result.ToList();
         }
 
-        private List<ValidationArtifactModel> CaptureViews(string validatorContext, GameObject avatar, SceneObjectModel target, int maxViews)
-        {
-            var targetCenter = ToVector3(target.bounds_center);
-            var avatarPosition = avatar.transform.position;
-            var viewSpecs = BuildViewSpecifications(validatorContext, avatarPosition, targetCenter)
-                .Take(maxViews)
-                .ToList();
-
-            var artifacts = new List<ValidationArtifactModel>();
-            foreach (var spec in viewSpecs)
-            {
-                var artifact = CaptureView(spec.label, spec.position, spec.rotationEuler, targetCenter);
-                if (artifact != null)
-                {
-                    artifacts.Add(artifact);
-                }
-            }
-
-            return artifacts;
-        }
-
-        private ValidationViewScoreModel EvaluateValidationViews(
-            GameObject avatar,
-            SceneObjectModel target,
-            string taskHint,
-            List<ValidationArtifactModel> artifacts)
-        {
-            var result = new ValidationViewScoreModel
-            {
-                recommended_action = "retry_next_candidate",
-                artifacts = artifacts ?? new List<ValidationArtifactModel>()
-            };
-
-            if (artifacts == null || artifacts.Count == 0)
-            {
-                result.reasons.Add("No validation views were captured.");
-                return result;
-            }
-
-            var avatarBounds = ComputeAvatarBounds(avatar);
-            var targetBounds = new Bounds(ToVector3(target.bounds_center), ToVector3(target.bounds_size));
-            Physics.SyncTransforms();
-
-            bool anyTargetVisible = false;
-            bool anyAvatarVisible = false;
-            float occlusionSum = 0f;
-            float framingSum = 0f;
-            int scoredViews = 0;
-
-            foreach (var artifact in artifacts)
-            {
-                var scoringCamera = CreateScoringCamera(artifact);
-                if (scoringCamera == null)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    bool targetVisible = IsBoundsVisible(scoringCamera, targetBounds);
-                    bool avatarVisible = IsBoundsVisible(scoringCamera, avatarBounds);
-                    float occlusionScore = ComputeOcclusionScore(scoringCamera, targetBounds, avatar);
-                    float framingScore = ComputeTaskFramingScore(scoringCamera, avatarBounds, targetBounds, taskHint);
-
-                    anyTargetVisible |= targetVisible;
-                    anyAvatarVisible |= avatarVisible;
-                    occlusionSum += occlusionScore;
-                    framingSum += framingScore;
-                    scoredViews++;
-                }
-                finally
-                {
-                    if (scoringCamera != null)
-                    {
-                        UnityEngine.Object.DestroyImmediate(scoringCamera.gameObject);
-                    }
-                }
-            }
-
-            float averagedOcclusion = scoredViews > 0 ? occlusionSum / scoredViews : 0f;
-            float averagedFraming = scoredViews > 0 ? framingSum / scoredViews : 0f;
-            result.metrics = new ValidationViewMetricsModel
-            {
-                target_visible = anyTargetVisible,
-                avatar_visible = anyAvatarVisible,
-                target_occlusion_score = (float)Math.Round(averagedOcclusion, 4),
-                task_framing_score = (float)Math.Round(averagedFraming, 4)
-            };
-
-            float score = 0f;
-            if (anyTargetVisible) score += 0.3f;
-            if (anyAvatarVisible) score += 0.2f;
-            score += averagedOcclusion * 0.25f;
-            score += averagedFraming * 0.25f;
-            result.score = (float)Math.Round(score, 4);
-
-            if (!anyTargetVisible)
-            {
-                result.reasons.Add("Target is not visible in the validation view.");
-            }
-            if (!anyAvatarVisible)
-            {
-                result.reasons.Add("Avatar is not visible in the validation view.");
-            }
-            if (averagedOcclusion < 0.55f)
-            {
-                result.reasons.Add("Target is too occluded from the validation view.");
-            }
-            if (averagedFraming < 0.45f)
-            {
-                result.reasons.Add("Avatar and target framing is not suitable for the task.");
-            }
-
-            result.passed = anyTargetVisible && anyAvatarVisible && averagedOcclusion >= 0.55f && averagedFraming >= 0.45f;
-            result.recommended_action = result.passed ? "accept" : "retry_next_candidate";
-            return result;
-        }
-
-        private ValidationArtifactModel CaptureView(string label, Vector3 position, Vector3 rotationEuler, Vector3 lookAt)
+        private ValidationArtifactModel CaptureView(string validatorContext, string label, Vector3 position, Vector3 rotationEuler, Vector3 lookAt)
         {
             Camera sourceCamera = Camera.main;
             bool createdTempCamera = false;
@@ -712,7 +637,7 @@ namespace VsensAgent.SceneApi.V2
 
                 string captureDir = Path.Combine(Application.persistentDataPath, "ValidationCaptures");
                 Directory.CreateDirectory(captureDir);
-                string artifactId = $"{label}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}";
+                string artifactId = $"{validatorContext}_{label}_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}";
                 string filePath = Path.Combine(captureDir, $"{artifactId}.png");
                 File.WriteAllBytes(filePath, texture.EncodeToPNG());
 
@@ -747,216 +672,6 @@ namespace VsensAgent.SceneApi.V2
                     }
                 }
             }
-        }
-
-        private static IEnumerable<(string label, Vector3 position, Vector3 rotationEuler)> BuildViewSpecifications(
-            string validatorContext,
-            Vector3 avatarPosition,
-            Vector3 targetCenter)
-        {
-            var toTarget = (targetCenter - avatarPosition);
-            var flat = new Vector3(toTarget.x, 0f, toTarget.z).normalized;
-            if (flat.sqrMagnitude < 1e-4f)
-            {
-                flat = Vector3.forward;
-            }
-
-            var right = Vector3.Cross(Vector3.up, flat).normalized;
-            if (right.sqrMagnitude < 1e-4f)
-            {
-                right = Vector3.right;
-            }
-
-            yield return (
-                $"{validatorContext}_overview",
-                avatarPosition - flat * 2.2f + Vector3.up * 1.6f + right * 1.2f,
-                Vector3.zero);
-            yield return (
-                $"{validatorContext}_side",
-                targetCenter + right * 2.4f + Vector3.up * 1.5f,
-                Vector3.zero);
-        }
-
-        private static Camera CreateScoringCamera(ValidationArtifactModel artifact)
-        {
-            var go = new GameObject("ValidationScoringCamera");
-            var camera = go.AddComponent<Camera>();
-            camera.transform.position = ToVector3(artifact.camera_position);
-            camera.transform.rotation = Quaternion.Euler(ToVector3(artifact.camera_rotation));
-            return camera;
-        }
-
-        private static bool IsBoundsVisible(Camera camera, Bounds bounds)
-        {
-            foreach (var corner in GetBoundsCorners(bounds))
-            {
-                var viewport = camera.WorldToViewportPoint(corner);
-                if (viewport.z > 0f && viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f)
-                {
-                    return true;
-                }
-            }
-
-            var center = camera.WorldToViewportPoint(bounds.center);
-            return center.z > 0f && center.x >= 0f && center.x <= 1f && center.y >= 0f && center.y <= 1f;
-        }
-
-        private static float ComputeOcclusionScore(Camera camera, Bounds targetBounds, GameObject avatar)
-        {
-            var points = new[]
-            {
-                targetBounds.center,
-                targetBounds.center + Vector3.up * (targetBounds.extents.y * 0.8f),
-                targetBounds.center + Vector3.right * Mathf.Min(0.15f, targetBounds.extents.x),
-                targetBounds.center - Vector3.right * Mathf.Min(0.15f, targetBounds.extents.x),
-                targetBounds.center + Vector3.forward * Mathf.Min(0.15f, targetBounds.extents.z),
-                targetBounds.center - Vector3.forward * Mathf.Min(0.15f, targetBounds.extents.z),
-            };
-
-            int clearCount = 0;
-            bool centerClear = IsTargetSampleVisible(camera, targetBounds.center, targetBounds, avatar);
-            foreach (var point in points)
-            {
-                if (IsTargetSampleVisible(camera, point, targetBounds, avatar))
-                {
-                    clearCount++;
-                }
-            }
-
-            if (points.Length == 0)
-            {
-                return 0f;
-            }
-
-            float rawScore = (float)clearCount / points.Length;
-            if (!centerClear)
-            {
-                // For task-oriented validation, if the target center is blocked the view should fail decisively.
-                return Mathf.Min(0.24f, rawScore * 0.4f);
-            }
-
-            return rawScore;
-        }
-
-        private static bool IsTargetSampleVisible(Camera camera, Vector3 point, Bounds targetBounds, GameObject avatar)
-        {
-            var direction = point - camera.transform.position;
-            if (direction.sqrMagnitude < 1e-6f)
-            {
-                return true;
-            }
-
-            if (!Physics.Raycast(camera.transform.position, direction.normalized, out var hit, direction.magnitude + 0.05f))
-            {
-                return true;
-            }
-
-            if (hit.collider == null)
-            {
-                return false;
-            }
-
-            var hitObject = hit.collider.gameObject;
-            if (IsSameOrChildOf(hitObject, avatar))
-            {
-                return false;
-            }
-
-            return IsBoundsOwner(hitObject, targetBounds);
-        }
-
-        private static float ComputeTaskFramingScore(Camera camera, Bounds avatarBounds, Bounds targetBounds, string taskHint)
-        {
-            var avatarViewport = camera.WorldToViewportPoint(avatarBounds.center);
-            var targetViewport = camera.WorldToViewportPoint(targetBounds.center);
-            if (avatarViewport.z <= 0f || targetViewport.z <= 0f)
-            {
-                return 0f;
-            }
-
-            float avatarCentering = 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(avatarViewport.x, avatarViewport.y), new Vector2(0.35f, 0.45f)) / 0.75f);
-            float targetCentering = 1f - Mathf.Clamp01(Vector2.Distance(new Vector2(targetViewport.x, targetViewport.y), new Vector2(0.6f, 0.5f)) / 0.75f);
-            float separation = Mathf.Abs(targetViewport.x - avatarViewport.x);
-            float separationScore = 1f - Mathf.Clamp01(Mathf.Abs(separation - 0.25f) / 0.35f);
-
-            if (!string.IsNullOrWhiteSpace(taskHint) && taskHint.IndexOf("door", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                separationScore = Mathf.Max(separationScore, 1f - Mathf.Clamp01(Mathf.Abs(separation - 0.18f) / 0.4f));
-            }
-
-            return Mathf.Clamp01((avatarCentering * 0.35f) + (targetCentering * 0.35f) + (separationScore * 0.3f));
-        }
-
-        private static IEnumerable<Vector3> GetBoundsCorners(Bounds bounds)
-        {
-            var min = bounds.min;
-            var max = bounds.max;
-            yield return new Vector3(min.x, min.y, min.z);
-            yield return new Vector3(min.x, min.y, max.z);
-            yield return new Vector3(min.x, max.y, min.z);
-            yield return new Vector3(min.x, max.y, max.z);
-            yield return new Vector3(max.x, min.y, min.z);
-            yield return new Vector3(max.x, min.y, max.z);
-            yield return new Vector3(max.x, max.y, min.z);
-            yield return new Vector3(max.x, max.y, max.z);
-        }
-
-        private static Bounds ComputeAvatarBounds(GameObject avatar)
-        {
-            var renderers = avatar.GetComponentsInChildren<Renderer>(true);
-            if (renderers != null && renderers.Length > 0)
-            {
-                var bounds = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++)
-                {
-                    bounds.Encapsulate(renderers[i].bounds);
-                }
-                return bounds;
-            }
-
-            return new Bounds(avatar.transform.position + Vector3.up * (DefaultAvatarHeight * 0.5f), new Vector3(DefaultAvatarRadius * 2f, DefaultAvatarHeight, DefaultAvatarRadius * 2f));
-        }
-
-        private static bool IsSameOrChildOf(GameObject hitObject, GameObject root)
-        {
-            if (hitObject == null || root == null)
-            {
-                return false;
-            }
-
-            return hitObject == root || hitObject.transform.IsChildOf(root.transform);
-        }
-
-        private static bool IsBoundsOwner(GameObject hitObject, Bounds targetBounds)
-        {
-            if (hitObject == null)
-            {
-                return false;
-            }
-
-            var renderer = hitObject.GetComponentInParent<Renderer>();
-            if (renderer != null)
-            {
-                return renderer.bounds.Intersects(targetBounds) || targetBounds.Contains(renderer.bounds.center);
-            }
-
-            var collider = hitObject.GetComponentInParent<Collider>();
-            if (collider != null)
-            {
-                return collider.bounds.Intersects(targetBounds) || targetBounds.Contains(collider.bounds.center);
-            }
-
-            return false;
-        }
-
-        private GameObject ResolveAvatarForValidation(string avatarId)
-        {
-            if (_avatarRuntimeManager == null)
-            {
-                return null;
-            }
-
-            return _avatarRuntimeManager.GetManagedAvatarObject();
         }
 
         private static Vector3 ResolveAvatarVisualForward(GameObject avatar)

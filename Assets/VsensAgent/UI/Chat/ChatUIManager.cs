@@ -9,6 +9,8 @@ using VsensAgent.Audio;
 using VsensAgent.Network;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
+using VsensAgent.RuntimeEditing;
+using VsensAgent.SceneApi.V2;
 
 namespace VsensAgent.UI
 {
@@ -21,6 +23,7 @@ namespace VsensAgent.UI
         public TMP_InputField textInputField;          // 文字输入框
         public Button sendButton;                      // 发送按钮
         public Button toggleViewButton;                 // 切换视角按钮
+        public Button editModeButton;                   // 运行时编辑模式按钮
         public GameObject voiceInputIndicator;          // 语音录制指示器
 
         [Header("消息预制件")]
@@ -49,6 +52,7 @@ namespace VsensAgent.UI
         private bool wasInputFocused = false;  // 跟踪输入框聚焦状态
         private Canvas MainCanvas;              // 用于点击检测
         private InputController inputController;      // 输入管理器
+        private RuntimeEditModeController runtimeEditModeController;
         private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
         private ClarificationRequestMessage _pendingClarification;
         private ProposalReadyMessage _pendingProposal;
@@ -74,6 +78,7 @@ namespace VsensAgent.UI
 
             // 初始化
             InitializeUI();
+            runtimeEditModeController = ResolveRuntimeEditModeController(createIfMissing: true);
             
             // 获取Canvas引用用于点击检测
             MainCanvas = GetComponentInParent<Canvas>();
@@ -116,6 +121,8 @@ namespace VsensAgent.UI
                 textInputField.onSubmit.AddListener(OnTextInputSubmit);
             if (toggleViewButton != null)
                 toggleViewButton.onClick.AddListener(OnToggleViewClicked);
+            if (editModeButton != null)
+                editModeButton.onClick.AddListener(OnEditModeClicked);
         }
 
         void OnDisable()
@@ -134,6 +141,8 @@ namespace VsensAgent.UI
                 textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
             if (toggleViewButton != null)
                 toggleViewButton.onClick.RemoveListener(OnToggleViewClicked);
+            if (editModeButton != null)
+                editModeButton.onClick.RemoveListener(OnEditModeClicked);
         }
 
         void Update()
@@ -146,6 +155,7 @@ namespace VsensAgent.UI
             
             // 修改后的自动聚焦逻辑
             HandleAutoFocus();
+            UpdateEditModeButtonLabel();
         }
 
         private void InitializeUI()
@@ -203,6 +213,8 @@ namespace VsensAgent.UI
 
             // 初始化发送/停止按钮标签
             UpdateSendButtonLabel();
+            EnsureEditModeButton();
+            UpdateEditModeButtonLabel();
 
             // 添加欢迎消息
             AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
@@ -371,6 +383,22 @@ namespace VsensAgent.UI
             UnfocusInputField();
         }
 
+        private void OnEditModeClicked()
+        {
+            var controller = ResolveRuntimeEditModeController(createIfMissing: true);
+            if (controller == null)
+            {
+                AddSystemMessage("❌ Runtime edit mode is not available right now.");
+                return;
+            }
+
+            controller.ToggleEditMode();
+            UpdateEditModeButtonLabel();
+            AddSystemMessage(controller.IsEditModeEnabled
+                ? "🛠️ Edit mode enabled. Click the avatar to select it, left-click the floor to move it, and right-drag to rotate."
+                : "✅ Edit mode disabled.");
+        }
+
         // ========== 焦点管理方法 ==========
 
         /// <summary>
@@ -465,6 +493,7 @@ namespace VsensAgent.UI
         private void HandleAutoFocus()
         {
             if (!autoFocusInput || textInputField == null || isRecording) return;
+            if (ResolveRuntimeEditModeController(createIfMissing: false)?.IsEditModeEnabled == true) return;
             
             // 只在没有按下WASD键时才自动聚焦
             bool isMovementKeyPressed = Input.GetKey(KeyCode.W) || 
@@ -557,6 +586,71 @@ namespace VsensAgent.UI
             var label = sendButton.GetComponentInChildren<TMP_Text>();
             if (label == null) return;
             label.text = _agentIsIdle ? "OK" : "Stop";
+        }
+
+        private void EnsureEditModeButton()
+        {
+            if (editModeButton != null)
+            {
+                return;
+            }
+
+            var template = toggleViewButton != null ? toggleViewButton : sendButton;
+            if (template == null || template.transform.parent == null)
+            {
+                return;
+            }
+
+            var editButtonObject = Instantiate(template.gameObject, template.transform.parent);
+            editButtonObject.name = "EditModeButton";
+            editModeButton = editButtonObject.GetComponent<Button>();
+        }
+
+        private void UpdateEditModeButtonLabel()
+        {
+            if (editModeButton == null)
+            {
+                return;
+            }
+
+            var label = editModeButton.GetComponentInChildren<TMP_Text>();
+            if (label == null)
+            {
+                return;
+            }
+
+            var controller = ResolveRuntimeEditModeController(createIfMissing: false);
+            bool isEditing = controller != null && controller.IsEditModeEnabled;
+            label.text = isEditing ? "Done" : "Edit";
+        }
+
+        private RuntimeEditModeController ResolveRuntimeEditModeController(bool createIfMissing)
+        {
+            if (runtimeEditModeController != null)
+            {
+                return runtimeEditModeController;
+            }
+
+            runtimeEditModeController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            if (runtimeEditModeController != null || !createIfMissing)
+            {
+                return runtimeEditModeController;
+            }
+
+            var runtime = ServiceLocator.Get<VsensAgent.SceneApi.V2.AvatarRuntimeManager>() ?? FindFirstObjectByType<VsensAgent.SceneApi.V2.AvatarRuntimeManager>();
+            GameObject host = runtime != null ? runtime.gameObject : new GameObject("RuntimeEditModeController");
+            runtimeEditModeController = host.GetComponent<RuntimeEditModeController>();
+            if (runtimeEditModeController == null)
+            {
+                runtimeEditModeController = host.AddComponent<RuntimeEditModeController>();
+            }
+
+            if (runtime != null)
+            {
+                runtimeEditModeController.Configure(runtime);
+            }
+
+            return runtimeEditModeController;
         }
 
         /// <summary>

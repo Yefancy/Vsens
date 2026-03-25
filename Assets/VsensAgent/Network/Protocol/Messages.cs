@@ -199,4 +199,14 @@ namespace VsensAgent.Network.Protocol
         [JsonProperty("attention_threshold")]
         public float attention_threshold;
     }
+
+    [Serializable]
+    public class ErrorMessage
+    {
+        public string type;
+        public string message;
+        public string details;
+        public string code;
+        public string request_id;
+    }
 }

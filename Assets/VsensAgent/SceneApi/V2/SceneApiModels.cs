@@ -108,6 +108,7 @@ namespace VsensAgent.SceneApi.V2
         public string motion_id;
         public string motion_name;
         public bool is_playing;
+        public string pose_authority;
     }
 
     [Serializable]
@@ -173,26 +174,6 @@ namespace VsensAgent.SceneApi.V2
         public Vector3Data suggested_position;
         public Vector3Data suggested_rotation;
         public List<ValidationIssueModel> issues = new List<ValidationIssueModel>();
-        public List<ValidationArtifactModel> artifacts = new List<ValidationArtifactModel>();
-    }
-
-    [Serializable]
-    public class ValidationViewMetricsModel
-    {
-        public bool target_visible;
-        public bool avatar_visible;
-        public float target_occlusion_score;
-        public float task_framing_score;
-    }
-
-    [Serializable]
-    public class ValidationViewScoreModel
-    {
-        public bool passed;
-        public float score;
-        public string recommended_action;
-        public List<string> reasons = new List<string>();
-        public ValidationViewMetricsModel metrics = new ValidationViewMetricsModel();
         public List<ValidationArtifactModel> artifacts = new List<ValidationArtifactModel>();
     }
 

@@ -166,6 +166,7 @@ namespace VsensAgent.SceneApi.V2
         public string motionId = string.Empty;
         public string motionName = string.Empty;
         public bool isPlaying;
+        public string poseAuthority = "agent";
     }
 
     public class AvatarObjectDescriber : global::ObjectDescriber
@@ -193,6 +194,7 @@ namespace VsensAgent.SceneApi.V2
         private AvatarPlaybackDriver _playbackDriver;
         private AvatarRuntimeState _runtimeState;
         private readonly Dictionary<string, AvatarMotionQueryModel> _motionCatalog = new Dictionary<string, AvatarMotionQueryModel>();
+        private string _poseAuthority = "agent";
 
         private void Awake()
         {
@@ -229,6 +231,7 @@ namespace VsensAgent.SceneApi.V2
 
                 _avatarObject.transform.position = position;
                 _avatarObject.transform.rotation = appliedRotation;
+                _poseAuthority = "agent";
                 UpdateRuntimeState();
                 error = null;
                 return true;
@@ -260,6 +263,7 @@ namespace VsensAgent.SceneApi.V2
                 _runtimeState = _avatarObject.AddComponent<AvatarRuntimeState>();
             }
 
+            _poseAuthority = "agent";
             UpdateRuntimeState();
             error = null;
             return true;
@@ -312,6 +316,33 @@ namespace VsensAgent.SceneApi.V2
                 _avatarObject.transform.localScale = scale.Value;
             }
 
+            _poseAuthority = "agent";
+            UpdateRuntimeState();
+            error = null;
+            return true;
+        }
+
+        public bool TrySetManualAvatarPose(string avatarId, Vector3? position, float? yawDegrees, out string error)
+        {
+            if (!HasMatchingAvatar(avatarId))
+            {
+                error = "Managed avatar not found.";
+                return false;
+            }
+
+            if (position.HasValue)
+            {
+                _avatarObject.transform.position = SnapPositionToFloor(position.Value);
+            }
+
+            if (yawDegrees.HasValue)
+            {
+                var logicalEuler = GetLogicalRotationEuler(_avatarObject.transform.rotation);
+                logicalEuler.y = yawDegrees.Value;
+                _avatarObject.transform.rotation = ApplyAvatarRotationOffset(logicalEuler);
+            }
+
+            _poseAuthority = "manual";
             UpdateRuntimeState();
             error = null;
             return true;
@@ -429,6 +460,7 @@ namespace VsensAgent.SceneApi.V2
                 motion_id = _playbackDriver != null ? _playbackDriver.LoadedMotionId : string.Empty,
                 motion_name = _playbackDriver != null ? _playbackDriver.LoadedMotionName : string.Empty,
                 is_playing = _playbackDriver != null && _playbackDriver.IsPlaying,
+                pose_authority = _poseAuthority,
             });
 
             return result;
@@ -507,6 +539,7 @@ namespace VsensAgent.SceneApi.V2
             _runtimeState.motionId = _playbackDriver != null ? _playbackDriver.LoadedMotionId : string.Empty;
             _runtimeState.motionName = _playbackDriver != null ? _playbackDriver.LoadedMotionName : string.Empty;
             _runtimeState.isPlaying = _playbackDriver != null && _playbackDriver.IsPlaying;
+            _runtimeState.poseAuthority = _poseAuthority;
         }
 
         public static Quaternion ApplyAvatarRotationOffset(Vector3 logicalRotationEuler)

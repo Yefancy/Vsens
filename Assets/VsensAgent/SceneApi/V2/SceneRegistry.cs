@@ -220,6 +220,7 @@ namespace VsensAgent.SceneApi.V2
                 model.state["motion_id"] = avatarState.motionId;
                 model.state["motion_name"] = avatarState.motionName;
                 model.state["is_playing"] = avatarState.isPlaying;
+                model.state["pose_authority"] = avatarState.poseAuthority;
             }
 
             return model;

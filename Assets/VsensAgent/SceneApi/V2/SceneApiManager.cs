@@ -117,13 +117,7 @@ namespace VsensAgent.SceneApi.V2
                         node.Value<string>("target_object_id") ?? string.Empty,
                         node.Value<string>("target_alias") ?? string.Empty,
                         node["max_views"]?.ToObject<int?>()),
-                    "scene.score_validation_views" => _validationService.ScoreValidationViews(
-                        node.Value<string>("validator_context") ?? string.Empty,
-                        node.Value<string>("avatar_id") ?? string.Empty,
-                        node.Value<string>("target_object_id") ?? string.Empty,
-                        node.Value<string>("target_alias") ?? string.Empty,
-                        node.Value<string>("task_hint") ?? string.Empty,
-                        node["max_views"]?.ToObject<int?>()),
+                    "scene.score_validation_views" => BuildDeprecatedSceneApiResponse(type),
                     "scene.find_sensor_placements" => HandleFindPlacements(node),
                     "scene.validate_placement" => HandleValidatePlacement(node),
                     "scene.validate_actions" => HandleValidateActions(node),
@@ -149,6 +143,17 @@ namespace VsensAgent.SceneApi.V2
                 });
                 WsClient.SendMessage(AddRequestId(errorObject, requestId));
             }
+        }
+
+        public static object BuildDeprecatedSceneApiResponse(string type)
+        {
+            return new
+            {
+                type = "scene.error",
+                code = SceneApiErrorCodes.INVALID_PARAM,
+                message =
+                    $"'{type}' is deprecated in the active runtime path. Use 'scene.capture_validation_views' and let the Python visual review loop decide accept/retry."
+            };
         }
 
         public static JObject AddRequestId(JObject response, string requestId)
