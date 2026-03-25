@@ -246,7 +246,7 @@ namespace Animations
                     var translation = raw.trans[i]; // float[3]
 
                     var frame = new AnimationFrame();
-                    frame.translation = new Vector3(translation[0], -translation[1], translation[2]);
+                    frame.translation = new Vector3(-translation[0], -translation[1], translation[2]);
                     frame.boneRotations = new Quaternion[55];  // 165 / 3 = 55
 
                     for (int j = 0; j < poseVec.Length / 3; j++)

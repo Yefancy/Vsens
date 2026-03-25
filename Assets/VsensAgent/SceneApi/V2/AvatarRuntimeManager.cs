@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using VsensAgent.Core;
 #if UNITY_EDITOR
@@ -71,16 +72,27 @@ namespace VsensAgent.SceneApi.V2
             {
                 controller = GetComponent<smplx.SmplxBodyAnimationController>();
             }
+
+            if (controller == null)
+            {
+                controller = GetComponentInChildren<smplx.SmplxBodyAnimationController>(true);
+            }
         }
 
         public override bool TryLoadMotion(string motionId, string motionName, string motionJson, out string error)
         {
             if (controller == null)
             {
+                controller = GetComponentInChildren<smplx.SmplxBodyAnimationController>(true);
+            }
+
+            if (controller == null)
+            {
                 error = "SmplxBodyAnimationController is missing.";
                 return false;
             }
 
+            EnsureControllerPrepared();
             controller.setAnimation(motionName, motionJson);
             controller.globalTranslation = true;
             controller.time = 0f;
@@ -93,6 +105,21 @@ namespace VsensAgent.SceneApi.V2
             IsPlaying = false;
             error = null;
             return true;
+        }
+
+        private void EnsureControllerPrepared()
+        {
+            if (controller == null)
+            {
+                return;
+            }
+
+            if (controller.Root != null && controller.Bones != null && controller.Bones.Length > 0)
+            {
+                return;
+            }
+
+            controller.PrepareModel();
         }
 
         public override bool TryPlay(float speed, bool loop, out string error)
@@ -157,6 +184,7 @@ namespace VsensAgent.SceneApi.V2
         private const string DefaultAvatarId = "avatar_main";
         private const string MalePrefabKey = "smplx_male";
         private const string DefaultMalePrefabPath = "Assets/smplx/male.prefab";
+        private static readonly Quaternion SmplxVisualYawOffset = Quaternion.Euler(0f, 180f, 0f);
 
         [SerializeField] private GameObject malePrefab;
         [SerializeField] private Transform avatarParent;
@@ -188,6 +216,8 @@ namespace VsensAgent.SceneApi.V2
         {
             avatarId = string.IsNullOrWhiteSpace(avatarId) ? DefaultAvatarId : avatarId;
             prefabKey = string.IsNullOrWhiteSpace(prefabKey) ? MalePrefabKey : prefabKey;
+            position = SnapPositionToFloor(position);
+            var appliedRotation = ApplyAvatarRotationOffset(rotationEuler);
 
             if (_avatarObject != null)
             {
@@ -198,7 +228,7 @@ namespace VsensAgent.SceneApi.V2
                 }
 
                 _avatarObject.transform.position = position;
-                _avatarObject.transform.rotation = Quaternion.Euler(rotationEuler);
+                _avatarObject.transform.rotation = appliedRotation;
                 UpdateRuntimeState();
                 error = null;
                 return true;
@@ -211,7 +241,7 @@ namespace VsensAgent.SceneApi.V2
                 return false;
             }
 
-            _avatarObject = Instantiate(prefab, position, Quaternion.Euler(rotationEuler), avatarParent);
+            _avatarObject = Instantiate(prefab, position, appliedRotation, avatarParent);
             _avatarObject.name = avatarId;
             _playbackDriver = _avatarObject.GetComponent<AvatarPlaybackDriver>();
             if (_playbackDriver == null)
@@ -271,11 +301,11 @@ namespace VsensAgent.SceneApi.V2
 
             if (position.HasValue)
             {
-                _avatarObject.transform.position = position.Value;
+                _avatarObject.transform.position = SnapPositionToFloor(position.Value);
             }
             if (rotationEuler.HasValue)
             {
-                _avatarObject.transform.rotation = Quaternion.Euler(rotationEuler.Value);
+                _avatarObject.transform.rotation = ApplyAvatarRotationOffset(rotationEuler.Value);
             }
             if (scale.HasValue)
             {
@@ -395,7 +425,7 @@ namespace VsensAgent.SceneApi.V2
                 object_id = objectId,
                 prefab_key = MalePrefabKey,
                 position = new Vector3Data(_avatarObject.transform.position.x, _avatarObject.transform.position.y, _avatarObject.transform.position.z),
-                rotation = new Vector3Data(_avatarObject.transform.eulerAngles.x, _avatarObject.transform.eulerAngles.y, _avatarObject.transform.eulerAngles.z),
+                rotation = ToData(GetLogicalRotationEuler(_avatarObject.transform.rotation)),
                 motion_id = _playbackDriver != null ? _playbackDriver.LoadedMotionId : string.Empty,
                 motion_name = _playbackDriver != null ? _playbackDriver.LoadedMotionName : string.Empty,
                 is_playing = _playbackDriver != null && _playbackDriver.IsPlaying,
@@ -407,6 +437,11 @@ namespace VsensAgent.SceneApi.V2
         public List<AvatarMotionQueryModel> GetMotionQueryModels()
         {
             return new List<AvatarMotionQueryModel>(_motionCatalog.Values);
+        }
+
+        public GameObject GetManagedAvatarObject()
+        {
+            return _avatarObject;
         }
 
         private bool EnsureAvatarForMotion(string avatarId, out string error)
@@ -472,6 +507,86 @@ namespace VsensAgent.SceneApi.V2
             _runtimeState.motionId = _playbackDriver != null ? _playbackDriver.LoadedMotionId : string.Empty;
             _runtimeState.motionName = _playbackDriver != null ? _playbackDriver.LoadedMotionName : string.Empty;
             _runtimeState.isPlaying = _playbackDriver != null && _playbackDriver.IsPlaying;
+        }
+
+        public static Quaternion ApplyAvatarRotationOffset(Vector3 logicalRotationEuler)
+        {
+            return Quaternion.Euler(logicalRotationEuler) * SmplxVisualYawOffset;
+        }
+
+        public static Quaternion GetLogicalRotation(Quaternion appliedRotation)
+        {
+            return appliedRotation * Quaternion.Inverse(SmplxVisualYawOffset);
+        }
+
+        public static Vector3 GetLogicalRotationEuler(Quaternion appliedRotation)
+        {
+            return GetLogicalRotation(appliedRotation).eulerAngles;
+        }
+
+        public static Vector3 GetLogicalForward(Quaternion appliedRotation)
+        {
+            return GetLogicalRotation(appliedRotation) * Vector3.forward;
+        }
+
+        private static Vector3Data ToData(Vector3 value)
+        {
+            return new Vector3Data(value.x, value.y, value.z);
+        }
+
+        private static Vector3 SnapPositionToFloor(Vector3 rawPosition)
+        {
+            var floorColliders = UnityEngine.Object.FindObjectsByType<Collider>(FindObjectsSortMode.None)
+                .Where(collider =>
+                {
+                    if (collider == null)
+                    {
+                        return false;
+                    }
+
+                    var lowerName = collider.gameObject.name.ToLowerInvariant();
+                    return lowerName.Contains("floor") || lowerName.Contains("ground");
+                })
+                .OrderBy(collider =>
+                {
+                    var bounds = collider.bounds;
+                    var center = bounds.center;
+                    var dx = center.x - rawPosition.x;
+                    var dz = center.z - rawPosition.z;
+                    return dx * dx + dz * dz;
+                })
+                .ToList();
+
+            if (floorColliders.Count > 0)
+            {
+                rawPosition.y = floorColliders[0].bounds.max.y;
+                return rawPosition;
+            }
+
+            var rayOrigin = rawPosition + Vector3.up * 5f;
+            var hits = Physics.RaycastAll(rayOrigin, Vector3.down, 20f)
+                .Where(hit => hit.collider != null)
+                .OrderBy(hit => hit.point.y)
+                .ToList();
+
+            if (hits.Count == 0)
+            {
+                return rawPosition;
+            }
+
+            var preferred = hits.FirstOrDefault(hit =>
+            {
+                var lowerName = hit.collider.gameObject.name.ToLowerInvariant();
+                return lowerName.Contains("floor") || lowerName.Contains("ground");
+            });
+
+            if (preferred.collider == null)
+            {
+                preferred = hits[0];
+            }
+
+            rawPosition.y = preferred.point.y;
+            return rawPosition;
         }
     }
 }

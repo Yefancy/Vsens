@@ -121,6 +121,82 @@ namespace VsensAgent.SceneApi.V2
     }
 
     [Serializable]
+    public class AvatarCandidateQueryModel
+    {
+        public string candidate_id;
+        public string target_object_id;
+        public string task_hint;
+        public string preferred_side;
+        public Vector3Data position;
+        public Vector3Data rotation;
+        public float score;
+        public float facing_score;
+        public float distance_to_target;
+        public bool grounded;
+        public bool collision_free;
+        public List<string> reasons = new List<string>();
+    }
+
+    [Serializable]
+    public class ValidationIssueModel
+    {
+        public string code;
+        public string message;
+    }
+
+    [Serializable]
+    public class ValidationArtifactModel
+    {
+        public string artifact_id;
+        public string artifact_type;
+        public string file_path;
+        public string label;
+        public Vector3Data camera_position;
+        public Vector3Data camera_rotation;
+    }
+
+    [Serializable]
+    public class AvatarPlacementValidationModel
+    {
+        public string validator_id;
+        public string target_object_id;
+        public string task_hint;
+        public bool valid;
+        public bool collision_free;
+        public bool grounded;
+        public bool endpoint_valid;
+        public bool trajectory_valid;
+        public string motion_mode;
+        public float facing_score;
+        public float distance_to_target;
+        public int sampled_points_checked;
+        public Vector3Data suggested_position;
+        public Vector3Data suggested_rotation;
+        public List<ValidationIssueModel> issues = new List<ValidationIssueModel>();
+        public List<ValidationArtifactModel> artifacts = new List<ValidationArtifactModel>();
+    }
+
+    [Serializable]
+    public class ValidationViewMetricsModel
+    {
+        public bool target_visible;
+        public bool avatar_visible;
+        public float target_occlusion_score;
+        public float task_framing_score;
+    }
+
+    [Serializable]
+    public class ValidationViewScoreModel
+    {
+        public bool passed;
+        public float score;
+        public string recommended_action;
+        public List<string> reasons = new List<string>();
+        public ValidationViewMetricsModel metrics = new ValidationViewMetricsModel();
+        public List<ValidationArtifactModel> artifacts = new List<ValidationArtifactModel>();
+    }
+
+    [Serializable]
     public class ActionBatchRequestV2
     {
         public string request_id;

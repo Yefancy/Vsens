@@ -27,8 +27,8 @@ namespace smplx
                     }
                     else
                     {
-                        _root.parent.localEulerAngles = new Vector3(-90, 0, 0);
-                        _root.parent.localPosition = new Vector3(0, -0.34f, -0.4f);
+                        // _root.parent.localEulerAngles = new Vector3(0, 0, 0);
+                        // _root.parent.localPosition = new Vector3(0, -0.34f, -0.4f);
                     }
                 }
                 SetBetas(smplxAnimation.betas);

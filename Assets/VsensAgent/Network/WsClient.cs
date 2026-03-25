@@ -115,71 +115,94 @@ namespace VsensAgent.Network
         try
         {
             var typeWrapper = JsonConvert.DeserializeObject<MessageTypeWrapper>(json);
+            if (typeWrapper == null || string.IsNullOrWhiteSpace(typeWrapper.type))
+            {
+                Debug.LogWarning($"[WS] Ignoring message without a valid type: {json}");
+                return;
+            }
 
             switch (typeWrapper.type)
             {
                 case "agent_ready":
                     var replyMsg = JsonConvert.DeserializeObject<AgentReplyMessage>(json);
-                    
-                    // 触发统一的回复事件
-                    OnAgentReply?.Invoke(replyMsg);
+                    if (replyMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize agent_ready payload: {json}");
+                        break;
+                    }
+
+                    SafeInvoke(() => OnAgentReply?.Invoke(replyMsg), "agent_ready.OnAgentReply", json);
                     StopThinkingAnimation();
-                    
-                    // 处理控制指令
+
                     if (replyMsg.control != null && replyMsg.control.actions != null)
                     {
-                        OnControl?.Invoke(replyMsg.control.actions);
+                        SafeInvoke(() => OnControl?.Invoke(replyMsg.control.actions), "agent_ready.OnControl", json);
                     }
                     break;
 
                 case "conversation.reply":
                     var conversationMsg = JsonConvert.DeserializeObject<ConversationReplyMessage>(json);
-                    OnConversationReply?.Invoke(conversationMsg);
-                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                    if (conversationMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize conversation.reply payload: {json}");
+                        break;
+                    }
+                    SafeInvoke(() => OnConversationReply?.Invoke(conversationMsg), "conversation.reply.OnConversationReply", json);
+                    SafeInvoke(() => OnAgentReply?.Invoke(ToAgentReplyMessage(
                         conversationMsg.type,
                         conversationMsg.status,
                         conversationMsg.transcription,
                         conversationMsg.reply,
                         conversationMsg.audio_path,
-                        conversationMsg.control));
+                        conversationMsg.control)), "conversation.reply.OnAgentReply", json);
                     StopThinkingAnimation();
                     if (conversationMsg.control != null && conversationMsg.control.actions != null)
                     {
-                        OnControl?.Invoke(conversationMsg.control.actions);
+                        SafeInvoke(() => OnControl?.Invoke(conversationMsg.control.actions), "conversation.reply.OnControl", json);
                     }
                     break;
 
                 case "clarification.request":
                     var clarificationMsg = JsonConvert.DeserializeObject<ClarificationRequestMessage>(json);
-                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                    if (clarificationMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize clarification.request payload: {json}");
+                        break;
+                    }
+                    SafeInvoke(() => OnAgentReply?.Invoke(ToAgentReplyMessage(
                         clarificationMsg.type,
                         clarificationMsg.status,
                         clarificationMsg.transcription,
                         clarificationMsg.reply,
                         clarificationMsg.audio_path,
-                        clarificationMsg.control));
+                        clarificationMsg.control)), "clarification.request.OnAgentReply", json);
                     StopThinkingAnimation();
-                    OnClarificationRequest?.Invoke(clarificationMsg);
+                    SafeInvoke(() => OnClarificationRequest?.Invoke(clarificationMsg), "clarification.request.OnClarificationRequest", json);
                     if (clarificationMsg.control != null && clarificationMsg.control.actions != null)
                     {
-                        OnControl?.Invoke(clarificationMsg.control.actions);
+                        SafeInvoke(() => OnControl?.Invoke(clarificationMsg.control.actions), "clarification.request.OnControl", json);
                     }
                     break;
 
                 case "proposal.ready":
                     var proposalMsg = JsonConvert.DeserializeObject<ProposalReadyMessage>(json);
-                    OnAgentReply?.Invoke(ToAgentReplyMessage(
+                    if (proposalMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize proposal.ready payload: {json}");
+                        break;
+                    }
+                    SafeInvoke(() => OnAgentReply?.Invoke(ToAgentReplyMessage(
                         proposalMsg.type,
                         proposalMsg.status,
                         proposalMsg.transcription,
                         proposalMsg.reply,
                         proposalMsg.audio_path,
-                        proposalMsg.control));
+                        proposalMsg.control)), "proposal.ready.OnAgentReply", json);
                     StopThinkingAnimation();
-                    OnProposalReady?.Invoke(proposalMsg);
+                    SafeInvoke(() => OnProposalReady?.Invoke(proposalMsg), "proposal.ready.OnProposalReady", json);
                     if (proposalMsg.control != null && proposalMsg.control.actions != null)
                     {
-                        OnControl?.Invoke(proposalMsg.control.actions);
+                        SafeInvoke(() => OnControl?.Invoke(proposalMsg.control.actions), "proposal.ready.OnControl", json);
                     }
                     break;
 
@@ -204,6 +227,9 @@ namespace VsensAgent.Network
                 case "scene.query_objects":
                 case "scene.query_relations":
                 case "scene.query_surfaces":
+                case "scene.query_avatar_candidates":
+                case "scene.validate_avatar_placement":
+                case "scene.capture_validation_views":
                 case "scene.find_sensor_placements":
                 case "scene.validate_placement":
                 case "scene.validate_actions":
@@ -215,23 +241,38 @@ namespace VsensAgent.Network
                 case "job.status":
                 case "job.cancelled":
                     var jobMsg = JsonConvert.DeserializeObject<JobLifecycleMessage>(json);
-                    OnJobLifecycle?.Invoke(jobMsg);
+                    if (jobMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize job lifecycle payload: {json}");
+                        break;
+                    }
+                    SafeInvoke(() => OnJobLifecycle?.Invoke(jobMsg), "job.OnJobLifecycle", json);
                     break;
 
                 case "agent_push":
                     // Phase 3: HeartbeatHandler 在检测到显著场景事件时主动推送
                     var pushMsg = JsonConvert.DeserializeObject<AgentPushMessage>(json);
-                    OnAgentPush?.Invoke(pushMsg);
+                    if (pushMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize agent_push payload: {json}");
+                        break;
+                    }
+                    SafeInvoke(() => OnAgentPush?.Invoke(pushMsg), "agent_push.OnAgentPush", json);
                     // 控制指令走同一条控制管线（与 agent_ready 行为一致）
                     if (pushMsg.control != null && pushMsg.control.actions != null)
                     {
-                        OnControl?.Invoke(pushMsg.control.actions);
+                        SafeInvoke(() => OnControl?.Invoke(pushMsg.control.actions), "agent_push.OnControl", json);
                     }
                     break;
 
                 case "server_config":
                     // Phase 3: 连接时由 Python 服务器立即发送，包含心跳间隔等配置
                     var cfgMsg = JsonConvert.DeserializeObject<ServerConfigMessage>(json);
+                    if (cfgMsg == null)
+                    {
+                        Debug.LogWarning($"[WS] Failed to deserialize server_config payload: {json}");
+                        break;
+                    }
                     OnServerConfig?.Invoke(cfgMsg);
                     Debug.Log($"[WS] ⚙️ Server config received: heartbeat={cfgMsg.heartbeat_interval_s}s, tts_in_push={cfgMsg.tts_in_push}");
                     break;
@@ -244,7 +285,7 @@ namespace VsensAgent.Network
         }
         catch (Exception ex)
         {
-            Debug.LogError("[WS] Failed to parse message: " + ex.Message);
+            Debug.LogError($"[WS] Failed to parse message: {ex.Message}\nPayload: {json}\n{ex}");
         }
     }
 
@@ -490,6 +531,18 @@ namespace VsensAgent.Network
         if (wsClient != null && wsClient.agentBehaviorController != null)
         {
             wsClient.agentBehaviorController.StopThinking();
+        }
+    }
+
+    private static void SafeInvoke(Action action, string dispatchName, string payload)
+    {
+        try
+        {
+            action?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[WS] Failed during dispatch '{dispatchName}': {ex.Message}\nPayload: {payload}\n{ex}");
         }
     }
 

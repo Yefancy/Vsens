@@ -1,15 +1,26 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using Animations;
 using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.TestTools.Utils;
 using VsensAgent;
 using VsensAgent.Core;
 using VsensAgent.Network.Protocol;
 using VsensAgent.SceneApi.V2;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace VsensAgent.Tests.Editor.SceneApi
 {
     public class AvatarSceneApiTests
     {
+        private static JObject ToObject(object value) => JObject.FromObject(value);
+
         [Test]
         public void QueryAvatars_ReturnsSpawnedAvatarInSceneModel()
         {
@@ -17,6 +28,11 @@ namespace VsensAgent.Tests.Editor.SceneApi
             var root = new GameObject("AvatarSceneApiRoot");
             var prefab = new GameObject("AvatarPrefab");
             prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
 
             try
             {
@@ -36,17 +52,58 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(spawned, Is.True, error);
 
                 var queryService = new SceneQueryService(registry, runtime);
-                dynamic response = queryService.QueryAvatars();
+                var response = ToObject(queryService.QueryAvatars());
+                var avatars = response["avatars"]!.ToObject<List<AvatarQueryModel>>();
 
-                Assert.That((string)response.method, Is.EqualTo("scene.query_avatars"));
-                Assert.That(((IList<AvatarQueryModel>)response.avatars).Count, Is.EqualTo(1));
-                Assert.That(((IList<AvatarQueryModel>)response.avatars)[0].avatar_id, Is.EqualTo("avatar_main"));
+                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.query_avatars"));
+                Assert.That(avatars.Count, Is.EqualTo(1));
+                Assert.That(avatars[0].avatar_id, Is.EqualTo("avatar_main"));
 
                 var snapshot = registry.BuildSnapshot(includeRelations: false);
                 Assert.That(snapshot.objects.Exists(o => o.alias == "avatar_main"), Is.True);
             }
             finally
             {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void SpawnAvatar_ReducesRequestedHeightTowardFloor()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSnapRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    new Vector3(0f, 2.5f, 0f),
+                    Vector3.zero,
+                    out var error), Is.True, error);
+
+                var avatar = runtime.GetManagedAvatarObject();
+                Assert.That(avatar, Is.Not.Null);
+                Assert.That(avatar.transform.position.y, Is.LessThan(1.0f));
+                Assert.That(avatar.transform.position.y, Is.LessThan(2.5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
                 Object.DestroyImmediate(prefab);
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
@@ -79,11 +136,11 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(runtime.TryPlayAvatarMotion("avatar_main", 1.25f, false, out var playError), Is.True, playError);
 
                 var queryService = new SceneQueryService(registry, runtime);
-                dynamic avatarsResponse = queryService.QueryAvatars();
-                dynamic motionsResponse = queryService.QueryMotions();
+                var avatarsResponse = ToObject(queryService.QueryAvatars());
+                var motionsResponse = ToObject(queryService.QueryMotions());
 
-                var avatar = ((IList<AvatarQueryModel>)avatarsResponse.avatars)[0];
-                var motion = ((IList<AvatarMotionQueryModel>)motionsResponse.motions)[0];
+                var avatar = avatarsResponse["avatars"]!.ToObject<List<AvatarQueryModel>>()[0];
+                var motion = motionsResponse["motions"]!.ToObject<List<AvatarMotionQueryModel>>()[0];
 
                 Assert.That(avatar.motion_id, Is.EqualTo("motion_wave"));
                 Assert.That(avatar.motion_name, Is.EqualTo("wave_once"));
@@ -99,8 +156,8 @@ namespace VsensAgent.Tests.Editor.SceneApi
                     out var replaceError
                 ), Is.True, replaceError);
 
-                dynamic replacedResponse = queryService.QueryAvatars();
-                var replacedAvatar = ((IList<AvatarQueryModel>)replacedResponse.avatars)[0];
+                var replacedResponse = ToObject(queryService.QueryAvatars());
+                var replacedAvatar = replacedResponse["avatars"]!.ToObject<List<AvatarQueryModel>>()[0];
                 Assert.That(replacedAvatar.motion_id, Is.EqualTo("motion_walk"));
                 Assert.That(replacedAvatar.is_playing, Is.False);
 
@@ -109,8 +166,8 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(runtime.TryClearAvatarMotion("avatar_main", out var clearError), Is.True, clearError);
                 Assert.That(runtime.TryRemoveAvatar("avatar_main", out var removeError), Is.True, removeError);
 
-                dynamic afterResponse = queryService.QueryAvatars();
-                Assert.That(((IList<AvatarQueryModel>)afterResponse.avatars).Count, Is.EqualTo(0));
+                var afterResponse = ToObject(queryService.QueryAvatars());
+                Assert.That(afterResponse["avatars"]!.ToObject<List<AvatarQueryModel>>().Count, Is.EqualTo(0));
             }
             finally
             {
@@ -118,6 +175,56 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
             }
+        }
+
+        [Test]
+        public void SmplxDriver_CanLoadMotionImmediatelyAfterSpawn()
+        {
+#if UNITY_EDITOR
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSmplxImmediateLoadRoot");
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/smplx/male.prefab");
+                Assert.That(prefab, Is.Not.Null, "male.prefab must exist for this integration test.");
+
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    Vector3.zero,
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                const string motionJson =
+                    "{\"model\":\"smplx\",\"gender\":\"neutral\",\"fps\":30.0,\"betas\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"poses\":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],\"trans\":[[0,0,0]]}";
+
+                LogAssert.Expect(LogType.Error, "[SMPL-X] ERROR: Cannot set beta shapes on model without beta shapes");
+                Assert.That(runtime.TryLoadAvatarMotion(
+                    "avatar_main",
+                    "motion_smoke_test",
+                    "idle_once",
+                    motionJson,
+                    "idle",
+                    out var loadError), Is.True, loadError);
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+#else
+            Assert.Pass("Editor-only integration test.");
+#endif
         }
 
         [Test]
@@ -177,12 +284,952 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(report.scene_version_after, Is.GreaterThan(report.scene_version_before));
 
                 var queryService = new SceneQueryService(registry, runtime);
-                dynamic avatarsResponse = queryService.QueryAvatars();
-                Assert.That(((IList<AvatarQueryModel>)avatarsResponse.avatars).Count, Is.EqualTo(1));
-                Assert.That(((IList<AvatarQueryModel>)avatarsResponse.avatars)[0].motion_id, Is.EqualTo("motion_walk"));
+                var avatarsResponse = ToObject(queryService.QueryAvatars());
+                var avatars = avatarsResponse["avatars"]!.ToObject<List<AvatarQueryModel>>();
+                Assert.That(avatars.Count, Is.EqualTo(1));
+                Assert.That(avatars[0].motion_id, Is.EqualTo("motion_walk"));
             }
             finally
             {
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryAvatarCandidates_ReturnsRankedCandidatesNearTarget()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarCandidateRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.QueryAvatarCandidates(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    preferredSide: "front",
+                    preferredDistance: null,
+                    maxCandidates: 3));
+
+                var candidates = response["candidates"]!.ToObject<List<AvatarCandidateQueryModel>>();
+                Assert.That(candidates.Count, Is.GreaterThan(0));
+                Assert.That(candidates[0].target_object_id, Is.Not.Empty);
+                Assert.That(candidates[0].distance_to_target, Is.GreaterThan(0.4f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryAvatarCandidates_PrefersFloorHeightOverCabinetTop()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarCandidateFloorSnapRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 1.2f, 0f);
+            target.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
+            target.AddComponent<ObjectDescriber>();
+
+            var cabinetTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cabinetTop.name = "CabinetTop";
+            cabinetTop.transform.position = new Vector3(0f, 1.0f, 0.8f);
+            cabinetTop.transform.localScale = new Vector3(1.0f, 0.1f, 1.0f);
+            cabinetTop.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.QueryAvatarCandidates(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    preferredSide: "front",
+                    preferredDistance: 0.9f,
+                    maxCandidates: 3));
+
+                var candidates = response["candidates"]!.ToObject<List<AvatarCandidateQueryModel>>();
+                Assert.That(candidates.Count, Is.GreaterThan(0));
+                Assert.That(candidates[0].position.y, Is.LessThan(0.5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(cabinetTop);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryAvatarCandidates_ClampCandidatesToFloorFootprint()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarCandidateFootprintRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.4f, 0.95f);
+            target.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
+            target.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(2f, 0.1f, 2f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.QueryAvatarCandidates(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    preferredSide: "front",
+                    preferredDistance: 0.9f,
+                    maxCandidates: 3));
+
+                var candidates = response["candidates"]!.ToObject<List<AvatarCandidateQueryModel>>();
+                Assert.That(candidates.Count, Is.GreaterThan(0));
+                Assert.That(Mathf.Abs(candidates[0].position.x), Is.LessThanOrEqualTo(1.0f));
+                Assert.That(Mathf.Abs(candidates[0].position.z), Is.LessThanOrEqualTo(1.0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryAvatarCandidates_AddsDiagonalFallbacksWhenPreferredFrontIsBlocked()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarCandidateDiagonalFallbackRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+
+            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obstacle.name = "FrontCounterBlocker";
+            obstacle.transform.position = new Vector3(0f, 0.65f, 0.9f);
+            obstacle.transform.localScale = new Vector3(1.2f, 1.3f, 0.8f);
+            obstacle.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.QueryAvatarCandidates(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    preferredSide: "front",
+                    preferredDistance: 0.9f,
+                    maxCandidates: 6));
+
+                var candidates = response["candidates"]!.ToObject<List<AvatarCandidateQueryModel>>();
+                Assert.That(candidates.Count, Is.GreaterThanOrEqualTo(6));
+                Assert.That(candidates.Exists(candidate =>
+                    candidate.preferred_side == "front_left" ||
+                    candidate.preferred_side == "front_right"), Is.True);
+                Assert.That(candidates[0].preferred_side, Is.Not.EqualTo("front"));
+                Assert.That(candidates[0].collision_free, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ValidateAvatarPlacement_FailsWhenEmbeddedInTarget()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarValidateRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.6f, 1f, 0.6f);
+            target.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.ValidateAvatarPlacement(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    position: new Vector3(0f, 0f, 0f),
+                    rotationEuler: new Vector3(0f, 0f, 0f),
+                    motionJson: string.Empty,
+                    trajectorySampleCount: null));
+
+                var report = response["validation"]!.ToObject<AvatarPlacementValidationModel>();
+                Assert.That(report.valid, Is.False);
+                Assert.That(report.issues.Exists(issue => issue.code == "AVATAR_EMBEDDED_TARGET"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ValidateAvatarPlacement_UsesSnapshotBoundsWhenColliderIsMissing()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSnapshotCollisionRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+
+            var cabinet = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cabinet.name = "CabinetBody";
+            cabinet.transform.position = new Vector3(0.8f, 0.9f, 0f);
+            cabinet.transform.localScale = new Vector3(0.8f, 1.8f, 0.8f);
+            cabinet.AddComponent<ObjectDescriber>();
+            Object.DestroyImmediate(cabinet.GetComponent<Collider>());
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.ValidateAvatarPlacement(
+                    targetObjectId: string.Empty,
+                    targetAlias: "CoffeeMaker",
+                    taskHint: "make_coffee",
+                    position: new Vector3(0.8f, 0f, 0f),
+                    rotationEuler: Vector3.zero,
+                    motionJson: string.Empty,
+                    trajectorySampleCount: null));
+
+                var report = response["validation"]!.ToObject<AvatarPlacementValidationModel>();
+                Assert.That(report.valid, Is.False);
+                Assert.That(report.collision_free, Is.False);
+                Assert.That(report.issues.Exists(issue => issue.code == SceneApiErrorCodes.PLACEMENT_COLLISION), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(cabinet);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ValidateAvatarPlacement_DetectsTrajectoryCollision()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarTrajectoryRoot");
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "Door_A";
+            target.transform.position = new Vector3(1.2f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.8f, 2f, 0.2f);
+            target.AddComponent<ObjectDescriber>();
+
+            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obstacle.name = "Obstacle";
+            obstacle.transform.position = new Vector3(0.2f, 0.9f, 0f);
+            obstacle.transform.localScale = new Vector3(0.4f, 1.8f, 0.4f);
+            obstacle.AddComponent<ObjectDescriber>();
+
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            const string motionJson = "{\"model\":\"smplx\",\"gender\":\"male\",\"fps\":30.0,\"betas\":[],\"poses\":[[],[],[]],\"trans\":[[0,0,0],[0.4,0,0],[0.8,0,0]]}";
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                var validation = new SceneValidationService(registry, runtime);
+
+                var response = ToObject(validation.ValidateAvatarPlacement(
+                    targetObjectId: string.Empty,
+                    targetAlias: "Door_A",
+                    taskHint: "walk_through_door",
+                    position: new Vector3(0f, 0f, 0f),
+                    rotationEuler: new Vector3(0f, 90f, 0f),
+                    motionJson: motionJson,
+                    trajectorySampleCount: 5));
+
+                var report = response["validation"]!.ToObject<AvatarPlacementValidationModel>();
+                Assert.That(report.motion_mode, Is.EqualTo("translational"));
+                Assert.That(report.trajectory_valid, Is.False);
+                Assert.That(report.issues.Exists(issue => issue.code == "TRAJECTORY_COLLISION"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void SmplxGlobalTranslation_PreservesForwardDirection()
+        {
+#if UNITY_EDITOR
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSmplxForwardTranslationRoot");
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/smplx/male.prefab");
+                Assert.That(prefab, Is.Not.Null, "male.prefab must exist for this translation test.");
+
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    Vector3.zero,
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                const string motionJson =
+                    "{\"model\":\"smplx\",\"gender\":\"neutral\",\"fps\":30.0,\"betas\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"poses\":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],\"trans\":[[0,0,0],[0,0,1]]}";
+
+                LogAssert.Expect(LogType.Error, "[SMPL-X] ERROR: Cannot set beta shapes on model without beta shapes");
+                Assert.That(runtime.TryLoadAvatarMotion(
+                    "avatar_main",
+                    "motion_forward",
+                    "walk_forward",
+                    motionJson,
+                    "walk forward",
+                    out var loadError), Is.True, loadError);
+
+                var controller = runtime.GetManagedAvatarObject().GetComponentInChildren<smplx.SmplxBodyAnimationController>(true);
+                Assert.That(controller, Is.Not.Null);
+
+                Vector3 translation = controller.getGlobalTranslation(controller.deltaTime);
+                Assert.That(translation.z, Is.GreaterThan(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+#else
+            Assert.Pass("Editor-only integration test.");
+#endif
+        }
+
+        [Test]
+        public void SmplxGlobalTranslation_MirrorsXAxisToMatchUnityWorld()
+        {
+#if UNITY_EDITOR
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSmplxXAxisTranslationRoot");
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/smplx/male.prefab");
+                Assert.That(prefab, Is.Not.Null, "male.prefab must exist for this translation test.");
+
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    Vector3.zero,
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                const string motionJson =
+                    "{\"model\":\"smplx\",\"gender\":\"neutral\",\"fps\":30.0,\"betas\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"poses\":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],\"trans\":[[0,0,0],[1,0,0]]}";
+
+                LogAssert.Expect(LogType.Error, "[SMPL-X] ERROR: Cannot set beta shapes on model without beta shapes");
+                Assert.That(runtime.TryLoadAvatarMotion(
+                    "avatar_main",
+                    "motion_right",
+                    "step_right",
+                    motionJson,
+                    "step right",
+                    out var loadError), Is.True, loadError);
+
+                var controller = runtime.GetManagedAvatarObject().GetComponentInChildren<smplx.SmplxBodyAnimationController>(true);
+                Assert.That(controller, Is.Not.Null);
+
+                Vector3 translation = controller.getGlobalTranslation(controller.deltaTime);
+                Assert.That(translation.x, Is.LessThan(0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+#else
+            Assert.Pass("Editor-only integration test.");
+#endif
+        }
+
+        [Test]
+        public void SmplxAvatarRotation_AlignsVisibleForwardWithRequestedYaw()
+        {
+#if UNITY_EDITOR
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSmplxRotationAlignmentRoot");
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/smplx/male.prefab");
+                Assert.That(prefab, Is.Not.Null, "male.prefab must exist for this rotation test.");
+
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    Vector3.zero,
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                var avatar = runtime.GetManagedAvatarObject();
+                Assert.That(avatar, Is.Not.Null);
+
+                const string motionJson =
+                    "{\"model\":\"smplx\",\"gender\":\"neutral\",\"fps\":30.0,\"betas\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],\"poses\":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],\"trans\":[[0,0,0]]}";
+                LogAssert.Expect(LogType.Error, "[SMPL-X] ERROR: Cannot set beta shapes on model without beta shapes");
+                Assert.That(runtime.TryLoadAvatarMotion(
+                    "avatar_main",
+                    "motion_alignment_probe",
+                    "alignment_probe",
+                    motionJson,
+                    "alignment probe",
+                    out var loadError), Is.True, loadError);
+
+                var controller = avatar.GetComponentInChildren<smplx.SmplxBodyAnimationController>(true);
+                Assert.That(controller, Is.Not.Null);
+                Assert.That(controller.Root, Is.Not.Null);
+
+                var visibleForward = controller.Root.forward.normalized;
+                Assert.That(Vector3.Dot(visibleForward, Vector3.forward), Is.GreaterThan(0.99f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+#else
+            Assert.Pass("Editor-only integration test.");
+#endif
+        }
+
+        [Test]
+        public void CaptureValidationViews_ReturnsArtifacts()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarCaptureRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+            var cameraGo = new GameObject("Main Camera");
+            var camera = cameraGo.AddComponent<Camera>();
+            cameraGo.tag = "MainCamera";
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var validation = new SceneValidationService(registry, runtime);
+                var response = ToObject(validation.CaptureValidationViews("avatar_test", "avatar_main", string.Empty, "CoffeeMaker", 1));
+
+                var artifacts = response["artifacts"]!.ToObject<List<ValidationArtifactModel>>();
+                Assert.That(artifacts.Count, Is.EqualTo(1));
+                Assert.That(File.Exists(artifacts[0].file_path), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ScoreValidationViews_PassesForReasonableFraming()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarVisualScorePassRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var validation = new SceneValidationService(registry, runtime);
+                var response = ToObject(validation.ScoreValidationViews("avatar_score_pass", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 1));
+
+                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.score_validation_views"));
+                Assert.That(response.Value<bool>("passed"), Is.True);
+                Assert.That(response.Value<string>("recommended_action"), Is.EqualTo("accept"));
+                Assert.That(response["artifacts"]!.ToObject<List<ValidationArtifactModel>>().Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ScoreValidationViews_FailsWhenTargetIsOccluded()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarVisualScoreFailRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obstacle.name = "Occluder";
+            obstacle.transform.position = new Vector3(-1.6f, 1.0f, -0.6f);
+            obstacle.transform.localScale = new Vector3(2.4f, 2.2f, 1.4f);
+            obstacle.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var validation = new SceneValidationService(registry, runtime);
+                var response = ToObject(validation.ScoreValidationViews("avatar_score_fail", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 1));
+
+                Assert.That(response.Value<bool>("passed"), Is.False);
+                Assert.That(response.Value<string>("recommended_action"), Is.EqualTo("retry_next_candidate"));
+                Assert.That(response["reasons"]!.ToObject<List<string>>().Count, Is.GreaterThan(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ScoreValidationViews_PublishesDebugSnapshotForSceneInspection()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarVisualDebugRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var validation = new SceneValidationService(registry, runtime);
+                _ = validation.ScoreValidationViews("avatar_debug_state", "avatar_main", string.Empty, "CoffeeMaker", "make_coffee", 2);
+
+                var debugStateType = System.Type.GetType("VsensAgent.SceneApi.V2.AvatarValidationDebugState, Assembly-CSharp");
+                Assert.That(debugStateType, Is.Not.Null, "AvatarValidationDebugState should exist after visual debug support is added.");
+
+                var latestProperty = debugStateType!.GetProperty("Latest", BindingFlags.Public | BindingFlags.Static);
+                Assert.That(latestProperty, Is.Not.Null);
+                var snapshot = latestProperty!.GetValue(null);
+                Assert.That(snapshot, Is.Not.Null, "Scoring should publish a latest debug snapshot.");
+
+                var snapshotType = snapshot!.GetType();
+                var avatarPosition = (Vector3)snapshotType.GetProperty("AvatarRootPosition")!.GetValue(snapshot);
+                var avatarForward = (Vector3)snapshotType.GetProperty("AvatarForward")!.GetValue(snapshot);
+                var cameraPoses = snapshotType.GetProperty("ValidationCameraPoses")!.GetValue(snapshot) as System.Collections.ICollection;
+                var expectedForward = AvatarRuntimeManager.GetLogicalForward(runtime.GetManagedAvatarObject().transform.rotation);
+
+                Assert.That(avatarPosition, Is.EqualTo(runtime.GetManagedAvatarObject().transform.position).Using(new Vector3EqualityComparer(0.0001f)));
+                Assert.That(Vector3.Dot(avatarForward.normalized, expectedForward.normalized), Is.GreaterThan(0.99f));
+                Assert.That(cameraPoses, Is.Not.Null);
+                Assert.That(cameraPoses!.Count, Is.GreaterThan(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator HandleControlBatch_CapturesValidationViewsWhenRequested()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarBatchCaptureRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.tag = "MainCamera";
+            cameraGo.AddComponent<Camera>();
+
+            string captureDir = Path.Combine(Application.persistentDataPath, "ValidationCaptures");
+            Directory.CreateDirectory(captureDir);
+            string validatorContext = $"avatar_batch_test_{System.Guid.NewGuid():N}";
+            int beforeCount = Directory.GetFiles(captureDir, $"{validatorContext}_*.png").Length;
+
+            try
+            {
+                root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                var controlManager = root.AddComponent<ControlManager>();
+
+                var controls = new[]
+                {
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "spawn_avatar",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["avatar_id"] = "avatar_main",
+                            ["prefab_key"] = "smplx_male",
+                            ["position"] = new[] { -1f, 0f, 0f },
+                            ["rotation"] = new[] { 0f, 0f, 0f },
+                            ["validator_context"] = validatorContext,
+                            ["validation_target_alias"] = "CoffeeMaker",
+                        }
+                    },
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "load_avatar_motion",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["avatar_id"] = "avatar_main",
+                            ["motion_id"] = "motion_wave",
+                            ["motion_name"] = "wave_once",
+                            ["motion_json"] = "{\"model\":\"smplx\",\"gender\":\"male\",\"fps\":30.0,\"betas\":[],\"poses\":[],\"trans\":[]}",
+                            ["source_text"] = "wave once",
+                            ["validator_context"] = validatorContext,
+                            ["validation_target_alias"] = "CoffeeMaker",
+                        }
+                    },
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "play_avatar_motion",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["speed"] = 1.0f,
+                            ["loop"] = false,
+                            ["capture_validation_views"] = true,
+                            ["validator_context"] = validatorContext,
+                            ["validation_target_alias"] = "CoffeeMaker",
+                        }
+                    },
+                };
+
+                var method = typeof(ControlManager).GetMethod("HandleControlBatch", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(method, Is.Not.Null);
+                method!.Invoke(controlManager, new object[] { controls });
+
+                yield return null;
+                yield return null;
+
+                int afterCount = Directory.GetFiles(captureDir, $"{validatorContext}_*.png").Length;
+                Assert.That(afterCount, Is.GreaterThan(beforeCount));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [UnityTest]
+        public System.Collections.IEnumerator HandleControlBatch_RetriesCandidateWhenVisualScoreFails()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarBatchRetryRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "CoffeeMaker";
+            target.transform.position = new Vector3(0f, 0.5f, 0f);
+            target.transform.localScale = new Vector3(0.4f, 1f, 0.4f);
+            target.AddComponent<ObjectDescriber>();
+            var obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obstacle.name = "Occluder";
+            obstacle.transform.position = new Vector3(-1.6f, 1.0f, -0.6f);
+            obstacle.transform.localScale = new Vector3(2.4f, 2.2f, 1.4f);
+            obstacle.AddComponent<ObjectDescriber>();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.tag = "MainCamera";
+            cameraGo.AddComponent<Camera>();
+
+            try
+            {
+                root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                var controlManager = root.AddComponent<ControlManager>();
+
+                var candidateList = new object[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["candidate_id"] = "avatar_cand_000",
+                        ["position"] = new[] { -1f, 0f, 0f },
+                        ["rotation"] = new[] { 0f, 0f, 0f },
+                    },
+                    new Dictionary<string, object>
+                    {
+                        ["candidate_id"] = "avatar_cand_001",
+                        ["position"] = new[] { 1f, 0f, 0f },
+                        ["rotation"] = new[] { 0f, 180f, 0f },
+                    },
+                };
+
+                var controls = new[]
+                {
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "spawn_avatar",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["avatar_id"] = "avatar_main",
+                            ["prefab_key"] = "smplx_male",
+                            ["position"] = new[] { -1f, 0f, 0f },
+                            ["rotation"] = new[] { 0f, 0f, 0f },
+                            ["validator_context"] = "avatar_retry_test",
+                            ["validation_target_alias"] = "CoffeeMaker",
+                            ["validation_task_hint"] = "make_coffee",
+                            ["validation_candidate_id"] = "avatar_cand_000",
+                            ["validation_candidates"] = candidateList,
+                        }
+                    },
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "load_avatar_motion",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["avatar_id"] = "avatar_main",
+                            ["motion_id"] = "motion_wave",
+                            ["motion_name"] = "wave_once",
+                            ["motion_json"] = "{\"model\":\"smplx\",\"gender\":\"male\",\"fps\":30.0,\"betas\":[],\"poses\":[],\"trans\":[]}",
+                            ["source_text"] = "wave once",
+                            ["validator_context"] = "avatar_retry_test",
+                            ["validation_target_alias"] = "CoffeeMaker",
+                            ["validation_task_hint"] = "make_coffee",
+                            ["validation_candidate_id"] = "avatar_cand_000",
+                            ["validation_candidates"] = candidateList,
+                        }
+                    },
+                    new ControlObject
+                    {
+                        target = "avatar_main",
+                        action = "play_avatar_motion",
+                        parameters = new Dictionary<string, object>
+                        {
+                            ["speed"] = 1.0f,
+                            ["loop"] = false,
+                            ["capture_validation_views"] = true,
+                            ["validator_context"] = "avatar_retry_test",
+                            ["validation_target_alias"] = "CoffeeMaker",
+                            ["validation_task_hint"] = "make_coffee",
+                            ["validation_candidate_id"] = "avatar_cand_000",
+                            ["validation_candidates"] = candidateList,
+                        }
+                    },
+                };
+
+                var method = typeof(ControlManager).GetMethod("HandleControlBatch", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(method, Is.Not.Null);
+                method!.Invoke(controlManager, new object[] { controls });
+
+                yield return null;
+                yield return null;
+
+                var avatar = runtime.GetManagedAvatarObject();
+                Assert.That(avatar, Is.Not.Null);
+                Assert.That(avatar.transform.position.x, Is.GreaterThan(0.5f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(floor);
                 Object.DestroyImmediate(prefab);
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();

@@ -15,6 +15,7 @@ namespace VsensAgent.SceneApi.V2
         [SerializeField] private AvatarRuntimeManager avatarRuntimeManager;
 
         private SceneQueryService _queryService;
+        private SceneValidationService _validationService;
         private SceneTransactionExecutor _executor;
 
         private void Awake()
@@ -54,6 +55,7 @@ namespace VsensAgent.SceneApi.V2
             }
 
             _queryService = new SceneQueryService(sceneRegistry, avatarRuntimeManager);
+            _validationService = new SceneValidationService(sceneRegistry, avatarRuntimeManager);
             _executor = new SceneTransactionExecutor(sceneRegistry, controlManager);
         }
 
@@ -94,6 +96,34 @@ namespace VsensAgent.SceneApi.V2
                         node.Value<bool?>("mountable_only") ?? true),
                     "scene.query_avatars" => _queryService.QueryAvatars(),
                     "scene.query_motions" => _queryService.QueryMotions(),
+                    "scene.query_avatar_candidates" => _validationService.QueryAvatarCandidates(
+                        node.Value<string>("target_object_id") ?? string.Empty,
+                        node.Value<string>("target_alias") ?? string.Empty,
+                        node.Value<string>("task_hint") ?? string.Empty,
+                        node.Value<string>("preferred_side") ?? string.Empty,
+                        node["preferred_distance"]?.ToObject<float?>(),
+                        node["max_candidates"]?.ToObject<int?>()),
+                    "scene.validate_avatar_placement" => _validationService.ValidateAvatarPlacement(
+                        node.Value<string>("target_object_id") ?? string.Empty,
+                        node.Value<string>("target_alias") ?? string.Empty,
+                        node.Value<string>("task_hint") ?? string.Empty,
+                        ReadVector3(node["position"]),
+                        ReadVector3(node["rotation"]),
+                        node.Value<string>("motion_json") ?? string.Empty,
+                        node["trajectory_sample_count"]?.ToObject<int?>()),
+                    "scene.capture_validation_views" => _validationService.CaptureValidationViews(
+                        node.Value<string>("validator_context") ?? string.Empty,
+                        node.Value<string>("avatar_id") ?? string.Empty,
+                        node.Value<string>("target_object_id") ?? string.Empty,
+                        node.Value<string>("target_alias") ?? string.Empty,
+                        node["max_views"]?.ToObject<int?>()),
+                    "scene.score_validation_views" => _validationService.ScoreValidationViews(
+                        node.Value<string>("validator_context") ?? string.Empty,
+                        node.Value<string>("avatar_id") ?? string.Empty,
+                        node.Value<string>("target_object_id") ?? string.Empty,
+                        node.Value<string>("target_alias") ?? string.Empty,
+                        node.Value<string>("task_hint") ?? string.Empty,
+                        node["max_views"]?.ToObject<int?>()),
                     "scene.find_sensor_placements" => HandleFindPlacements(node),
                     "scene.validate_placement" => HandleValidatePlacement(node),
                     "scene.validate_actions" => HandleValidateActions(node),
@@ -218,6 +248,24 @@ namespace VsensAgent.SceneApi.V2
             }
 
             return request;
+        }
+
+        private static Vector3? ReadVector3(JToken token)
+        {
+            if (token == null)
+            {
+                return null;
+            }
+
+            if (token is JArray arr && arr.Count >= 3)
+            {
+                return new Vector3(
+                    arr[0]!.Value<float>(),
+                    arr[1]!.Value<float>(),
+                    arr[2]!.Value<float>());
+            }
+
+            return null;
         }
     }
 }

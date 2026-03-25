@@ -117,7 +117,6 @@ namespace Animations
             var lastFrame = getFrame(frameIndex);
             var nextFrame = getFrame(frameIndex + 1);
             var translation = Vector3.Lerp(lastFrame.translation, nextFrame.translation, lerp) - _rawAnimation.frames[0].translation;
-            translation = new Vector3(-translation.x, -translation.y, -translation.z);
             return translation;
         }
     
@@ -174,7 +173,6 @@ namespace Animations
                 if (globalTranslation)
                 {
                     var translation = Vector3.Lerp(lastFrame.translation, nextFrame.translation, lerp) - _rawAnimation.frames[0].translation;
-                    translation = new Vector3(-translation.x, -translation.y, -translation.z);
                     _root.localPosition = translation;
                 }
                 else
