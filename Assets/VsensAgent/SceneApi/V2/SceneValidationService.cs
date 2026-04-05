@@ -130,8 +130,7 @@ namespace VsensAgent.SceneApi.V2
             string validatorContext,
             string avatarId,
             string targetObjectId,
-            string targetAlias,
-            int? maxViews)
+            string targetAlias)
         {
             var snapshot = _registry.BuildSnapshot(includeRelations: false);
             var target = ResolveTarget(snapshot, targetObjectId, targetAlias);

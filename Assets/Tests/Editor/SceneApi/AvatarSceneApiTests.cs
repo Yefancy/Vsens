@@ -73,17 +73,6 @@ namespace VsensAgent.Tests.Editor.SceneApi
         }
 
         [Test]
-        public void DeprecatedScoreValidationViews_ReturnsExplicitSceneError()
-        {
-            var response = ToObject(SceneApiManager.BuildDeprecatedSceneApiResponse("scene.score_validation_views"));
-
-            Assert.That(response.Value<string>("type"), Is.EqualTo("scene.error"));
-            Assert.That(response.Value<string>("code"), Is.EqualTo(SceneApiErrorCodes.INVALID_PARAM));
-            StringAssert.Contains("scene.score_validation_views", response.Value<string>("message"));
-            StringAssert.Contains("deprecated", response.Value<string>("message"));
-        }
-
-        [Test]
         public void SpawnAvatar_ReducesRequestedHeightTowardFloor()
         {
             ServiceLocator.Clear();
@@ -856,7 +845,7 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", new Vector3(-1f, 0f, 0f), Vector3.zero, out var spawnError), Is.True, spawnError);
 
                 var validation = new SceneValidationService(registry, runtime);
-                var response = ToObject(validation.CaptureValidationViews("avatar_test", "avatar_main", string.Empty, "CoffeeMaker", 2));
+                var response = ToObject(validation.CaptureValidationViews("avatar_test", "avatar_main", string.Empty, "CoffeeMaker"));
 
                 var artifacts = response["artifacts"]!.ToObject<List<ValidationArtifactModel>>();
                 Assert.That(artifacts.Count, Is.EqualTo(2));

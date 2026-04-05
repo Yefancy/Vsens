@@ -232,7 +232,6 @@ namespace VsensAgent.Network
                 case "scene.query_avatar_candidates":
                 case "scene.validate_avatar_placement":
                 case "scene.capture_validation_views":
-                case "scene.score_validation_views":
                 case "scene.find_sensor_placements":
                 case "scene.validate_placement":
                 case "scene.validate_actions":
