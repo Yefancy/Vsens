@@ -95,6 +95,8 @@ namespace VsensAgent.SceneApi.V2
                         node.Value<string>("zone_id") ?? string.Empty,
                         node.Value<bool?>("mountable_only") ?? true),
                     "scene.query_avatars" => _queryService.QueryAvatars(),
+                    "scene.query_avatar_attachment_points" => _queryService.QueryAvatarAttachmentPoints(
+                        node.Value<string>("avatar_id") ?? string.Empty),
                     "scene.query_motions" => _queryService.QueryMotions(),
                     "scene.query_avatar_candidates" => _validationService.QueryAvatarCandidates(
                         node.Value<string>("target_object_id") ?? string.Empty,

@@ -42,6 +42,32 @@ namespace VsensAgent.Tests.Editor.Network
         }
 
         [Test]
+        public void HandleMessage_RoutesSceneQueryAvatarAttachmentPointsToSceneApiRequest()
+        {
+            var go = new GameObject("WsClientTests");
+            string routedJson = null;
+            System.Action<string> handler = payload => routedJson = payload;
+
+            try
+            {
+                var client = go.AddComponent<WsClient>();
+                WsClient.OnSceneApiRequest += handler;
+
+                ResolveHandleMessage().Invoke(client, new object[]
+                {
+                    "{\"type\":\"scene.query_avatar_attachment_points\",\"avatar_id\":\"avatar_main\",\"request_id\":\"qry_attach_1\"}"
+                });
+
+                Assert.That(routedJson, Is.EqualTo("{\"type\":\"scene.query_avatar_attachment_points\",\"avatar_id\":\"avatar_main\",\"request_id\":\"qry_attach_1\"}"));
+            }
+            finally
+            {
+                WsClient.OnSceneApiRequest -= handler;
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
         public void HandleMessage_LogsServerErrorWithoutUnknownMessageFallback()
         {
             var go = new GameObject("WsClientTests");

@@ -26,8 +26,7 @@ namespace VsensAgent.Tests.Editor.SceneApi
         {
             ServiceLocator.Clear();
             var root = new GameObject("AvatarSceneApiRoot");
-            var prefab = new GameObject("AvatarPrefab");
-            prefab.AddComponent<TestAvatarPlaybackDriver>();
+            var prefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
             var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "KitchenFloor";
             floor.transform.position = new Vector3(0f, -0.05f, 0f);
@@ -62,6 +61,106 @@ namespace VsensAgent.Tests.Editor.SceneApi
 
                 var snapshot = registry.BuildSnapshot(includeRelations: false);
                 Assert.That(snapshot.objects.Exists(o => o.alias == "avatar_main"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryAvatarAttachmentPoints_ReturnsSemanticBodyPointsForManagedAvatar()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarAttachmentPointRoot");
+            var prefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    Vector3.zero,
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                var queryService = new SceneQueryService(registry, runtime);
+                var response = ToObject(queryService.QueryAvatarAttachmentPoints("avatar_main"));
+                var points = response["attachment_points"]!.ToObject<List<AvatarAttachmentPointQueryModel>>();
+
+                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.query_avatar_attachment_points"));
+                Assert.That(points, Is.Not.Null);
+                Assert.That(points.Count, Is.GreaterThanOrEqualTo(7));
+                Assert.That(points.Exists(p => p.joint_name == "left_wrist"), Is.True);
+                Assert.That(points.Exists(p => p.joint_name == "right_wrist"), Is.True);
+                Assert.That(points.Exists(p => p.joint_name == "head"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void SetSensor_WithAvatarJointAttachment_ParentsSensorToResolvedJoint()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("AvatarSensorAttachRoot");
+            var prefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "KitchenFloor";
+            floor.transform.position = new Vector3(0f, -0.05f, 0f);
+            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
+            floor.AddComponent<ObjectDescriber>();
+
+            try
+            {
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", Vector3.zero, Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var sensorObject = new GameObject("imu_left_wrist");
+                var attachedSensor = sensorObject.AddComponent<TestVirtualSensor>();
+                sensorObject.AddComponent<SensorObjectDescriber>();
+                sensorObject.name = "imu_left_wrist";
+                sensorObject.transform.position = new Vector3(2f, 2f, 2f);
+
+                var controlManager = root.AddComponent<ControlManager>();
+                var ctrl = new ControlObject
+                {
+                    target = "imu_left_wrist",
+                    action = "set_sensor",
+                    parameters = new Dictionary<string, object>
+                    {
+                        ["sensor_type"] = "IMU",
+                        ["attach_mode"] = "avatar_joint",
+                        ["avatar_id"] = "avatar_main",
+                        ["joint_name"] = "left_wrist",
+                    }
+                };
+
+                Assert.That(controlManager.TryExecuteControlAction(ctrl, out var errorCode, out var errorMessage), Is.True, $"{errorCode}: {errorMessage}");
+
+                Assert.That(attachedSensor, Is.Not.Null);
+                Assert.That(attachedSensor.transform.parent, Is.Not.Null);
+                Assert.That(attachedSensor.transform.parent.name.ToLowerInvariant(), Does.Contain("wrist"));
+                Assert.That(attachedSensor.transform.root.name, Is.EqualTo("avatar_main"));
+                Object.DestroyImmediate(sensorObject);
             }
             finally
             {
@@ -876,6 +975,58 @@ namespace VsensAgent.Tests.Editor.SceneApi
             LastMotionJson = motionJson;
             error = null;
             return true;
+        }
+    }
+
+    public class TestVirtualSensor : Sensor.VirtualSensor
+    {
+        private static readonly Sensor.ISensorDefinition Definition = Sensor.ISensorDefinition.create("IMU", "x,y,z");
+
+        public override void UpdateWorking(float time, float deltaTime)
+        {
+        }
+
+        public override Sensor.ISensorDefinition SensorDefinition()
+        {
+            return Definition;
+        }
+    }
+
+    internal static class AvatarSceneApiTestHelpers
+    {
+        internal static GameObject CreateAttachmentAwareAvatarPrefab()
+        {
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+
+            CreateNamedJoint(prefab.transform, "pelvis", new Vector3(0f, 0.9f, 0f));
+            CreateNamedJoint(prefab.transform, "spine1", new Vector3(0f, 1.0f, 0f));
+            CreateNamedJoint(prefab.transform, "spine2", new Vector3(0f, 1.15f, 0f));
+            CreateNamedJoint(prefab.transform, "spine3", new Vector3(0f, 1.3f, 0f));
+            CreateNamedJoint(prefab.transform, "neck", new Vector3(0f, 1.5f, 0f));
+            CreateNamedJoint(prefab.transform, "head", new Vector3(0f, 1.65f, 0f));
+            CreateNamedJoint(prefab.transform, "left_wrist", new Vector3(-0.35f, 1.2f, 0f));
+            CreateNamedJoint(prefab.transform, "right_wrist", new Vector3(0.35f, 1.2f, 0f));
+            CreateNamedJoint(prefab.transform, "left_ankle", new Vector3(-0.12f, 0.08f, 0f));
+            CreateNamedJoint(prefab.transform, "right_ankle", new Vector3(0.12f, 0.08f, 0f));
+
+            return prefab;
+        }
+
+        internal static GameObject CreateImuSensorPrefab()
+        {
+            var sensorPrefab = new GameObject("IMUPrefab");
+            sensorPrefab.AddComponent<TestVirtualSensor>();
+            sensorPrefab.AddComponent<SensorObjectDescriber>();
+            return sensorPrefab;
+        }
+
+        private static Transform CreateNamedJoint(Transform parent, string name, Vector3 localPosition)
+        {
+            var joint = new GameObject(name).transform;
+            joint.SetParent(parent, false);
+            joint.localPosition = localPosition;
+            return joint;
         }
     }
 }

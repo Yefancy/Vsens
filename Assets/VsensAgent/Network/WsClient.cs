@@ -228,6 +228,7 @@ namespace VsensAgent.Network
                 case "scene.query_relations":
                 case "scene.query_surfaces":
                 case "scene.query_avatars":
+                case "scene.query_avatar_attachment_points":
                 case "scene.query_motions":
                 case "scene.query_avatar_candidates":
                 case "scene.validate_avatar_placement":

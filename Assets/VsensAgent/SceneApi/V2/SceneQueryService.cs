@@ -193,6 +193,21 @@ namespace VsensAgent.SceneApi.V2
             };
         }
 
+        public object QueryAvatarAttachmentPoints(string avatarId)
+        {
+            var points = _avatarRuntimeManager != null
+                ? _avatarRuntimeManager.GetAttachmentPointQueryModels(avatarId)
+                : new List<AvatarAttachmentPointQueryModel>();
+            return new
+            {
+                type = "scene.query_response",
+                method = "scene.query_avatar_attachment_points",
+                scene_version = _registry.CurrentVersion,
+                avatar_id = avatarId,
+                attachment_points = points
+            };
+        }
+
         public object FindSensorPlacements(string sensorType, List<string> targetIds, PlacementConstraints constraints)
         {
             var snapshot = _registry.BuildSnapshot(includeRelations: false);

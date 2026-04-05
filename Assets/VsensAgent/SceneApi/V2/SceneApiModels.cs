@@ -122,6 +122,16 @@ namespace VsensAgent.SceneApi.V2
     }
 
     [Serializable]
+    public class AvatarAttachmentPointQueryModel
+    {
+        public string avatar_id;
+        public string joint_name;
+        public Vector3Data world_position;
+        public Vector3Data world_rotation;
+        public string description;
+    }
+
+    [Serializable]
     public class AvatarCandidateQueryModel
     {
         public string candidate_id;

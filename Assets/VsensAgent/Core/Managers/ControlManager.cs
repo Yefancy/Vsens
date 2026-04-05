@@ -60,6 +60,25 @@ namespace VsensAgent
                     errorMessage = "set_sensor requires 'sensor_type'.";
                     return false;
                 }
+                if (IsAvatarJointAttach(ctrl.parameters))
+                {
+                    ResolveAvatarRuntimeManager();
+                    if (avatarRuntimeManager == null)
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                        errorMessage = "AvatarRuntimeManager not found.";
+                        return false;
+                    }
+
+                    var avatarId = ParseStringFromParameter(ctrl.parameters["avatar_id"]);
+                    var jointName = ParseStringFromParameter(ctrl.parameters["joint_name"]);
+                    if (string.IsNullOrWhiteSpace(avatarId) || string.IsNullOrWhiteSpace(jointName))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "set_sensor with attach_mode=avatar_joint requires 'avatar_id' and 'joint_name'.";
+                        return false;
+                    }
+                }
                 return true;
             }
 
@@ -749,6 +768,11 @@ namespace VsensAgent
 
             // 处理parent参数 (重要：必须在应用global坐标之后设置)
             // Agent给出的坐标是global的，我们先应用了这些坐标，现在设置parent让Unity自动转换为local坐标
+            if (TryApplyAvatarJointAttachment(sensorObj, parameters))
+            {
+                changed = true;
+            }
+            else
             if (parameters.ContainsKey("parent"))
             {
                 string parentName = ParseStringFromParameter(parameters["parent"]);
@@ -787,6 +811,64 @@ namespace VsensAgent
             }
 
             return changed;
+        }
+
+        private bool TryApplyAvatarJointAttachment(GameObject sensorObj, Dictionary<string, object> parameters)
+        {
+            if (!IsAvatarJointAttach(parameters))
+            {
+                return false;
+            }
+
+            ResolveAvatarRuntimeManager();
+            if (avatarRuntimeManager == null)
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ Cannot attach sensor to avatar joint because AvatarRuntimeManager was not found.");
+                return false;
+            }
+
+            var avatarId = ParseStringFromParameter(parameters["avatar_id"]);
+            var jointName = ParseStringFromParameter(parameters["joint_name"]);
+            if (!avatarRuntimeManager.TryResolveAttachmentPointTransform(avatarId, jointName, out var attachmentTransform, out var error))
+            {
+                Debug.LogWarning($"[ControlManager] ⚠️ Failed to resolve avatar attachment point '{jointName}' on '{avatarId}': {error}");
+                return false;
+            }
+
+            sensorObj.transform.SetParent(attachmentTransform, false);
+            if (parameters.ContainsKey("local_position"))
+            {
+                sensorObj.transform.localPosition = ParseVector3FromArray(parameters["local_position"], Vector3.zero);
+            }
+            else
+            {
+                sensorObj.transform.localPosition = Vector3.zero;
+            }
+
+            if (parameters.ContainsKey("local_rotation"))
+            {
+                sensorObj.transform.localRotation = Quaternion.Euler(ParseVector3FromArray(parameters["local_rotation"], Vector3.zero));
+            }
+            else
+            {
+                sensorObj.transform.localRotation = Quaternion.identity;
+            }
+
+            Debug.Log($"[ControlManager] 🤝 Attached sensor '{sensorObj.name}' to avatar joint '{jointName}' on '{avatarId}'.");
+            return true;
+        }
+
+        private static bool IsAvatarJointAttach(Dictionary<string, object> parameters)
+        {
+            if (parameters == null || !parameters.TryGetValue("attach_mode", out var attachModeObj) || attachModeObj == null)
+            {
+                return false;
+            }
+
+            return string.Equals(
+                attachModeObj.ToString(),
+                "avatar_joint",
+                StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

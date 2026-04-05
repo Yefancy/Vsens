@@ -186,6 +186,16 @@ namespace VsensAgent.SceneApi.V2
         private const string MalePrefabKey = "smplx_male";
         private const string DefaultMalePrefabPath = "Assets/smplx/male.prefab";
         private static readonly Quaternion SmplxVisualYawOffset = Quaternion.Euler(0f, 180f, 0f);
+        private static readonly string[] SupportedAttachmentPoints =
+        {
+            "head",
+            "chest",
+            "waist",
+            "left_wrist",
+            "right_wrist",
+            "left_ankle",
+            "right_ankle",
+        };
 
         [SerializeField] private GameObject malePrefab;
         [SerializeField] private Transform avatarParent;
@@ -471,6 +481,67 @@ namespace VsensAgent.SceneApi.V2
             return new List<AvatarMotionQueryModel>(_motionCatalog.Values);
         }
 
+        public List<AvatarAttachmentPointQueryModel> GetAttachmentPointQueryModels(string avatarId)
+        {
+            var result = new List<AvatarAttachmentPointQueryModel>();
+            if (!HasMatchingAvatar(avatarId))
+            {
+                return result;
+            }
+
+            foreach (var jointName in SupportedAttachmentPoints)
+            {
+                if (!TryResolveAttachmentPointTransform(avatarId, jointName, out var attachmentTransform, out _))
+                {
+                    continue;
+                }
+
+                result.Add(new AvatarAttachmentPointQueryModel
+                {
+                    avatar_id = _avatarObject.name,
+                    joint_name = jointName,
+                    world_position = new Vector3Data(
+                        attachmentTransform.position.x,
+                        attachmentTransform.position.y,
+                        attachmentTransform.position.z),
+                    world_rotation = ToData(attachmentTransform.rotation.eulerAngles),
+                    description = $"Semantic avatar attachment point '{jointName}'.",
+                });
+            }
+
+            return result;
+        }
+
+        public bool TryResolveAttachmentPointTransform(string avatarId, string jointName, out Transform attachmentTransform, out string error)
+        {
+            attachmentTransform = null;
+
+            if (!HasMatchingAvatar(avatarId))
+            {
+                error = "Managed avatar not found.";
+                return false;
+            }
+
+            var normalized = NormalizeAttachmentPointName(jointName);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                error = "Attachment point name is required.";
+                return false;
+            }
+
+            foreach (var candidateName in EnumerateAttachmentTransformCandidates(normalized))
+            {
+                if (TryResolveAvatarTransform(candidateName, out attachmentTransform))
+                {
+                    error = null;
+                    return true;
+                }
+            }
+
+            error = $"Attachment point '{jointName}' is not supported on the managed avatar.";
+            return false;
+        }
+
         public GameObject GetManagedAvatarObject()
         {
             return _avatarObject;
@@ -555,6 +626,64 @@ namespace VsensAgent.SceneApi.V2
         public static Vector3 GetLogicalRotationEuler(Quaternion appliedRotation)
         {
             return GetLogicalRotation(appliedRotation).eulerAngles;
+        }
+
+        private bool TryResolveAvatarTransform(string transformName, out Transform resolved)
+        {
+            resolved = null;
+            if (_avatarObject == null || string.IsNullOrWhiteSpace(transformName))
+            {
+                return false;
+            }
+
+            var smplx = _avatarObject.GetComponentInChildren<SMPLX>(true);
+            if (smplx != null && smplx.TransformFromName != null && smplx.TransformFromName.TryGetValue(transformName, out resolved))
+            {
+                return resolved != null;
+            }
+
+            foreach (var child in _avatarObject.GetComponentsInChildren<Transform>(true))
+            {
+                if (string.Equals(child.name, transformName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    resolved = child;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string NormalizeAttachmentPointName(string jointName)
+        {
+            return string.IsNullOrWhiteSpace(jointName)
+                ? string.Empty
+                : jointName.Trim().ToLowerInvariant();
+        }
+
+        private static IEnumerable<string> EnumerateAttachmentTransformCandidates(string jointName)
+        {
+            switch (jointName)
+            {
+                case "head":
+                    yield return "head";
+                    yield return "neck";
+                    break;
+                case "chest":
+                    yield return "spine3";
+                    yield return "spine2";
+                    break;
+                case "waist":
+                    yield return "pelvis";
+                    yield return "spine1";
+                    break;
+                case "left_wrist":
+                case "right_wrist":
+                case "left_ankle":
+                case "right_ankle":
+                    yield return jointName;
+                    break;
+            }
         }
 
         public static Vector3 GetLogicalForward(Quaternion appliedRotation)

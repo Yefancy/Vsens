@@ -53,6 +53,9 @@ namespace VsensAgent.UI
         private Canvas MainCanvas;              // 用于点击检测
         private InputController inputController;      // 输入管理器
         private RuntimeEditModeController runtimeEditModeController;
+        private Image _editModeButtonImage;
+        private Color _editModeButtonDefaultColor = Color.white;
+        private bool _editModeButtonDefaultColorInitialized;
         private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
         private ClarificationRequestMessage _pendingClarification;
         private ProposalReadyMessage _pendingProposal;
@@ -155,7 +158,7 @@ namespace VsensAgent.UI
             
             // 修改后的自动聚焦逻辑
             HandleAutoFocus();
-            UpdateEditModeButtonLabel();
+            UpdateEditModeButtonBG();
         }
 
         private void InitializeUI()
@@ -213,8 +216,7 @@ namespace VsensAgent.UI
 
             // 初始化发送/停止按钮标签
             UpdateSendButtonLabel();
-            EnsureEditModeButton();
-            UpdateEditModeButtonLabel();
+            UpdateEditModeButtonBG();
 
             // 添加欢迎消息
             AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
@@ -393,7 +395,7 @@ namespace VsensAgent.UI
             }
 
             controller.ToggleEditMode();
-            UpdateEditModeButtonLabel();
+            UpdateEditModeButtonBG();
             AddSystemMessage(controller.IsEditModeEnabled
                 ? "🛠️ Edit mode enabled. Click the avatar to select it, left-click the floor to move it, and right-drag to rotate."
                 : "✅ Edit mode disabled.");
@@ -588,40 +590,32 @@ namespace VsensAgent.UI
             label.text = _agentIsIdle ? "OK" : "Stop";
         }
 
-        private void EnsureEditModeButton()
+        private void UpdateEditModeButtonBG()
         {
-            if (editModeButton != null)
+            if (editModeButton == null) {
+                return;
+            }
+
+            if (_editModeButtonImage == null)
+            {
+                _editModeButtonImage = editModeButton.GetComponent<Image>();
+            }
+
+            if (_editModeButtonImage == null)
             {
                 return;
             }
 
-            var template = toggleViewButton != null ? toggleViewButton : sendButton;
-            if (template == null || template.transform.parent == null)
+            if (!_editModeButtonDefaultColorInitialized)
             {
-                return;
+                _editModeButtonDefaultColor = _editModeButtonImage.color;
+                _editModeButtonDefaultColorInitialized = true;
             }
 
-            var editButtonObject = Instantiate(template.gameObject, template.transform.parent);
-            editButtonObject.name = "EditModeButton";
-            editModeButton = editButtonObject.GetComponent<Button>();
-        }
-
-        private void UpdateEditModeButtonLabel()
-        {
-            if (editModeButton == null)
-            {
-                return;
-            }
-
-            var label = editModeButton.GetComponentInChildren<TMP_Text>();
-            if (label == null)
-            {
-                return;
-            }
-
-            var controller = ResolveRuntimeEditModeController(createIfMissing: false);
-            bool isEditing = controller != null && controller.IsEditModeEnabled;
-            label.text = isEditing ? "Done" : "Edit";
+            bool isEditModeEnabled = ResolveRuntimeEditModeController(createIfMissing: false)?.IsEditModeEnabled == true;
+            _editModeButtonImage.color = isEditModeEnabled
+                ? new Color(0.32f, 0.78f, 0.32f, _editModeButtonDefaultColor.a)
+                : _editModeButtonDefaultColor;
         }
 
         private RuntimeEditModeController ResolveRuntimeEditModeController(bool createIfMissing)
