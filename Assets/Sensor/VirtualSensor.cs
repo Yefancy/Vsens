@@ -181,6 +181,7 @@ namespace Sensor
         public List<SensorData> Data => _sensorData;
         private bool isRecording;
         public SensorAttachable sensorAttachable;
+        public event Action<SensorData, bool> onDataAppended;
 
         public virtual void OnAttachTo(SensorAttachable attachable)
         {
@@ -199,13 +200,19 @@ namespace Sensor
         
         protected void AppendData(float time, ISensorData data)
         {
-            if (!isRecording) return;
-            _sensorData.Add(new SensorData
+            var sample = new SensorData
             {
                 time = time,
                 sensorID = name,
                 data = data
-            });
+            };
+
+            if (isRecording)
+            {
+                _sensorData.Add(sample);
+            }
+
+            onDataAppended?.Invoke(sample, isRecording);
         }
     
         public virtual void ClearData()

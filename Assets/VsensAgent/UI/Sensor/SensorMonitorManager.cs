@@ -166,6 +166,7 @@ namespace VsensAgent.UI
             }
             
             GameObject itemObj = Instantiate(sensorItemPrefab, sensorItemContainer);
+            itemObj.SetActive(true);
             SensorUIItem uiItem = itemObj.GetComponent<SensorUIItem>();
             
             if (uiItem == null)

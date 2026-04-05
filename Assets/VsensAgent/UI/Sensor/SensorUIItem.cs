@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Sensor;
+using XCharts.Runtime;
+using OVRSimpleJSON;
 
 namespace VsensAgent.UI
 {
@@ -14,36 +18,58 @@ namespace VsensAgent.UI
         public TextMeshProUGUI sensorNameText;      // 传感器名称
         public TextMeshProUGUI sensorTypeText;      // 传感器类型
         public TextMeshProUGUI sensorDataText;      // 传感器数据
+        public Toggle detailToggle;            
         public Image statusIndicator;                // 状态指示器
-        public Button selectButton;                  // 选择按钮（可选）
+        
+        public GameObject detailContainer;       
+        
+        public LineChart chart;
+        public Button activeButton;
+        public Button previewButton;
+        public Button graphButton;
         
         [Header("Display Settings")]
         public Color activeColor = Color.green;      // 活动状态颜色
         public Color inactiveColor = Color.gray;     // 非活动状态颜色
-        public bool showDetailedData = true;         // 显示详细数据
         
         // 私有变量
         private VirtualSensor sensor;
         private bool isInitialized = false;
         private string lastDataString = "";
+        private readonly List<Tuple<float, float[]>> chartSamples = new();
+        private const int MaxChartSamples = 60;
+        private int chartDimension = -1;
 
         /// <summary>
         /// 初始化UI Item，绑定传感器
         /// </summary>
         public void Initialize(VirtualSensor sensorInstance)
         {
+            UnbindSensorEvents();
             sensor = sensorInstance;
             isInitialized = true;
+            BindSensorEvents();
+
+            if (activeButton != null)
+            {
+                activeButton.onClick.RemoveAllListeners();
+                activeButton.onClick.AddListener(OnActiveButtonClicked);
+            }
+
+            if (previewButton != null)
+            {
+                previewButton.onClick.RemoveAllListeners();
+                previewButton.onClick.AddListener(OnPreviewButtonClicked);
+            }
+
+            if (graphButton != null)
+            {
+                graphButton.onClick.RemoveAllListeners();
+                graphButton.onClick.AddListener(OnGraphButtonClicked);
+            }
             
             UpdateBasicInfo();
             UpdateDisplay();
-            
-            // 如果有选择按钮，添加点击事件
-            if (selectButton != null)
-            {
-                selectButton.onClick.RemoveAllListeners();
-                selectButton.onClick.AddListener(OnSelectButtonClicked);
-            }
         }
 
         /// <summary>
@@ -51,8 +77,16 @@ namespace VsensAgent.UI
         /// </summary>
         public void UpdateSensorReference(VirtualSensor newSensor)
         {
+            if (ReferenceEquals(sensor, newSensor))
+            {
+                return;
+            }
+
+            UnbindSensorEvents();
             sensor = newSensor;
+            BindSensorEvents();
             UpdateBasicInfo();
+            RebuildChartFromHistory();
         }
 
         /// <summary>
@@ -104,9 +138,24 @@ namespace VsensAgent.UI
             // 更新状态指示器
             if (statusIndicator != null)
             {
-                statusIndicator.color = sensor.isActiveAndEnabled ? activeColor : inactiveColor;
+                statusIndicator.color = sensor.IsActive ? activeColor : inactiveColor;
             }
-            
+                        
+            if (activeButton != null)
+            {
+                activeButton.GetComponent<Image>().color = sensor.IsActive ? activeColor : inactiveColor;
+            }
+
+            if (previewButton != null)
+            {
+                previewButton.GetComponent<Image>().color = sensor.ShowPreview ? activeColor : inactiveColor;
+            }
+
+            if (graphButton != null)
+            {
+                graphButton.GetComponent<Image>().color = sensor.ShowGraph ? activeColor : inactiveColor;
+            }
+
             // 更新传感器数据显示
             if (sensorDataText != null)
             {
@@ -150,7 +199,7 @@ namespace VsensAgent.UI
                 {
                     string description = virtualSensor.GetSensorDescription();
                     
-                    if (showDetailedData)
+                    if (detailToggle.isOn)
                     {
                         return description;
                     }
@@ -193,6 +242,24 @@ namespace VsensAgent.UI
             }
             
             return fullDescription;
+        }
+
+        private void OnActiveButtonClicked()
+        {
+            if (sensor == null) return;
+            sensor.IsActive = !sensor.IsActive;
+        }
+        
+        private void OnPreviewButtonClicked()
+        {
+            if (sensor == null) return;
+            sensor.ShowPreview = !sensor.ShowPreview;
+        }
+        
+        private void OnGraphButtonClicked()
+        {
+            if (sensor == null) return;
+            sensor.ShowGraph = !sensor.ShowGraph;
         }
 
         /// <summary>
@@ -264,10 +331,220 @@ namespace VsensAgent.UI
                 statusIndicator = GetComponentInChildren<Image>();
             }
             
-            if (selectButton == null)
+            if (detailToggle != null && detailContainer != null)
             {
-                selectButton = GetComponentInChildren<Button>();
+                detailToggle.isOn = detailContainer.activeSelf;
+                detailToggle.onValueChanged.RemoveAllListeners();
+                detailToggle.onValueChanged.AddListener(OnDetailToggleValueChanged);
             }
+        }
+        
+        private void OnDetailToggleValueChanged(bool isOn)
+        {
+            if (detailContainer != null)
+            {
+                detailContainer.SetActive(isOn);
+            }
+
+            if (isOn)
+            {
+                RebuildChartFromHistory();
+            }
+        }
+
+        private void BindSensorEvents()
+        {
+            if (sensor == null)
+            {
+                return;
+            }
+
+            sensor.onDataAppended += OnSensorDataAppended;
+        }
+
+        private void UnbindSensorEvents()
+        {
+            if (sensor == null)
+            {
+                return;
+            }
+
+            sensor.onDataAppended -= OnSensorDataAppended;
+        }
+
+        private void OnDestroy()
+        {
+            UnbindSensorEvents();
+        }
+
+        private void OnSensorDataAppended(SensorData sample, bool isRecording)
+        {
+            if (!isInitialized)
+            {
+                return;
+            }
+
+            if (sensorDataText != null)
+            {
+                lastDataString = "";
+            }
+
+            if (detailToggle == null || !detailToggle.isOn || chart == null)
+            {
+                return;
+            }
+
+            var values = ExtractChartValues(sample);
+            if (values == null || values.Length == 0)
+            {
+                return;
+            }
+
+            chartSamples.Add(Tuple.Create(sample.time, values));
+            while (chartSamples.Count > MaxChartSamples)
+            {
+                chartSamples.RemoveAt(0);
+            }
+
+            EnsureChartDimension(values.Length);
+            RedrawChart();
+        }
+
+        private void RebuildChartFromHistory()
+        {
+            chartSamples.Clear();
+            chartDimension = -1;
+
+            if (sensor == null || chart == null)
+            {
+                return;
+            }
+
+            var startIndex = Mathf.Max(0, sensor.Data.Count - MaxChartSamples);
+            for (var i = startIndex; i < sensor.Data.Count; i++)
+            {
+                var sample = sensor.Data[i];
+                var values = ExtractChartValues(sample);
+                if (values == null || values.Length == 0)
+                {
+                    continue;
+                }
+
+                chartSamples.Add(Tuple.Create(sample.time, values));
+            }
+
+            var expectedDimension = chartSamples.Count > 0 ? chartSamples[chartSamples.Count - 1].Item2.Length : 1;
+            EnsureChartDimension(expectedDimension);
+            RedrawChart();
+        }
+
+        private void RedrawChart()
+        {
+            if (chart == null)
+            {
+                return;
+            }
+
+            chart.ClearData();
+            foreach (var sample in chartSamples)
+            {
+                chart.AddXAxisData(sample.Item1.ToString("F2"));
+                for (var i = 0; i < sample.Item2.Length; i++)
+                {
+                    chart.AddData(i, sample.Item2[i]);
+                }
+            }
+        }
+
+        private float[] ExtractChartValues(SensorData sample)
+        {
+            if (sample.data == null)
+            {
+                return Array.Empty<float>();
+            }
+
+            JSONNode payload;
+            try
+            {
+                payload = sample.data.serialize();
+            }
+            catch
+            {
+                return Array.Empty<float>();
+            }
+
+            if (payload == null)
+            {
+                return Array.Empty<float>();
+            }
+
+            if (sensor is VirtualIMUSensor)
+            {
+                return ReadVectorComponents(payload["localAcceleration"]);
+            }
+
+            if (sensor is VirtualDistanceSensor)
+            {
+                return new[] { payload["distance"]?.AsFloat ?? 0f };
+            }
+
+            if (sensor is VirtualLightSensor)
+            {
+                return new[] { payload["lux"]?.AsFloat ?? 0f };
+            }
+
+            if (payload["value"] != null)
+            {
+                return new[] { payload["value"].AsFloat };
+            }
+
+            return Array.Empty<float>();
+        }
+
+        private static float[] ReadVectorComponents(JSONNode node)
+        {
+            if (node == null)
+            {
+                return new[] { 0f, 0f, 0f };
+            }
+
+            return new[]
+            {
+                node["x"]?.AsFloat ?? 0f,
+                node["y"]?.AsFloat ?? 0f,
+                node["z"]?.AsFloat ?? 0f
+            };
+        }
+
+        private void EnsureChartDimension(int expectedCount)
+        {
+            if (chart == null)
+            {
+                return;
+            }
+
+            var targetCount = Mathf.Max(1, expectedCount);
+            if (chartDimension == targetCount && chart.series.Count == targetCount)
+            {
+                return;
+            }
+
+            while (chart.series.Count > targetCount)
+            {
+                chart.RemoveSerie(chart.series.Count - 1);
+            }
+
+            while (chart.series.Count < targetCount)
+            {
+                var serie = chart.AddSerie<Line>($"Series {chart.series.Count + 1}");
+                serie.animation.enable = false;
+                if (serie?.symbol != null)
+                {
+                    serie.symbol.show = false;
+                }
+            }
+
+            chartDimension = targetCount;
         }
     }
 }
