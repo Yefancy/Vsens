@@ -967,13 +967,29 @@ namespace VsensAgent.Tests.Editor.SceneApi
 
     public class TestAvatarPlaybackDriver : AvatarPlaybackDriver
     {
+        public float reportedProgress;
+
+        public override float NormalizedProgress => Looping ? Mathf.Repeat(reportedProgress, 1f) : Mathf.Clamp01(reportedProgress);
+
         public override bool TryLoadMotion(string motionId, string motionName, string motionJson, out string error)
         {
             LoadedMotionId = motionId;
             LoadedMotionName = motionName;
             HasLoadedMotion = true;
             LastMotionJson = motionJson;
+            reportedProgress = 0f;
             error = null;
+            return true;
+        }
+
+        public override bool TrySetNormalizedProgress(float normalizedProgress, out string error)
+        {
+            if (!base.TrySetNormalizedProgress(normalizedProgress, out error))
+            {
+                return false;
+            }
+
+            reportedProgress = Mathf.Clamp01(normalizedProgress);
             return true;
         }
     }

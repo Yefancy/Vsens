@@ -3,6 +3,7 @@
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.meta.xr.sdk.all": "74.0.3",
     "com.monitor1394.xcharts": "https://github.com/XCharts-Team/XCharts.git",
+    "com.orkunmanap.runtime-transform-handles": "https://github.com/manaporkun/UnityRuntimeTransformHandles.git#upm",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.ai.navigation": "2.0.10",
     "com.unity.collab-proxy": "2.11.3",
@@ -52,5 +53,14 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  }
+  },
+  "scopedRegistries": [
+    {
+      "name": "Shtif",
+      "url": "http://package.binaryego.com:4873",
+      "scopes": [
+        "com.shtif"
+      ]
+    }
+  ]
 }

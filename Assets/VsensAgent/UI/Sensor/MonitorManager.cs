@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using VsensAgent.Core;
+using VsensAgent.SceneApi.V2;
 using VsensAgent.VirtualObject.Sensor;
 using Sensor;
 
@@ -10,15 +12,16 @@ namespace VsensAgent.UI
     /// <summary>
     /// 管理传感器监控面板UI，显示场景中所有传感器的列表和数据
     /// </summary>
-    public class SensorMonitorManager : MonoBehaviour
+    public class MonitorManager : MonoBehaviour
     {
         [Header("UI Panel References")]
-        public GameObject sensorMonitorPanel;           // 整个传感器监控面板
-        public ScrollRect sensorListScrollRect;         // 传感器列表滚动区域
-        public Transform sensorItemContainer;           // 传感器Item的容器 (ScrollRect的Content)
+        public GameObject monitorPanel;           // 整个传感器监控面板
+        public ScrollRect scrollRect;         // 传感器列表滚动区域
+        public Transform itemContainer;           // 传感器Item的容器 (ScrollRect的Content)
         
         [Header("Prefabs")]
         public GameObject sensorItemPrefab;             // 传感器Item预制件
+        public GameObject avatarItemPrefab;             // AvatarItem预制件
         
         [Header("Settings")]
         public float updateInterval = 0.5f;             // 数据更新间隔（秒）
@@ -31,6 +34,9 @@ namespace VsensAgent.UI
         // 私有变量
         private VsensAgentSensorManager sensorManager;
         private Dictionary<string, SensorUIItem> sensorUIItems = new Dictionary<string, SensorUIItem>();
+        private Dictionary<string, AvatarUIItem> avatarUIItems = new Dictionary<string, AvatarUIItem>();
+        private AvatarRuntimeManager avatarRuntimeManager;
+        private SceneRegistry sceneRegistry;
         private float nextUpdateTime;
         private float nextRefreshTime;
         private bool isPanelVisible = true;
@@ -38,27 +44,32 @@ namespace VsensAgent.UI
         void Awake()
         {
             // 确保组件引用
-            if (sensorListScrollRect == null)
-                sensorListScrollRect = GetComponentInChildren<ScrollRect>();
+            if (scrollRect == null)
+                scrollRect = GetComponentInChildren<ScrollRect>();
             
-            if (sensorItemContainer == null && sensorListScrollRect != null)
-                sensorItemContainer = sensorListScrollRect.content;
+            if (itemContainer == null && scrollRect != null)
+                itemContainer = scrollRect.content;
         }
 
         void Start()
         {
             // 获取传感器管理器实例
             sensorManager = VsensAgentSensorManager.Instance;
+            avatarRuntimeManager = ServiceLocator.IsRegistered<AvatarRuntimeManager>()
+                ? ServiceLocator.Get<AvatarRuntimeManager>()
+                : FindFirstObjectByType<AvatarRuntimeManager>();
+            sceneRegistry = ServiceLocator.IsRegistered<SceneRegistry>()
+                ? ServiceLocator.Get<SceneRegistry>()
+                : FindFirstObjectByType<SceneRegistry>();
             
             if (sensorManager == null)
             {
                 Debug.LogError("[SensorMonitorManager] ❌ VsensAgentSensorManager instance not found!");
-                return;
             }
             
-            if (sensorMonitorPanel != null)
+            if (monitorPanel != null)
             {
-                sensorMonitorPanel.SetActive(isPanelVisible);
+                monitorPanel.SetActive(isPanelVisible);
             }
             
             // 初始化传感器列表
@@ -92,10 +103,13 @@ namespace VsensAgent.UI
         /// </summary>
         public void RefreshSensorList()
         {
-            if (sensorManager == null || sensorItemContainer == null)
+            if (sensorManager == null || itemContainer == null)
             {
                 Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot refresh sensor list - missing references");
-                return;
+                if (itemContainer == null)
+                {
+                    return;
+                }
             }
             
             // 获取场景中所有的VirtualSensor
@@ -151,6 +165,8 @@ namespace VsensAgent.UI
             {
                 Debug.Log($"[SensorMonitorManager] 🗑️ Removed {toRemove.Count} sensor UI items");
             }
+
+            RefreshAvatarList();
         }
 
         /// <summary>
@@ -158,14 +174,7 @@ namespace VsensAgent.UI
         /// </summary>
         private void CreateSensorUIItem(VirtualSensor sensor)
         {
-            if (sensorItemPrefab == null)
-            {
-                // 如果没有预制件，动态创建一个简单的UI Item
-                CreateSimpleSensorUIItem(sensor);
-                return;
-            }
-            
-            GameObject itemObj = Instantiate(sensorItemPrefab, sensorItemContainer);
+            GameObject itemObj = Instantiate(sensorItemPrefab, itemContainer);
             itemObj.SetActive(true);
             SensorUIItem uiItem = itemObj.GetComponent<SensorUIItem>();
             
@@ -184,95 +193,19 @@ namespace VsensAgent.UI
         }
 
         /// <summary>
-        /// 创建简单的传感器UI Item（当没有预制件时）
-        /// </summary>
-        private void CreateSimpleSensorUIItem(VirtualSensor sensor)
-        {
-            // 创建一个简单的UI元素
-            GameObject itemObj = new GameObject($"SensorItem_{sensor.name}");
-            itemObj.transform.SetParent(sensorItemContainer, false);
-            
-            // 添加布局组件
-            RectTransform rt = itemObj.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(0, 60); // 高度60
-            
-            // 添加背景
-            Image bg = itemObj.AddComponent<Image>();
-            bg.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-            
-            // 添加水平布局
-            HorizontalLayoutGroup layout = itemObj.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 5, 5);
-            layout.spacing = 10;
-            layout.childAlignment = TextAnchor.MiddleLeft;
-            layout.childControlWidth = false;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
-            
-            // 添加文本显示传感器名称和类型
-            CreateTextElement(itemObj.transform, "Name", sensor.name, 200);
-            CreateTextElement(itemObj.transform, "Type", GetSensorTypeName(sensor), 150);
-            CreateTextElement(itemObj.transform, "Data", "Initializing...", 200);
-            
-            // 添加SensorUIItem组件
-            SensorUIItem uiItem = itemObj.AddComponent<SensorUIItem>();
-            uiItem.Initialize(sensor);
-            
-            sensorUIItems[sensor.name] = uiItem;
-            
-            if (showDebugInfo)
-            {
-                Debug.Log($"[SensorMonitorManager] ➕ Created simple UI item for sensor: {sensor.name}");
-            }
-        }
-
-        /// <summary>
-        /// 创建文本元素辅助方法
-        /// </summary>
-        private GameObject CreateTextElement(Transform parent, string name, string text, float width)
-        {
-            GameObject textObj = new GameObject(name);
-            textObj.transform.SetParent(parent, false);
-            
-            RectTransform rt = textObj.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(width, 0);
-            
-            TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
-            tmp.text = text;
-            tmp.fontSize = 14;
-            tmp.color = Color.white;
-            tmp.alignment = TextAlignmentOptions.MidlineLeft;
-            
-            LayoutElement le = textObj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
-            le.flexibleWidth = 0;
-            
-            return textObj;
-        }
-
-        /// <summary>
-        /// 获取传感器类型名称
-        /// </summary>
-        private string GetSensorTypeName(VirtualSensor sensor)
-        {
-            try
-            {
-                var definition = sensor.SensorDefinition();
-                return definition?.getSensorName() ?? "Unknown";
-            }
-            catch
-            {
-                return "Unknown";
-            }
-        }
-
-        /// <summary>
         /// 更新所有传感器的数据显示
         /// </summary>
         private void UpdateAllSensorData()
         {
             foreach (var kvp in sensorUIItems)
+            {
+                if (kvp.Value != null)
+                {
+                    kvp.Value.UpdateDisplay();
+                }
+            }
+
+            foreach (var kvp in avatarUIItems)
             {
                 if (kvp.Value != null)
                 {
@@ -287,9 +220,9 @@ namespace VsensAgent.UI
         public void TogglePanel()
         {
             isPanelVisible = !isPanelVisible;
-            if (sensorMonitorPanel != null)
+            if (monitorPanel != null)
             {
-                sensorMonitorPanel.SetActive(isPanelVisible);
+                monitorPanel.SetActive(isPanelVisible);
             }
         }
 
@@ -299,9 +232,9 @@ namespace VsensAgent.UI
         public void ShowPanel()
         {
             isPanelVisible = true;
-            if (sensorMonitorPanel != null)
+            if (monitorPanel != null)
             {
-                sensorMonitorPanel.SetActive(true);
+                monitorPanel.SetActive(true);
             }
         }
 
@@ -311,16 +244,16 @@ namespace VsensAgent.UI
         public void HidePanel()
         {
             isPanelVisible = false;
-            if (sensorMonitorPanel != null)
+            if (monitorPanel != null)
             {
-                sensorMonitorPanel.SetActive(false);
+                monitorPanel.SetActive(false);
             }
         }
 
         /// <summary>
-        /// 清空所有传感器UI
+        /// 清空所有UI
         /// </summary>
-        public void ClearAllSensorUI()
+        public void ClearAllUI()
         {
             foreach (var kvp in sensorUIItems)
             {
@@ -330,9 +263,93 @@ namespace VsensAgent.UI
                 }
             }
             sensorUIItems.Clear();
+
+            foreach (var kvp in avatarUIItems)
+            {
+                if (kvp.Value != null && kvp.Value.gameObject != null)
+                {
+                    Destroy(kvp.Value.gameObject);
+                }
+            }
+            avatarUIItems.Clear();
             
             if (showDebugInfo)
                 Debug.Log("[SensorMonitorManager] 🗑️ Cleared all sensor UI items");
+        }
+
+        private void RefreshAvatarList()
+        {
+            if (itemContainer == null || avatarItemPrefab == null)
+            {
+                return;
+            }
+
+            avatarRuntimeManager ??= ServiceLocator.IsRegistered<AvatarRuntimeManager>()
+                ? ServiceLocator.Get<AvatarRuntimeManager>()
+                : FindFirstObjectByType<AvatarRuntimeManager>();
+            sceneRegistry ??= ServiceLocator.IsRegistered<SceneRegistry>()
+                ? ServiceLocator.Get<SceneRegistry>()
+                : FindFirstObjectByType<SceneRegistry>();
+
+            var avatars = avatarRuntimeManager != null
+                ? avatarRuntimeManager.GetAvatarQueryModels(sceneRegistry)
+                : new List<AvatarQueryModel>();
+
+            var currentAvatarIds = new HashSet<string>();
+            foreach (var avatar in avatars)
+            {
+                if (avatar == null || string.IsNullOrWhiteSpace(avatar.avatar_id))
+                {
+                    continue;
+                }
+
+                currentAvatarIds.Add(avatar.avatar_id);
+                if (!avatarUIItems.TryGetValue(avatar.avatar_id, out var uiItem) || uiItem == null)
+                {
+                    CreateAvatarUIItem(avatar);
+                    continue;
+                }
+
+                uiItem.UpdateAvatarModel(avatar);
+            }
+
+            List<string> toRemove = new List<string>();
+            foreach (var kvp in avatarUIItems)
+            {
+                if (!currentAvatarIds.Contains(kvp.Key))
+                {
+                    toRemove.Add(kvp.Key);
+                    if (kvp.Value != null && kvp.Value.gameObject != null)
+                    {
+                        Destroy(kvp.Value.gameObject);
+                    }
+                }
+            }
+
+            foreach (var avatarId in toRemove)
+            {
+                avatarUIItems.Remove(avatarId);
+            }
+        }
+
+        private void CreateAvatarUIItem(AvatarQueryModel avatar)
+        {
+            GameObject itemObj = Instantiate(avatarItemPrefab, itemContainer);
+            itemObj.SetActive(true);
+            AvatarUIItem uiItem = itemObj.GetComponent<AvatarUIItem>();
+
+            if (uiItem == null)
+            {
+                uiItem = itemObj.AddComponent<AvatarUIItem>();
+            }
+
+            uiItem.Initialize(avatar);
+            avatarUIItems[avatar.avatar_id] = uiItem;
+
+            if (showDebugInfo)
+            {
+                Debug.Log($"[SensorMonitorManager] 👤 Created UI item for avatar: {avatar.avatar_id}");
+            }
         }
     }
 }

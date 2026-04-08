@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using Sensor;
 using XCharts.Runtime;
 using OVRSimpleJSON;
+using VsensAgent.Core;
+using VsensAgent.RuntimeEditing;
 
 namespace VsensAgent.UI
 {
     /// <summary>
     /// 单个传感器在UI列表中的Item组件
     /// </summary>
-    public class SensorUIItem : MonoBehaviour
+    public class SensorUIItem : MonoBehaviour, IPointerClickHandler
     {
         [Header("UI References")]
         public TextMeshProUGUI sensorNameText;      // 传感器名称
@@ -20,6 +23,7 @@ namespace VsensAgent.UI
         public TextMeshProUGUI sensorDataText;      // 传感器数据
         public Toggle detailToggle;            
         public Image statusIndicator;                // 状态指示器
+        public Image selectionHighlight;             // 选中高亮背景
         
         public GameObject detailContainer;       
         
@@ -31,6 +35,8 @@ namespace VsensAgent.UI
         [Header("Display Settings")]
         public Color activeColor = Color.green;      // 活动状态颜色
         public Color inactiveColor = Color.gray;     // 非活动状态颜色
+        public Color selectedHighlightColor = Color.red;
+        public Color unselectedHighlightColor = new Color(1f, 0f, 0f, 0f);
         
         // 私有变量
         private VirtualSensor sensor;
@@ -39,6 +45,7 @@ namespace VsensAgent.UI
         private readonly List<Tuple<float, float[]>> chartSamples = new();
         private const int MaxChartSamples = 60;
         private int chartDimension = -1;
+        private RuntimeEditModeController cachedEditController;
 
         /// <summary>
         /// 初始化UI Item，绑定传感器
@@ -70,6 +77,7 @@ namespace VsensAgent.UI
             
             UpdateBasicInfo();
             UpdateDisplay();
+            UpdateSelectionHighlight();
         }
 
         /// <summary>
@@ -262,6 +270,21 @@ namespace VsensAgent.UI
             sensor.ShowGraph = !sensor.ShowGraph;
         }
 
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData == null || eventData.button != PointerEventData.InputButton.Left || sensor == null)
+            {
+                return;
+            }
+
+            if (IsControlClick(eventData.pointerPressRaycast.gameObject) || IsControlClick(eventData.pointerCurrentRaycast.gameObject))
+            {
+                return;
+            }
+
+            TrySelectSensorForEditing();
+        }
+
         /// <summary>
         /// 选择按钮点击事件
         /// </summary>
@@ -330,6 +353,11 @@ namespace VsensAgent.UI
             {
                 statusIndicator = GetComponentInChildren<Image>();
             }
+
+            if (selectionHighlight != null)
+            {
+                selectionHighlight.color = unselectedHighlightColor;
+            }
             
             if (detailToggle != null && detailContainer != null)
             {
@@ -337,6 +365,17 @@ namespace VsensAgent.UI
                 detailToggle.onValueChanged.RemoveAllListeners();
                 detailToggle.onValueChanged.AddListener(OnDetailToggleValueChanged);
             }
+        }
+
+        private void OnEnable()
+        {
+            TrySubscribeSelectionEvents();
+            UpdateSelectionHighlight();
+        }
+
+        private void OnDisable()
+        {
+            UnsubscribeSelectionEvents();
         }
         
         private void OnDetailToggleValueChanged(bool isOn)
@@ -375,6 +414,91 @@ namespace VsensAgent.UI
         private void OnDestroy()
         {
             UnbindSensorEvents();
+            UnsubscribeSelectionEvents();
+        }
+
+        private bool IsControlClick(GameObject target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            return (detailToggle != null && target.transform.IsChildOf(detailToggle.transform)) ||
+                   (activeButton != null && target.transform.IsChildOf(activeButton.transform)) ||
+                   (previewButton != null && target.transform.IsChildOf(previewButton.transform)) ||
+                   (graphButton != null && target.transform.IsChildOf(graphButton.transform));
+        }
+
+        private void OnItemSelectedFromButton()
+        {
+            TrySelectSensorForEditing();
+        }
+
+        private void TrySelectSensorForEditing()
+        {
+            var editController = GetEditController();
+            if (editController == null || !editController.IsEditModeEnabled || sensor == null)
+            {
+                return;
+            }
+
+            editController.TrySelectEditableFromUi(sensor.name);
+            UpdateSelectionHighlight();
+        }
+
+        private RuntimeEditModeController GetEditController()
+        {
+            if (cachedEditController != null)
+            {
+                return cachedEditController;
+            }
+
+            cachedEditController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            return cachedEditController;
+        }
+
+        private void TrySubscribeSelectionEvents()
+        {
+            var editController = GetEditController();
+            if (editController == null)
+            {
+                return;
+            }
+
+            editController.SelectionChanged -= OnSelectionChanged;
+            editController.SelectionChanged += OnSelectionChanged;
+        }
+
+        private void UnsubscribeSelectionEvents()
+        {
+            if (cachedEditController == null)
+            {
+                return;
+            }
+
+            cachedEditController.SelectionChanged -= OnSelectionChanged;
+        }
+
+        private void OnSelectionChanged(string selectedObjectId)
+        {
+            UpdateSelectionHighlight();
+        }
+
+        private void UpdateSelectionHighlight()
+        {
+            if (selectionHighlight == null)
+            {
+                return;
+            }
+
+            var editController = GetEditController();
+            var isSelected = sensor != null &&
+                             editController != null &&
+                             editController.IsEditModeEnabled &&
+                             string.Equals(editController.SelectedObjectId, sensor.name, StringComparison.Ordinal);
+
+            selectionHighlight.color = isSelected ? selectedHighlightColor : unselectedHighlightColor;
         }
 
         private void OnSensorDataAppended(SensorData sample, bool isRecording)

@@ -248,7 +248,7 @@ namespace VsensAgent.Editor
 
         void AttachManagerScript(GameObject panel, GameObject scrollView)
         {
-            SensorMonitorManager manager = panel.AddComponent<SensorMonitorManager>();
+            MonitorManager manager = panel.AddComponent<MonitorManager>();
             Undo.RegisterCreatedObjectUndo(manager, "Add Manager Script");
             
             // 设置引用

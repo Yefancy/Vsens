@@ -11,6 +11,7 @@ using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
 using VsensAgent.RuntimeEditing;
 using VsensAgent.SceneApi.V2;
+using TransformHandles;
 
 namespace VsensAgent.UI
 {
@@ -25,7 +26,8 @@ namespace VsensAgent.UI
         public Button toggleViewButton;                 // 切换视角按钮
         public Button editModeButton;                   // 运行时编辑模式按钮
         public GameObject voiceInputIndicator;          // 语音录制指示器
-
+        public TransformGizmoUI transformGizmoUI;      // 变换 Gizmo UI
+        
         [Header("消息预制件")]
         public GameObject userMessagePrefab;           // 用户消息预制件
         public GameObject agentMessagePrefab;          // Agent消息预制件
@@ -53,6 +55,7 @@ namespace VsensAgent.UI
         private Canvas MainCanvas;              // 用于点击检测
         private InputController inputController;      // 输入管理器
         private RuntimeEditModeController runtimeEditModeController;
+        private RuntimeTransformHandleBridge runtimeTransformHandleBridge;
         private Image _editModeButtonImage;
         private Color _editModeButtonDefaultColor = Color.white;
         private bool _editModeButtonDefaultColorInitialized;
@@ -82,6 +85,8 @@ namespace VsensAgent.UI
             // 初始化
             InitializeUI();
             runtimeEditModeController = ResolveRuntimeEditModeController(createIfMissing: true);
+            runtimeTransformHandleBridge = ResolveRuntimeTransformHandleBridge(createIfMissing: true);
+            transformGizmoUI?.Initialize(OnTransformHandleTypeSelected);
             
             // 获取Canvas引用用于点击检测
             MainCanvas = GetComponentInParent<Canvas>();
@@ -159,6 +164,7 @@ namespace VsensAgent.UI
             // 修改后的自动聚焦逻辑
             HandleAutoFocus();
             UpdateEditModeButtonBG();
+            UpdateTransformGizmoUI();
         }
 
         private void InitializeUI()
@@ -217,6 +223,7 @@ namespace VsensAgent.UI
             // 初始化发送/停止按钮标签
             UpdateSendButtonLabel();
             UpdateEditModeButtonBG();
+            UpdateTransformGizmoUI();
 
             // 添加欢迎消息
             AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
@@ -618,6 +625,40 @@ namespace VsensAgent.UI
                 : _editModeButtonDefaultColor;
         }
 
+        private void UpdateTransformGizmoUI()
+        {
+            if (transformGizmoUI == null)
+            {
+                return;
+            }
+
+            runtimeEditModeController = ResolveRuntimeEditModeController(createIfMissing: false);
+            runtimeTransformHandleBridge = ResolveRuntimeTransformHandleBridge(createIfMissing: false);
+
+            bool shouldShow = runtimeEditModeController != null
+                && runtimeEditModeController.IsEditModeEnabled
+                && !string.IsNullOrWhiteSpace(runtimeEditModeController.SelectedObjectId)
+                && runtimeTransformHandleBridge != null
+                && runtimeTransformHandleBridge.SupportsCurrentSelection;
+
+            if (transformGizmoUI.gameObject.activeSelf != shouldShow)
+            {
+                transformGizmoUI.gameObject.SetActive(shouldShow);
+            }
+
+            if (shouldShow)
+            {
+                transformGizmoUI.SetMode(runtimeTransformHandleBridge.CurrentHandleType);
+            }
+        }
+
+        private void OnTransformHandleTypeSelected(HandleType handleType)
+        {
+            runtimeTransformHandleBridge = ResolveRuntimeTransformHandleBridge(createIfMissing: true);
+            runtimeTransformHandleBridge?.SetHandleType(handleType);
+            UpdateTransformGizmoUI();
+        }
+
         private RuntimeEditModeController ResolveRuntimeEditModeController(bool createIfMissing)
         {
             if (runtimeEditModeController != null)
@@ -645,6 +686,28 @@ namespace VsensAgent.UI
             }
 
             return runtimeEditModeController;
+        }
+
+        private RuntimeTransformHandleBridge ResolveRuntimeTransformHandleBridge(bool createIfMissing)
+        {
+            if (runtimeTransformHandleBridge != null)
+            {
+                return runtimeTransformHandleBridge;
+            }
+
+            var controller = ResolveRuntimeEditModeController(createIfMissing);
+            if (controller == null)
+            {
+                return null;
+            }
+
+            runtimeTransformHandleBridge = controller.GetComponent<RuntimeTransformHandleBridge>();
+            if (runtimeTransformHandleBridge == null && createIfMissing)
+            {
+                runtimeTransformHandleBridge = controller.gameObject.AddComponent<RuntimeTransformHandleBridge>();
+            }
+
+            return runtimeTransformHandleBridge;
         }
 
         /// <summary>

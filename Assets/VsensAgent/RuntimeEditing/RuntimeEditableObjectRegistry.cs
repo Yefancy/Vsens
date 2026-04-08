@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Sensor;
 using UnityEngine;
 using VsensAgent.Core;
 using VsensAgent.SceneApi.V2;
@@ -55,7 +56,9 @@ namespace VsensAgent.RuntimeEditing
         {
             if (avatarRuntimeManager == null)
             {
-                avatarRuntimeManager = ServiceLocator.Get<AvatarRuntimeManager>() ?? FindFirstObjectByType<AvatarRuntimeManager>();
+                avatarRuntimeManager = ServiceLocator.IsRegistered<AvatarRuntimeManager>()
+                    ? ServiceLocator.Get<AvatarRuntimeManager>()
+                    : FindFirstObjectByType<AvatarRuntimeManager>();
             }
 
             _editables.Clear();
@@ -63,6 +66,18 @@ namespace VsensAgent.RuntimeEditing
             {
                 var avatarEditable = new RuntimeEditableAvatarAdapter(avatarRuntimeManager);
                 _editables[avatarEditable.ObjectId] = avatarEditable;
+            }
+
+            var sensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None);
+            foreach (var sensor in sensors)
+            {
+                if (sensor == null || string.IsNullOrWhiteSpace(sensor.name))
+                {
+                    continue;
+                }
+
+                var sensorEditable = new RuntimeEditableSensorAdapter(sensor);
+                _editables[sensorEditable.ObjectId] = sensorEditable;
             }
         }
     }

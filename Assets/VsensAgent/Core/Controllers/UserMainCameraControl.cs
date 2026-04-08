@@ -35,6 +35,7 @@ namespace VsensAgent
         
         [Header("输入控制")]
         public bool inputEnabled = true;            // 外部控制输入是否启用
+        [SerializeField] private float lookSpeedMultiplier = 1.2f;
         
         // 第一人称私有变量
         private float firstPersonYaw = 0f;
@@ -135,8 +136,8 @@ namespace VsensAgent
             // 鼠标右键按下时允许视角旋转
             if (Input.GetMouseButton(1))
             {
-                float mouseX = Input.GetAxis("Mouse X") * firstPersonLookSpeed;
-                float mouseY = Input.GetAxis("Mouse Y") * firstPersonLookSpeed;
+                float mouseX = Input.GetAxis("Mouse X") * firstPersonLookSpeed * lookSpeedMultiplier;
+                float mouseY = Input.GetAxis("Mouse Y") * firstPersonLookSpeed * lookSpeedMultiplier;
 
                 firstPersonYaw += mouseX;
                 firstPersonPitch -= mouseY;
@@ -171,7 +172,7 @@ namespace VsensAgent
             // 鼠标右键按下时允许水平旋转
             if (Input.GetMouseButton(1))
             {
-                float mouseX = Input.GetAxis("Mouse X") * godViewLookSpeed;
+                float mouseX = Input.GetAxis("Mouse X") * godViewLookSpeed * lookSpeedMultiplier;
                 savedGodViewYaw += mouseX;
             }
 

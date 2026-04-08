@@ -40,11 +40,11 @@ namespace VsensAgent.Network
         // 注册到服务定位器
         ServiceLocator.Register<WsClient>(this);
 
-        // Scene API v2 默认启用，避免依赖手动场景挂载
-        if (GetComponent<SceneApiManager>() == null)
-        {
-            gameObject.AddComponent<SceneApiManager>();
-        }
+        // // Scene API v2 默认启用，避免依赖手动场景挂载
+        // if (GetComponent<SceneApiManager>() == null)
+        // {
+        //     gameObject.AddComponent<SceneApiManager>();
+        // }
         
         await ConnectWebSocket();
     }

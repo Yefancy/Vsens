@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using VsensAgent.Core;
 using VsensAgent.SceneApi.V2;
+using System;
 
 namespace VsensAgent.RuntimeEditing
 {
@@ -18,10 +19,12 @@ namespace VsensAgent.RuntimeEditing
 
         public bool IsEditModeEnabled { get; private set; }
         public string SelectedObjectId { get; private set; } = string.Empty;
+        public event Action<string> SelectionChanged;
 
         private void Awake()
         {
             EnsureDependencies();
+            EnsureTransformHandleBridge();
             ServiceLocator.Register<RuntimeEditModeController>(this);
         }
 
@@ -37,6 +40,7 @@ namespace VsensAgent.RuntimeEditing
         {
             avatarRuntimeManager = runtimeManager;
             EnsureDependencies();
+            EnsureTransformHandleBridge();
         }
 
         public void ToggleEditMode()
@@ -47,17 +51,30 @@ namespace VsensAgent.RuntimeEditing
         public void SetEditMode(bool enabled)
         {
             EnsureDependencies();
+            EnsureTransformHandleBridge();
             IsEditModeEnabled = enabled;
             if (!enabled)
             {
                 ClearSelection();
             }
+        }
 
-            var cameraControl = ServiceLocator.Get<VsensAgent.UserMainCameraControl>() ?? FindFirstObjectByType<VsensAgent.UserMainCameraControl>();
-            if (cameraControl != null)
+        public Transform GetSelectedTransform()
+        {
+            return _selectedEditable?.GetTransform();
+        }
+
+        public void NotifySelectedObjectMutated(string actionType = null)
+        {
+            if (_selectedEditable == null)
             {
-                cameraControl.SetInputEnabled(!enabled);
+                return;
             }
+
+            var effectiveActionType = string.IsNullOrWhiteSpace(actionType)
+                ? (_selectedEditable is RuntimeEditableSensorAdapter ? "set_sensor" : "set_avatar_transform")
+                : actionType;
+            RegisterManualMutation(effectiveActionType);
         }
 
         public bool TrySelectEditable(string objectId)
@@ -78,12 +95,18 @@ namespace VsensAgent.RuntimeEditing
             _selectedYawDegrees = editable.GetTransform() != null
                 ? AvatarRuntimeManager.GetLogicalRotationEuler(editable.GetTransform().rotation).y
                 : 0f;
+            SelectionChanged?.Invoke(SelectedObjectId);
             return true;
         }
 
         public bool TryMoveSelectionToGroundPoint(Vector3 worldPoint)
         {
             if (!IsEditModeEnabled || _selectedEditable == null)
+            {
+                return false;
+            }
+
+            if (_selectedEditable is RuntimeEditableSensorAdapter)
             {
                 return false;
             }
@@ -104,6 +127,11 @@ namespace VsensAgent.RuntimeEditing
                 return false;
             }
 
+            if (_selectedEditable is RuntimeEditableSensorAdapter)
+            {
+                return false;
+            }
+
             _selectedYawDegrees = yawDegrees;
             if (!_selectedEditable.TryRotateYaw(yawDegrees, out _))
             {
@@ -112,6 +140,11 @@ namespace VsensAgent.RuntimeEditing
 
             RegisterManualMutation("set_avatar_transform");
             return true;
+        }
+
+        public bool TrySelectEditableFromUi(string objectId)
+        {
+            return TrySelectEditable(objectId);
         }
 
         public bool TryHandlePointerRay(Ray ray)
@@ -130,13 +163,37 @@ namespace VsensAgent.RuntimeEditing
                 {
                     if (editableRegistry != null &&
                         editableRegistry.TryGetEditable(hit.collider != null ? hit.collider.gameObject : null, out var editable) &&
-                        editable != null)
+                        editable != null &&
+                        IsSceneSelectable(editable))
                     {
                         _selectedEditable = editable;
                         SelectedObjectId = editable.ObjectId;
                         _selectedYawDegrees = editable.GetTransform() != null
                             ? AvatarRuntimeManager.GetLogicalRotationEuler(editable.GetTransform().rotation).y
                             : _selectedYawDegrees;
+                        SelectionChanged?.Invoke(SelectedObjectId);
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            if (_selectedEditable is RuntimeEditableSensorAdapter)
+            {
+                foreach (var hit in hits)
+                {
+                    if (editableRegistry != null &&
+                        editableRegistry.TryGetEditable(hit.collider != null ? hit.collider.gameObject : null, out var editable) &&
+                        editable != null &&
+                        editable.ObjectId != _selectedEditable.ObjectId)
+                    {
+                        _selectedEditable = editable;
+                        SelectedObjectId = editable.ObjectId;
+                        _selectedYawDegrees = editable.GetTransform() != null
+                            ? AvatarRuntimeManager.GetLogicalRotationEuler(editable.GetTransform().rotation).y
+                            : _selectedYawDegrees;
+                        SelectionChanged?.Invoke(SelectedObjectId);
                         return true;
                     }
                 }
@@ -148,7 +205,8 @@ namespace VsensAgent.RuntimeEditing
             {
                 if (editableRegistry != null &&
                     editableRegistry.TryGetEditable(hit.collider != null ? hit.collider.gameObject : null, out var editable) &&
-                    editable != null)
+                    editable != null &&
+                    IsSceneSelectable(editable))
                 {
                     if (editable.ObjectId == _selectedEditable.ObjectId)
                     {
@@ -160,7 +218,17 @@ namespace VsensAgent.RuntimeEditing
                     _selectedYawDegrees = editable.GetTransform() != null
                         ? AvatarRuntimeManager.GetLogicalRotationEuler(editable.GetTransform().rotation).y
                         : _selectedYawDegrees;
+                    SelectionChanged?.Invoke(SelectedObjectId);
                     return true;
+                }
+
+                if (editableRegistry != null &&
+                    editableRegistry.TryGetEditable(hit.collider != null ? hit.collider.gameObject : null, out var sameEditable) &&
+                    sameEditable != null &&
+                    _selectedEditable != null &&
+                    sameEditable.ObjectId == _selectedEditable.ObjectId)
+                {
+                    continue;
                 }
 
                 if (TryMoveSelectionToGroundPoint(hit.point))
@@ -179,6 +247,11 @@ namespace VsensAgent.RuntimeEditing
             }
 
             return TryMoveSelectionToGroundPoint(ray.GetPoint(enter));
+        }
+
+        private static bool IsSceneSelectable(IRuntimeEditableObject editable)
+        {
+            return editable is not RuntimeEditableAvatarAdapter;
         }
 
         public void OverrideRuntimeCameraForTests(Camera camera)
@@ -226,23 +299,30 @@ namespace VsensAgent.RuntimeEditing
         {
             _selectedEditable = null;
             SelectedObjectId = string.Empty;
+            SelectionChanged?.Invoke(string.Empty);
         }
 
         private void EnsureDependencies()
         {
             if (avatarRuntimeManager == null)
             {
-                avatarRuntimeManager = ServiceLocator.Get<AvatarRuntimeManager>() ?? FindFirstObjectByType<AvatarRuntimeManager>();
+                avatarRuntimeManager = ServiceLocator.IsRegistered<AvatarRuntimeManager>()
+                    ? ServiceLocator.Get<AvatarRuntimeManager>()
+                    : FindFirstObjectByType<AvatarRuntimeManager>();
             }
 
             if (sceneRegistry == null)
             {
-                sceneRegistry = ServiceLocator.Get<SceneRegistry>() ?? FindFirstObjectByType<SceneRegistry>();
+                sceneRegistry = ServiceLocator.IsRegistered<SceneRegistry>()
+                    ? ServiceLocator.Get<SceneRegistry>()
+                    : FindFirstObjectByType<SceneRegistry>();
             }
 
             if (editableRegistry == null)
             {
-                editableRegistry = ServiceLocator.Get<RuntimeEditableObjectRegistry>() ?? GetComponent<RuntimeEditableObjectRegistry>();
+                editableRegistry = ServiceLocator.IsRegistered<RuntimeEditableObjectRegistry>()
+                    ? ServiceLocator.Get<RuntimeEditableObjectRegistry>()
+                    : GetComponent<RuntimeEditableObjectRegistry>();
                 if (editableRegistry == null)
                 {
                     editableRegistry = gameObject.AddComponent<RuntimeEditableObjectRegistry>();
@@ -260,7 +340,9 @@ namespace VsensAgent.RuntimeEditing
                 return runtimeCamera;
             }
 
-            var cameraControl = ServiceLocator.Get<VsensAgent.UserMainCameraControl>() ?? FindFirstObjectByType<VsensAgent.UserMainCameraControl>();
+            var cameraControl = ServiceLocator.IsRegistered<VsensAgent.UserMainCameraControl>()
+                ? ServiceLocator.Get<VsensAgent.UserMainCameraControl>()
+                : FindFirstObjectByType<VsensAgent.UserMainCameraControl>();
             if (cameraControl != null)
             {
                 runtimeCamera = cameraControl.GetComponent<Camera>();
@@ -270,6 +352,14 @@ namespace VsensAgent.RuntimeEditing
             return runtimeCamera;
         }
 
+        private void EnsureTransformHandleBridge()
+        {
+            if (GetComponent<RuntimeTransformHandleBridge>() == null)
+            {
+                gameObject.AddComponent<RuntimeTransformHandleBridge>();
+            }
+        }
+
         private void RegisterManualMutation(string actionType)
         {
             if (sceneRegistry == null || string.IsNullOrWhiteSpace(SelectedObjectId))
@@ -277,7 +367,8 @@ namespace VsensAgent.RuntimeEditing
                 return;
             }
 
-            sceneRegistry.RegisterMutation("runtime_edit", SelectedObjectId, actionType);
+            var mutationType = _selectedEditable is RuntimeEditableSensorAdapter ? "set_sensor" : actionType;
+            sceneRegistry.RegisterMutation("runtime_edit", SelectedObjectId, mutationType);
         }
     }
 }

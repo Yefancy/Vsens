@@ -1,0 +1,434 @@
+using System.IO;
+using System.Reflection;
+using Sensor;
+using TransformHandles;
+using UnityEngine;
+using System;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.PackageManager;
+#endif
+
+namespace VsensAgent.RuntimeEditing
+{
+    public class RuntimeTransformHandleBridge : MonoBehaviour
+    {
+        private const float DefaultAutoScaleSizeInPixels = 180f;
+
+        [SerializeField] private RuntimeEditModeController controller;
+        [SerializeField] private Camera handleCamera;
+        [SerializeField] private bool enableAutoScale = true;
+        [SerializeField] private float autoScaleSizeInPixels = DefaultAutoScaleSizeInPixels;
+        [SerializeField] private float handleScaleMultiplier = 1.1f;
+
+        private TransformHandleManager _handleManager;
+        private Handle _activeHandle;
+        private string _activeObjectId = string.Empty;
+        private Transform _activeTarget;
+        private bool _configurationFailed;
+        private TransformHandleSettings _runtimeSettings;
+        private HandleType _currentHandleType = HandleType.Position;
+
+        public Handle ActiveHandle => _activeHandle;
+        public HandleType CurrentHandleType => _currentHandleType;
+        public bool SupportsCurrentSelection => GetSelectedSensorTransform() != null;
+
+        private void Awake()
+        {
+            controller ??= GetComponent<RuntimeEditModeController>();
+        }
+
+        private void OnEnable()
+        {
+            controller ??= GetComponent<RuntimeEditModeController>();
+            if (controller != null)
+            {
+                controller.SelectionChanged -= OnSelectionChanged;
+                controller.SelectionChanged += OnSelectionChanged;
+            }
+
+            RefreshHandleBinding();
+        }
+
+        private void OnDisable()
+        {
+            if (controller != null)
+            {
+                controller.SelectionChanged -= OnSelectionChanged;
+            }
+
+            DestroyActiveHandle();
+        }
+
+        private void LateUpdate()
+        {
+            RefreshHandleBinding();
+            UpdateActiveHandleScale();
+        }
+
+        public void RefreshHandleBinding()
+        {
+            controller ??= GetComponent<RuntimeEditModeController>();
+            if (controller == null)
+            {
+                DestroyActiveHandle();
+                return;
+            }
+
+            if (!controller.IsEditModeEnabled)
+            {
+                DestroyActiveHandle();
+                return;
+            }
+
+            var selectedObjectId = controller.SelectedObjectId;
+            var sensorTransform = GetSelectedSensorTransform();
+            var sensor = sensorTransform != null ? sensorTransform.GetComponent<VirtualSensor>() : null;
+            if (sensor == null)
+            {
+                DestroyActiveHandle();
+                return;
+            }
+
+            if (_activeHandle != null && _activeObjectId == selectedObjectId && _activeTarget == sensor.transform)
+            {
+                return;
+            }
+
+            if (_configurationFailed)
+            {
+                return;
+            }
+
+            DestroyActiveHandle();
+
+            var manager = EnsureHandleManager();
+            if (manager == null)
+            {
+                return;
+            }
+
+            Handle handle = null;
+            try
+            {
+                handle = manager.CreateHandle(sensor.transform);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[RuntimeTransformHandleBridge] CreateHandle threw for '{sensor.name}': {ex}");
+                handle = TryCreateFallbackHandle(manager, sensor.transform);
+            }
+
+            if (handle == null)
+            {
+                Debug.LogWarning($"[RuntimeTransformHandleBridge] CreateHandle returned null for '{sensor.name}'.");
+                handle = TryCreateFallbackHandle(manager, sensor.transform);
+                if (handle == null)
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                ApplyHandleType(handle);
+                ApplyHandleDisplaySettings(handle);
+                handle.OnInteractionEndEvent += OnHandleInteractionEnd;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[RuntimeTransformHandleBridge] Handle post-config threw for '{sensor.name}': {ex}");
+                if (handle != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(handle.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(handle.gameObject);
+                    }
+                }
+                return;
+            }
+
+            _activeHandle = handle;
+            _activeObjectId = selectedObjectId;
+            _activeTarget = sensor.transform;
+        }
+
+        public void SetHandleType(HandleType handleType)
+        {
+            _currentHandleType = handleType;
+            if (_activeHandle == null)
+            {
+                return;
+            }
+
+            ApplyHandleType(_activeHandle);
+        }
+
+        private void OnSelectionChanged(string _)
+        {
+            RefreshHandleBinding();
+        }
+
+        private void OnHandleInteractionEnd(Handle _)
+        {
+            controller?.NotifySelectedObjectMutated("set_sensor");
+        }
+
+        private TransformHandleManager EnsureHandleManager()
+        {
+            if (_handleManager != null)
+            {
+                EnsureManagerInitialized(_handleManager);
+                _handleManager.mainCamera = ResolveCamera();
+                return _handleManager;
+            }
+
+            _handleManager = TransformHandleManager.Instance;
+            if (_handleManager == null)
+            {
+                return null;
+            }
+
+            if (!ConfigureHandleManager(_handleManager))
+            {
+                _configurationFailed = true;
+                return null;
+            }
+
+            EnsureManagerInitialized(_handleManager);
+            _handleManager.mainCamera = ResolveCamera();
+            return _handleManager;
+        }
+
+        private static void EnsureManagerInitialized(TransformHandleManager manager)
+        {
+            if (manager == null)
+            {
+                return;
+            }
+
+            var initializedField = manager.GetType().GetField("_isInitialized", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (initializedField != null && initializedField.GetValue(manager) is bool isInitialized && isInitialized)
+            {
+                return;
+            }
+
+            var initializeMethod = manager.GetType().GetMethod("InitializeManager", BindingFlags.Instance | BindingFlags.NonPublic);
+            initializeMethod?.Invoke(manager, null);
+        }
+
+        private Camera ResolveCamera()
+        {
+            if (handleCamera != null)
+            {
+                return handleCamera;
+            }
+
+            handleCamera = Camera.main ?? FindFirstObjectByType<Camera>();
+            return handleCamera;
+        }
+
+        private Transform GetSelectedSensorTransform()
+        {
+            var selectedTransform = controller != null ? controller.GetSelectedTransform() : null;
+            var sensor = selectedTransform != null ? selectedTransform.GetComponentInParent<VirtualSensor>() : null;
+            return sensor != null ? sensor.transform : null;
+        }
+
+        private void ApplyHandleDisplaySettings(Handle handle)
+        {
+            if (handle == null)
+            {
+                return;
+            }
+
+            handle.handleCamera = ResolveCamera();
+            handle.autoScale = false;
+            handle.AutoScaleSizeInPixels = autoScaleSizeInPixels;
+            handle.ScaleMultiplier = handleScaleMultiplier;
+        }
+
+        private void ApplyHandleType(Handle handle)
+        {
+            if (handle == null)
+            {
+                return;
+            }
+
+            TransformHandleManager.ChangeHandleType(handle, _currentHandleType);
+            handle.axes = HandleAxes.XYZ;
+            handle.space = _currentHandleType == HandleType.Rotation ? Space.Self : Space.World;
+        }
+
+        private void UpdateActiveHandleScale()
+        {
+            if (_activeHandle == null)
+            {
+                return;
+            }
+
+            var camera = ResolveCamera();
+            if (camera == null)
+            {
+                return;
+            }
+
+            if (!enableAutoScale)
+            {
+                _activeHandle.transform.localScale = Vector3.one * handleScaleMultiplier;
+                return;
+            }
+
+            float distance = GetDistanceAlongView(camera, _activeHandle.transform.position);
+            float worldSize;
+            if (camera.orthographic)
+            {
+                worldSize = (camera.orthographicSize * 2f) * (autoScaleSizeInPixels / Mathf.Max(1f, Screen.height));
+            }
+            else
+            {
+                worldSize = 2f * Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance * (autoScaleSizeInPixels / Mathf.Max(1f, Screen.height));
+            }
+
+            _activeHandle.transform.localScale = Vector3.one * worldSize * handleScaleMultiplier;
+        }
+
+        private static float GetDistanceAlongView(Camera camera, Vector3 worldPosition)
+        {
+            var toTarget = worldPosition - camera.transform.position;
+            float distance = Vector3.Dot(toTarget, camera.transform.forward);
+            if (distance <= 0f)
+            {
+                distance = toTarget.magnitude;
+            }
+
+            return Mathf.Max(0.05f, distance);
+        }
+
+        private bool ConfigureHandleManager(TransformHandleManager manager)
+        {
+#if UNITY_EDITOR
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(TransformHandleManager).Assembly);
+            if (packageInfo == null)
+            {
+                Debug.LogError("[RuntimeTransformHandleBridge] Could not locate transform handles package info.");
+                return false;
+            }
+
+            var packageAssetRoot = $"Packages/{packageInfo.name}";
+            var handlePrefabPath = $"{packageAssetRoot}/Runtime/Prefabs/NativeTransformHandle.prefab";
+            var ghostPrefabPath = $"{packageAssetRoot}/Runtime/Prefabs/Ghost.prefab";
+
+            var handlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(handlePrefabPath);
+            var ghostPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ghostPrefabPath);
+
+            if (handlePrefab == null || ghostPrefab == null)
+            {
+                Debug.LogError($"[RuntimeTransformHandleBridge] Failed to load handle prefabs. handle='{handlePrefabPath}', ghost='{ghostPrefabPath}'");
+                return false;
+            }
+
+            SetPrivateField(manager, "transformHandlePrefab", handlePrefab);
+            SetPrivateField(manager, "ghostPrefab", ghostPrefab);
+#endif
+            EnsureRuntimeSettings();
+            SetPrivateField(manager, "settings", _runtimeSettings);
+            SetPrivateField(manager, "layerMask", (LayerMask)(~0));
+            SetPrivateField(manager, "handleLayerName", string.Empty);
+            return true;
+        }
+
+        private void EnsureRuntimeSettings()
+        {
+            if (_runtimeSettings != null)
+            {
+                return;
+            }
+
+            _runtimeSettings = TransformHandleSettings.CreateDefault();
+            _runtimeSettings.hideFlags = HideFlags.HideAndDontSave;
+            SetPrivateField(_runtimeSettings, "enableShortcuts", false);
+            SetPrivateField(_runtimeSettings, "autoScaleHandles", enableAutoScale);
+            SetPrivateField(_runtimeSettings, "handleScale", handleScaleMultiplier);
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field == null)
+            {
+                return;
+            }
+
+            field.SetValue(target, value);
+        }
+
+        private static Handle TryCreateFallbackHandle(TransformHandleManager manager, Transform target)
+        {
+            if (manager == null || target == null)
+            {
+                return null;
+            }
+
+            var prefabField = manager.GetType().GetField("transformHandlePrefab", BindingFlags.Instance | BindingFlags.NonPublic);
+            var prefab = prefabField?.GetValue(manager) as GameObject;
+            if (prefab == null)
+            {
+                Debug.LogWarning("[RuntimeTransformHandleBridge] No transformHandlePrefab available for fallback handle creation.");
+                return null;
+            }
+
+            var instance = Instantiate(prefab);
+            var handle = instance != null ? instance.GetComponent<Handle>() : null;
+            if (handle == null)
+            {
+                if (instance != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(instance);
+                    }
+                    else
+                    {
+                        DestroyImmediate(instance);
+                    }
+                }
+
+                Debug.LogWarning("[RuntimeTransformHandleBridge] Fallback handle prefab does not contain a Handle component.");
+                return null;
+            }
+
+            handle.Enable(target);
+            return handle;
+        }
+
+        private void DestroyActiveHandle()
+        {
+            if (_activeHandle != null)
+            {
+                _activeHandle.OnInteractionEndEvent -= OnHandleInteractionEnd;
+                if (Application.isPlaying)
+                {
+                    Destroy(_activeHandle.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(_activeHandle.gameObject);
+                }
+            }
+
+            _activeHandle = null;
+            _activeObjectId = string.Empty;
+            _activeTarget = null;
+        }
+    }
+}

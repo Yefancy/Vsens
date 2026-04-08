@@ -107,6 +107,7 @@ namespace VsensAgent.SceneApi.V2
         public Vector3Data rotation;
         public string motion_id;
         public string motion_name;
+        public float motion_progress;
         public bool is_playing;
         public string pose_authority;
     }

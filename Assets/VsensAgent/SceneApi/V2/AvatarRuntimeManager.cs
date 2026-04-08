@@ -10,6 +10,8 @@ namespace VsensAgent.SceneApi.V2
 {
     public abstract class AvatarPlaybackDriver : MonoBehaviour
     {
+        private float _normalizedProgress;
+
         public string LoadedMotionId { get; protected set; } = string.Empty;
         public string LoadedMotionName { get; protected set; } = string.Empty;
         public string LastMotionJson { get; protected set; } = string.Empty;
@@ -17,6 +19,7 @@ namespace VsensAgent.SceneApi.V2
         public bool IsPlaying { get; protected set; }
         public float PlaybackSpeed { get; protected set; } = 1f;
         public bool Looping { get; protected set; } = true;
+        public virtual float NormalizedProgress => Looping ? Mathf.Repeat(_normalizedProgress, 1f) : Mathf.Clamp01(_normalizedProgress);
 
         public abstract bool TryLoadMotion(string motionId, string motionName, string motionJson, out string error);
 
@@ -56,6 +59,20 @@ namespace VsensAgent.SceneApi.V2
             LastMotionJson = string.Empty;
             HasLoadedMotion = false;
             IsPlaying = false;
+            _normalizedProgress = 0f;
+            error = null;
+            return true;
+        }
+
+        public virtual bool TrySetNormalizedProgress(float normalizedProgress, out string error)
+        {
+            if (!HasLoadedMotion)
+            {
+                error = "No motion loaded on avatar.";
+                return false;
+            }
+
+            _normalizedProgress = Mathf.Clamp01(normalizedProgress);
             error = null;
             return true;
         }
@@ -79,6 +96,20 @@ namespace VsensAgent.SceneApi.V2
             }
         }
 
+        public override float NormalizedProgress
+        {
+            get
+            {
+                if (controller == null || !controller.hasAnimation || controller.frameCount <= 0)
+                {
+                    return 0f;
+                }
+
+                var normalizedTime = controller.normalizedTime;
+                return Looping ? Mathf.Repeat(normalizedTime, 1f) : Mathf.Clamp01(normalizedTime);
+            }
+        }
+
         public override bool TryLoadMotion(string motionId, string motionName, string motionJson, out string error)
         {
             if (controller == null)
@@ -96,6 +127,7 @@ namespace VsensAgent.SceneApi.V2
             controller.setAnimation(motionName, motionJson);
             controller.globalTranslation = true;
             controller.time = 0f;
+            controller.normalizedTime = 0f;
             controller.isPlaying = false;
 
             LoadedMotionId = motionId ?? string.Empty;
@@ -158,6 +190,29 @@ namespace VsensAgent.SceneApi.V2
             controller.isPlaying = false;
             return base.TryClear(out error);
         }
+
+        public override bool TrySetNormalizedProgress(float normalizedProgress, out string error)
+        {
+            if (!base.TrySetNormalizedProgress(normalizedProgress, out error))
+            {
+                return false;
+            }
+
+            if (controller == null)
+            {
+                error = "SmplxBodyAnimationController is missing.";
+                return false;
+            }
+
+            EnsureControllerPrepared();
+            controller.normalizedTime = Mathf.Clamp01(normalizedProgress);
+            if (controller.hasAnimation)
+            {
+                controller.PlayAnimationToTime();
+            }
+
+            return true;
+        }
     }
 
     public class AvatarRuntimeState : MonoBehaviour
@@ -182,6 +237,12 @@ namespace VsensAgent.SceneApi.V2
 
     public class AvatarRuntimeManager : MonoBehaviour
     {
+        private class MotionCatalogEntry
+        {
+            public AvatarMotionQueryModel model;
+            public string motionJson;
+        }
+
         private const string DefaultAvatarId = "avatar_main";
         private const string MalePrefabKey = "smplx_male";
         private const string DefaultMalePrefabPath = "Assets/smplx/male.prefab";
@@ -203,7 +264,7 @@ namespace VsensAgent.SceneApi.V2
         private GameObject _avatarObject;
         private AvatarPlaybackDriver _playbackDriver;
         private AvatarRuntimeState _runtimeState;
-        private readonly Dictionary<string, AvatarMotionQueryModel> _motionCatalog = new Dictionary<string, AvatarMotionQueryModel>();
+        private readonly Dictionary<string, MotionCatalogEntry> _motionCatalog = new Dictionary<string, MotionCatalogEntry>();
         private string _poseAuthority = "agent";
 
         private void Awake()
@@ -381,13 +442,17 @@ namespace VsensAgent.SceneApi.V2
                 return false;
             }
 
-            _motionCatalog[motionId] = new AvatarMotionQueryModel
+            _motionCatalog[motionId] = new MotionCatalogEntry
             {
-                motion_id = motionId,
-                motion_name = motionName,
-                source_text = sourceText,
-                has_inline_json = !string.IsNullOrWhiteSpace(motionJson),
-                loaded_to_avatar_id = avatarId,
+                model = new AvatarMotionQueryModel
+                {
+                    motion_id = motionId,
+                    motion_name = motionName,
+                    source_text = sourceText,
+                    has_inline_json = !string.IsNullOrWhiteSpace(motionJson),
+                    loaded_to_avatar_id = avatarId,
+                },
+                motionJson = motionJson ?? string.Empty,
             };
 
             UpdateRuntimeState();
@@ -445,6 +510,56 @@ namespace VsensAgent.SceneApi.V2
             return ok;
         }
 
+        public float GetAvatarMotionNormalizedProgress(string avatarId)
+        {
+            if (!HasMatchingAvatar(avatarId) || _playbackDriver == null)
+            {
+                return 0f;
+            }
+
+            return _playbackDriver.NormalizedProgress;
+        }
+
+        public bool TrySetAvatarMotionNormalizedProgress(string avatarId, float normalizedProgress, out string error)
+        {
+            if (!HasMatchingAvatar(avatarId))
+            {
+                error = "Managed avatar not found.";
+                return false;
+            }
+
+            var ok = _playbackDriver.TrySetNormalizedProgress(normalizedProgress, out error);
+            UpdateRuntimeState();
+            return ok;
+        }
+
+        public bool TrySwitchAvatarMotion(string avatarId, string motionId, bool autoplay, out string error)
+        {
+            if (!_motionCatalog.TryGetValue(motionId, out var entry) || entry?.model == null)
+            {
+                error = $"Motion '{motionId}' is not available in the avatar catalog.";
+                return false;
+            }
+
+            if (!TryLoadAvatarMotion(
+                    avatarId,
+                    entry.model.motion_id,
+                    entry.model.motion_name,
+                    entry.motionJson,
+                    entry.model.source_text,
+                    out error))
+            {
+                return false;
+            }
+
+            if (!autoplay)
+            {
+                return true;
+            }
+
+            return TryPlayAvatarMotion(avatarId, 1f, true, out error);
+        }
+
         public List<AvatarQueryModel> GetAvatarQueryModels(SceneRegistry registry)
         {
             var result = new List<AvatarQueryModel>();
@@ -469,6 +584,7 @@ namespace VsensAgent.SceneApi.V2
                 rotation = ToData(GetLogicalRotationEuler(_avatarObject.transform.rotation)),
                 motion_id = _playbackDriver != null ? _playbackDriver.LoadedMotionId : string.Empty,
                 motion_name = _playbackDriver != null ? _playbackDriver.LoadedMotionName : string.Empty,
+                motion_progress = _playbackDriver != null ? _playbackDriver.NormalizedProgress : 0f,
                 is_playing = _playbackDriver != null && _playbackDriver.IsPlaying,
                 pose_authority = _poseAuthority,
             });
@@ -478,7 +594,7 @@ namespace VsensAgent.SceneApi.V2
 
         public List<AvatarMotionQueryModel> GetMotionQueryModels()
         {
-            return new List<AvatarMotionQueryModel>(_motionCatalog.Values);
+            return _motionCatalog.Values.Select(entry => entry.model).ToList();
         }
 
         public List<AvatarAttachmentPointQueryModel> GetAttachmentPointQueryModels(string avatarId)

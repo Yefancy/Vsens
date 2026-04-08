@@ -32,6 +32,17 @@ namespace VsensAgent.RuntimeEditing
             return _runtimeManager != null ? _runtimeManager.GetManagedAvatarObject()?.transform : null;
         }
 
+        public Vector3 GetForward()
+        {
+            var transform = GetTransform();
+            if (transform == null)
+            {
+                return Vector3.forward;
+            }
+
+            return AvatarRuntimeManager.GetLogicalForward(transform.rotation);
+        }
+
         public bool TryMoveToGroundPoint(Vector3 worldPoint, out string error)
         {
             if (_runtimeManager == null)
