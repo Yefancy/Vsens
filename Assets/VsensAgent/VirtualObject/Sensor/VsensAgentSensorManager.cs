@@ -1,19 +1,50 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Sensor;
 using UnityEngine;
 using VsensAgent.Core;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace VsensAgent.VirtualObject.Sensor
 {
     public class VsensAgentSensorManager : MonoBehaviour
     {
+        public readonly struct RecordingExportResult
+        {
+            public RecordingExportResult(bool saved, bool canceled, string directoryPath, int exportedFileCount)
+            {
+                this.saved = saved;
+                this.canceled = canceled;
+                this.directoryPath = directoryPath;
+                this.exportedFileCount = exportedFileCount;
+            }
+
+            public bool saved { get; }
+            public bool canceled { get; }
+            public string directoryPath { get; }
+            public int exportedFileCount { get; }
+        }
+
         public static VsensAgentSensorManager Instance { get; private set; }
 
         [SerializeField] private List<VirtualSensor> _registeredSensors = new List<VirtualSensor>();
         [Header("Test Settings")]
         [SerializeField] private Transform testParent; // Test parent for sensor creation
+
+        private SensorDataCenter _sensorDataCenter;
+        private bool _isRecording;
+        private float _recordingStartRealtime;
+        private Func<string> _editorExportDirectoryResolver;
+        private Func<string> _playerExportDirectoryResolver;
+
+        public bool IsRecording => _isRecording;
+        public float RecordingDurationSeconds => _isRecording ? Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime) : 0f;
 
         private void Awake() 
         {
@@ -30,13 +61,112 @@ namespace VsensAgent.VirtualObject.Sensor
             }
         }
 
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
+            if (ServiceLocator.IsRegistered<VsensAgentSensorManager>() && ServiceLocator.Get<VsensAgentSensorManager>() == this)
+            {
+                ServiceLocator.Unregister<VsensAgentSensorManager>();
+            }
+        }
+
         public VsensAgentSensorManager()
         {
             // 移除构造函数中的单例逻辑，改用Awake
         }
 
+        public bool StartSensorRecording()
+        {
+            var dataCenter = ResolveSensorDataCenter();
+            if (dataCenter == null)
+            {
+                Debug.LogError("[VsensAgentSensorManager] ❌ Cannot start recording: SensorDataCenter not found.");
+                return false;
+            }
+
+            dataCenter.StartRecording();
+            _isRecording = true;
+            _recordingStartRealtime = Time.realtimeSinceStartup;
+            Debug.Log("[VsensAgentSensorManager] ⏺️ Started sensor recording.");
+            return true;
+        }
+
+        public void SetEditorExportDirectoryResolver(Func<string> resolver)
+        {
+            _editorExportDirectoryResolver = resolver;
+        }
+
+        public void SetPlayerExportDirectoryResolver(Func<string> resolver)
+        {
+            _playerExportDirectoryResolver = resolver;
+        }
+
+        public RecordingExportResult StopSensorRecordingAndExport()
+        {
+            var dataCenter = ResolveSensorDataCenter();
+            if (dataCenter == null)
+            {
+                Debug.LogError("[VsensAgentSensorManager] ❌ Cannot stop recording: SensorDataCenter not found.");
+                _isRecording = false;
+                return new RecordingExportResult(false, false, string.Empty, 0);
+            }
+
+            var capturedData = dataCenter.StopRecording();
+            _isRecording = false;
+
+            if (capturedData == null || capturedData.Count == 0)
+            {
+                Debug.LogWarning("[VsensAgentSensorManager] ⚠️ No recorded sensor data to export.");
+                return new RecordingExportResult(false, false, string.Empty, 0);
+            }
+
+            var targetDirectory = ResolveExportDirectory();
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                Debug.Log("[VsensAgentSensorManager] ℹ️ Export canceled by user.");
+                return new RecordingExportResult(false, true, string.Empty, 0);
+            }
+
+            Directory.CreateDirectory(targetDirectory);
+
+            int exportedFiles = 0;
+            foreach (var pair in capturedData)
+            {
+                if (pair.Key == null || pair.Value == null || pair.Value.Count == 0)
+                {
+                    continue;
+                }
+
+                var sensor = pair.Key;
+                var safeSensorName = SanitizeFileName(sensor.name);
+                var safeSensorType = SanitizeFileName(sensor.SensorDefinition().getSensorName());
+                var filePath = Path.Combine(targetDirectory, $"{safeSensorName}_{safeSensorType}.csv");
+                using var writer = new StreamWriter(filePath);
+                writer.WriteLine($"tag,time,{sensor.SensorDefinition().getCsvHeader()}");
+                foreach (var sample in pair.Value)
+                {
+                    writer.WriteLine(sample.ToCsvLine());
+                }
+
+                exportedFiles++;
+            }
+
+            Debug.Log($"[VsensAgentSensorManager] 💾 Exported {exportedFiles} sensor file(s) to {targetDirectory}");
+            return new RecordingExportResult(exportedFiles > 0, false, targetDirectory, exportedFiles);
+        }
+
         public void RegisterSensor(VirtualSensor sensor)
         {
+            PruneRegisteredSensors();
+            if (sensor == null)
+            {
+                return;
+            }
+
             if (!_registeredSensors.Contains(sensor))
             {
                 _registeredSensors.Add(sensor);
@@ -47,19 +177,93 @@ namespace VsensAgent.VirtualObject.Sensor
             }
         }
 
+        public void UnregisterSensor(VirtualSensor sensor)
+        {
+            PruneRegisteredSensors();
+            if (sensor == null)
+            {
+                return;
+            }
+
+            _registeredSensors.Remove(sensor);
+        }
+
+        private SensorDataCenter ResolveSensorDataCenter()
+        {
+            _sensorDataCenter ??= SensorDataCenter.Instance;
+            _sensorDataCenter ??= FindFirstObjectByType<SensorDataCenter>();
+            return _sensorDataCenter;
+        }
+
+        private static string SanitizeFileName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "sensor";
+            }
+
+            var invalidChars = new string(Path.GetInvalidFileNameChars());
+            var invalidRegex = $"[{Regex.Escape(invalidChars)}]";
+            return Regex.Replace(value, invalidRegex, "_");
+        }
+
+        private string ResolveExportDirectory()
+        {
+            var baseDirectory = ResolveExportBaseDirectory();
+            if (string.IsNullOrWhiteSpace(baseDirectory))
+            {
+                return string.Empty;
+            }
+
+            return Path.Combine(baseDirectory, DefaultExportFolderName());
+        }
+
+        private string ResolveExportBaseDirectory()
+        {
+#if UNITY_EDITOR
+            if (_editorExportDirectoryResolver != null)
+            {
+                return _editorExportDirectoryResolver();
+            }
+
+            var selectedFolder = EditorUtility.SaveFolderPanel("Choose Folder For Recorded Sensor Data", "", string.Empty);
+            if (!string.IsNullOrWhiteSpace(selectedFolder))
+            {
+                return selectedFolder;
+            }
+
+            return string.Empty;
+#else
+            if (_playerExportDirectoryResolver != null)
+            {
+                return _playerExportDirectoryResolver();
+            }
+
+            return System.Environment.GetFolderPath(System.Environment.SpecialFolder.DesktopDirectory);
+#endif
+        }
+
+        private static string DefaultExportFolderName()
+        {
+            return $"vsens_sensor_recording_{System.DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
         public List<string> GetRegisteredSensorNames()
         {
+            PruneRegisteredSensors();
             return _registeredSensors.Select(sensor => sensor.SensorDefinition().getSensorName()).ToList();
         }
 
         public bool HasSensor(string sensorName)
         {
+            PruneRegisteredSensors();
             return _registeredSensors.Any(prefab => prefab.SensorDefinition().getSensorName() == sensorName);
         }
 
         [CanBeNull]
         public VirtualSensor CreateSensorByName(string sensorName, Transform parent)
         {
+            PruneRegisteredSensors();
             Debug.Log($"[SensorManager] 🔍 Attempting to create sensor: '{sensorName}'");
             Debug.Log($"[SensorManager] 📋 Available sensors: {string.Join(", ", GetRegisteredSensorNames())}");
             
@@ -72,6 +276,7 @@ namespace VsensAgent.VirtualObject.Sensor
                 
                 Debug.Log($"[SensorManager] ✅ Found matching sensor prefab, creating instance...");
                 var created = Instantiate(prefab, parent);
+                ResolveSensorDataCenter().RegisterSensor(created);
                 created.prefab = prefab.gameObject;
                 
                 string parentInfo = parent != null ? parent.name : "Global (null parent)";
@@ -83,11 +288,16 @@ namespace VsensAgent.VirtualObject.Sensor
             return null;
         }
         
-                // 获取测试用的父物体
+        // 获取测试用的父物体
         private Transform GetTestParent()
         {
             if (testParent != null) return testParent;
             return this.transform; // 如果没有指定，就用自己作为父物体
+        }
+
+        private void PruneRegisteredSensors()
+        {
+            _registeredSensors.RemoveAll(sensor => sensor == null);
         }
         
         #region #Test
@@ -140,9 +350,9 @@ namespace VsensAgent.VirtualObject.Sensor
                 {
                     // 给每个传感器一个稍微不同的位置，避免重叠
                     sensor.transform.localPosition += new Vector3(
-                        Random.Range(-0.5f, 0.5f), 
-                        Random.Range(-0.5f, 0.5f), 
-                        Random.Range(-0.5f, 0.5f)
+                        UnityEngine.Random.Range(-0.5f, 0.5f), 
+                        UnityEngine.Random.Range(-0.5f, 0.5f), 
+                        UnityEngine.Random.Range(-0.5f, 0.5f)
                     );
                 }
             }

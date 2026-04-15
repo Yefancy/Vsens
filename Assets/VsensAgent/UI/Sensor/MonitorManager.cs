@@ -22,6 +22,13 @@ namespace VsensAgent.UI
         [Header("Prefabs")]
         public GameObject sensorItemPrefab;             // 传感器Item预制件
         public GameObject avatarItemPrefab;             // AvatarItem预制件
+
+        [Header("Recording UI")]
+        public Button recordingButton;
+        public Image recordingButtonImage;
+        public TMP_Text recordingTimerText;
+        public Color recordingButtonIdleColor = Color.white;
+        public Color recordingButtonRecordingColor = new Color(0.85f, 0.2f, 0.2f, 1f);
         
         [Header("Settings")]
         public float updateInterval = 0.5f;             // 数据更新间隔（秒）
@@ -49,12 +56,18 @@ namespace VsensAgent.UI
             
             if (itemContainer == null && scrollRect != null)
                 itemContainer = scrollRect.content;
+
+            if (recordingButtonImage == null && recordingButton != null)
+                recordingButtonImage = recordingButton.GetComponent<Image>();
         }
 
         void Start()
         {
             // 获取传感器管理器实例
-            sensorManager = VsensAgentSensorManager.Instance;
+            sensorManager = VsensAgentSensorManager.Instance
+                ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                    ? ServiceLocator.Get<VsensAgentSensorManager>()
+                    : FindFirstObjectByType<VsensAgentSensorManager>());
             avatarRuntimeManager = ServiceLocator.IsRegistered<AvatarRuntimeManager>()
                 ? ServiceLocator.Get<AvatarRuntimeManager>()
                 : FindFirstObjectByType<AvatarRuntimeManager>();
@@ -74,6 +87,8 @@ namespace VsensAgent.UI
             
             // 初始化传感器列表
             RefreshSensorList();
+            BindRecordingUi();
+            RefreshRecordingUi();
             
             if (showDebugInfo)
                 Debug.Log("[SensorMonitorManager] ✅ Sensor Monitor initialized");
@@ -96,6 +111,8 @@ namespace VsensAgent.UI
                 RefreshSensorList();
                 nextRefreshTime = Time.time + listRefreshInterval;
             }
+
+            RefreshRecordingUi();
         }
 
         /// <summary>
@@ -275,6 +292,77 @@ namespace VsensAgent.UI
             
             if (showDebugInfo)
                 Debug.Log("[SensorMonitorManager] 🗑️ Cleared all sensor UI items");
+        }
+
+        private void BindRecordingUi()
+        {
+            if (recordingButton == null)
+            {
+                return;
+            }
+
+            recordingButton.onClick.RemoveListener(OnRecordingButtonClicked);
+            recordingButton.onClick.AddListener(OnRecordingButtonClicked);
+        }
+
+        private void OnRecordingButtonClicked()
+        {
+            if (sensorManager == null)
+            {
+                Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot toggle recording: sensor manager missing.");
+                return;
+            }
+
+            if (!sensorManager.IsRecording)
+            {
+                sensorManager.StartSensorRecording();
+                RefreshRecordingUi();
+                return;
+            }
+
+            var result = sensorManager.StopSensorRecordingAndExport();
+            if (result.saved)
+            {
+                Debug.Log($"[SensorMonitorManager] 💾 Sensor recording saved to {result.directoryPath}");
+            }
+            else if (result.canceled)
+            {
+                Debug.Log("[SensorMonitorManager] ℹ️ Sensor recording export canceled.");
+            }
+
+            RefreshRecordingUi();
+        }
+
+        private void RefreshRecordingUi()
+        {
+            if (recordingButtonImage != null)
+            {
+                recordingButtonImage.color = sensorManager != null && sensorManager.IsRecording
+                    ? recordingButtonRecordingColor
+                    : recordingButtonIdleColor;
+            }
+
+            if (recordingTimerText == null)
+            {
+                return;
+            }
+
+            bool isRecording = sensorManager != null && sensorManager.IsRecording;
+            if (recordingTimerText.gameObject.activeSelf != isRecording)
+            {
+                recordingTimerText.gameObject.SetActive(isRecording);
+            }
+
+            if (isRecording)
+            {
+                recordingTimerText.text = FormatDuration(sensorManager.RecordingDurationSeconds);
+            }
+        }
+
+        private static string FormatDuration(float seconds)
+        {
+            var duration = System.TimeSpan.FromSeconds(Mathf.Max(0f, seconds));
+            return $"{duration.Minutes:00}:{duration.Seconds:00}";
         }
 
         private void RefreshAvatarList()

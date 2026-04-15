@@ -329,6 +329,7 @@ namespace Sensor
 
         private void OnDestroy()
         {
+            SensorDataCenter.Instance?.UnregisterSensor(this);
             Destroy(graphChart);
             Detach();
         }
