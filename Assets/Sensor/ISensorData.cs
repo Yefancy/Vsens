@@ -1,4 +1,4 @@
-﻿using OVRSimpleJSON;
+﻿using SimpleJSON;
 
 namespace Sensor
 {

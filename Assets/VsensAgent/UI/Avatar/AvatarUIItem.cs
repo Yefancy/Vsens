@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using com.convalise.UnityMaterialSymbols;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -45,6 +46,7 @@ namespace VsensAgent.UI
         private readonly List<MotionUIItem> motionItems = new List<MotionUIItem>();
         private readonly List<string> cachedMotionCatalog = new List<string>();
         private string cachedSelectedMotionId = string.Empty;
+        private MaterialSymbol _playButtonImage;
 
         public void Initialize(AvatarQueryModel avatarModel)
         {
@@ -379,11 +381,15 @@ namespace VsensAgent.UI
                 return;
             }
 
-            var image = playButton.GetComponent<Image>();
-            if (image != null)
+            if (_playButtonImage == null)
             {
-                image.color = isPlaying ? playingColor : Color.white;
+                _playButtonImage = playButton.GetComponent<MaterialSymbol>();
             }
+            if (_playButtonImage != null)
+            {
+                _playButtonImage.color = isPlaying ? playingColor : Color.white;
+            }
+            
         }
 
         private void RefreshSlider(float normalizedProgress)

@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Oculus.Interaction;
-using Oculus.Interaction.Input;
 using SimpleJSON;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -11,7 +9,7 @@ using UnityEngine.Serialization;
 
 namespace Sensor
 {
-    public abstract class VirtualSensor : PointableElement
+    public abstract class VirtualSensor : MonoBehaviour
     {
         [Tooltip("to visualize the object when it is in active.")]
         [SerializeField] [AllowNull] public GameObject inActiveVisualization;
@@ -135,7 +133,7 @@ namespace Sensor
         }
         public Action<bool> onSelectedChanged;
 
-        protected override void Start()
+        protected virtual void Start()
         {
             if (registerOnStart)
             {
@@ -173,7 +171,6 @@ namespace Sensor
         /// if selectedTime bigger than durationForTransformMode, the sensor will be in transform mode,
         /// else it will be in selecting mode.
         /// </summary>
-        private IHand hand;
         private float selectedTime = -1;
         private SensorPlacement sensorPlacement;
         private Vector3 lastPosition;
@@ -230,55 +227,6 @@ namespace Sensor
         /// </summary>
         public abstract ISensorDefinition SensorDefinition();
 
-        public override void ProcessPointerEvent(PointerEvent evt)
-        {
-            if (!interactable) return;
-            var eventHand = DevicesRef.Instance.LeftHandGrabInteractor.Identifier == evt.Identifier ? DevicesRef.Instance.LeftHand : 
-                DevicesRef.Instance.RightHandGrabInteractor.Identifier == evt.Identifier ? DevicesRef.Instance.RightHand : null;
-            base.ProcessPointerEvent(evt);
-            if (evt.Type == PointerEventType.Select)
-            {
-                if (eventHand != null && (controlledHand == SensorAttachable.HandCondition.None || 
-                    (controlledHand == SensorAttachable.HandCondition.Left && eventHand != DevicesRef.Instance.LeftHand) ||
-                    (controlledHand == SensorAttachable.HandCondition.Right && eventHand != DevicesRef.Instance.RightHand)))
-                {
-                    return;
-                }
-                selectedTime = 0;
-                lastPosition = transform.position;
-                hand = eventHand;
-            }
-            else if (selectedTime >= 0 && evt.Type == PointerEventType.Unselect)
-            {
-                if (selectedTime < modeSwitchTime && canSelected)
-                {
-                    // selecting mode
-                    if (!isSelected || canDeselect)
-                    {
-                        isSelected = !isSelected;
-                    }
-                }
-                selectedTime = -1;
-                sensorPlacement = null;
-                hand = null;
-            }
-        }
-
-        protected override void PointableElementUpdated(PointerEvent evt)
-        {
-            if (evt.Type == PointerEventType.Unselect)
-            {
-                // do not force move
-                evt = new PointerEvent(evt.Identifier, PointerEventType.Cancel, evt.Pose, evt.Data);
-            }
-            if (evt.Type == PointerEventType.Move && selectedTime < modeSwitchTime + jitterTime)
-            {
-                // if the sensor is in transform mode (after jitter), it will process the Move event.
-                return;
-            }
-            base.PointableElementUpdated(evt);
-        }
-
         void Update()
         {
             // sensor is selected
@@ -291,7 +239,6 @@ namespace Sensor
                     if (sensorPlacement == null)
                     { // create sensor placement for the first time.
                         sensorPlacement = Rigidbody.AddComponent<SensorPlacement>();
-                        sensorPlacement.SetSensor(this, hand);
                     }
                     isSelected = false;
                     if (selectedTime <= modeSwitchTime + jitterTime)
@@ -330,7 +277,7 @@ namespace Sensor
         private void OnDestroy()
         {
             SensorDataCenter.Instance?.UnregisterSensor(this);
-            Destroy(graphChart);
+            if (graphChart != null) Destroy(graphChart);
             Detach();
         }
         

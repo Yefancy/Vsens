@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using Sensor;
 using XCharts.Runtime;
-using OVRSimpleJSON;
+using SimpleJSON;
 using VsensAgent.Core;
 using VsensAgent.RuntimeEditing;
 

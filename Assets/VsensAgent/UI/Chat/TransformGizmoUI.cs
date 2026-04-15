@@ -1,3 +1,4 @@
+using com.convalise.UnityMaterialSymbols;
 using UnityEngine;
 using UnityEngine.UI;
 using TransformHandles;
@@ -7,9 +8,9 @@ public class TransformGizmoUI : MonoBehaviour
     public ToggleGroup toggleGroup;
     
     public Toggle translateToggle;
-    public Image translateBG;
+    public MaterialSymbol translateBG;
     public Toggle rotateToggle;
-    public Image rotateBG;
+    public MaterialSymbol rotateBG;
 
     [Header("Colors")]
     public Color activeColor = new Color(0.32f, 0.78f, 0.32f, 1f);

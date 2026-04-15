@@ -1,7 +1,7 @@
 {
   "dependencies": {
+    "com.convalise.unity-material-symbols": "https://github.com/convalise/unity-material-symbols.git?path=/src/UnityMaterialSymbols/Assets/MaterialSymbols",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
-    "com.meta.xr.sdk.all": "74.0.3",
     "com.monitor1394.xcharts": "https://github.com/XCharts-Team/XCharts.git",
     "com.orkunmanap.runtime-transform-handles": "https://github.com/manaporkun/UnityRuntimeTransformHandles.git#upm",
     "com.unity.2d.sprite": "1.0.0",
@@ -16,9 +16,6 @@
     "com.unity.timeline": "1.8.10",
     "com.unity.ugui": "2.0.0",
     "com.unity.visualscripting": "1.9.9",
-    "com.unity.xr.management": "4.5.3",
-    "com.unity.xr.meta-openxr": "2.3.0",
-    "com.unity.xr.openxr": "1.16.1",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",

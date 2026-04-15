@@ -1,6 +1,6 @@
 using System;
 using JetBrains.Annotations;
-using OVRSimpleJSON;
+using SimpleJSON;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;

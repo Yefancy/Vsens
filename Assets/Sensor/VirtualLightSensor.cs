@@ -1,6 +1,6 @@
 using System;
-using OVRSimpleJSON;
 using Sensor.visualization;
+using SimpleJSON;
 using UnityEngine;
 
 namespace Sensor

@@ -25,8 +25,6 @@ using UnityEditor;
 
 // Joint recalculation
 using LightweightMatrixCSharp;
-using NUnit.Framework;
-using Oculus.Interaction;
 
 public class SMPLX : MonoBehaviour
 {

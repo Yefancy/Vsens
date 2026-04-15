@@ -312,14 +312,14 @@ namespace VsensAgent.UI
                 Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot toggle recording: sensor manager missing.");
                 return;
             }
-
+            
             if (!sensorManager.IsRecording)
             {
                 sensorManager.StartSensorRecording();
                 RefreshRecordingUi();
                 return;
             }
-
+            
             var result = sensorManager.StopSensorRecordingAndExport();
             if (result.saved)
             {
@@ -329,7 +329,7 @@ namespace VsensAgent.UI
             {
                 Debug.Log("[SensorMonitorManager] ℹ️ Sensor recording export canceled.");
             }
-
+            
             RefreshRecordingUi();
         }
 
@@ -341,18 +341,18 @@ namespace VsensAgent.UI
                     ? recordingButtonRecordingColor
                     : recordingButtonIdleColor;
             }
-
+            
             if (recordingTimerText == null)
             {
                 return;
             }
-
+            
             bool isRecording = sensorManager != null && sensorManager.IsRecording;
             if (recordingTimerText.gameObject.activeSelf != isRecording)
             {
                 recordingTimerText.gameObject.SetActive(isRecording);
             }
-
+            
             if (isRecording)
             {
                 recordingTimerText.text = FormatDuration(sensorManager.RecordingDurationSeconds);

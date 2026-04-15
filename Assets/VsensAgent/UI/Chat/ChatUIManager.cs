@@ -4,13 +4,13 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System;
+using com.convalise.UnityMaterialSymbols;
 using VsensAgent.Data;
 using VsensAgent.Audio;
 using VsensAgent.Network;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
 using VsensAgent.RuntimeEditing;
-using VsensAgent.SceneApi.V2;
 using TransformHandles;
 
 namespace VsensAgent.UI
@@ -56,7 +56,7 @@ namespace VsensAgent.UI
         private InputController inputController;      // 输入管理器
         private RuntimeEditModeController runtimeEditModeController;
         private RuntimeTransformHandleBridge runtimeTransformHandleBridge;
-        private Image _editModeButtonImage;
+        private MaterialSymbol _editModeButtonImage;
         private Color _editModeButtonDefaultColor = Color.white;
         private bool _editModeButtonDefaultColorInitialized;
         private bool _agentIsIdle = true;             // 跟踪Agent是否处于空闲状态（驱动发送/停止按钮）
@@ -125,8 +125,8 @@ namespace VsensAgent.UI
             // 订阅输入事件
             if (sendButton != null)
                 sendButton.onClick.AddListener(OnSendButtonClicked);
-            if (textInputField != null)
-                textInputField.onSubmit.AddListener(OnTextInputSubmit);
+            // if (textInputField != null)
+                // textInputField.onSubmit.AddListener(OnTextInputSubmit);
             if (toggleViewButton != null)
                 toggleViewButton.onClick.AddListener(OnToggleViewClicked);
             if (editModeButton != null)
@@ -145,8 +145,8 @@ namespace VsensAgent.UI
             
             if (sendButton != null)
                 sendButton.onClick.RemoveListener(OnSendButtonClicked);
-            if (textInputField != null)
-                textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
+            // if (textInputField != null)
+                // textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
             if (toggleViewButton != null)
                 toggleViewButton.onClick.RemoveListener(OnToggleViewClicked);
             if (editModeButton != null)
@@ -156,7 +156,7 @@ namespace VsensAgent.UI
         void Update()
         {
             // 检测输入框聚焦变化
-            CheckInputFocusChange();
+            CheckInputField();
             
             // 处理取消聚焦的输入
             HandleUnfocusInput();
@@ -413,21 +413,34 @@ namespace VsensAgent.UI
         /// <summary>
         /// 检测输入框聚焦状态变化并通知其他组件
         /// </summary>
-        private void CheckInputFocusChange()
+        private void CheckInputField()
         {
-            if (textInputField == null) return;
-            
-            bool isCurrentlyFocused = textInputField.isFocused;
-            
-            if (isCurrentlyFocused != wasInputFocused)
+            if (textInputField == null || !textInputField.isFocused)
+                return;
+
+            // 只处理“普通 Enter”
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
-                wasInputFocused = isCurrentlyFocused;
-                
-                // 通知输入管理器聊天焦点状态变化
-                inputController?.OnChatFocusChanged(isCurrentlyFocused);
-                
-                // 通知其他组件聚焦状态变化
-                OnInputFocusChanged?.Invoke(isCurrentlyFocused);
+                bool shift =
+                    Input.GetKey(KeyCode.LeftShift) ||
+                    Input.GetKey(KeyCode.RightShift);
+
+                if (shift)
+                {
+                    // 🔥 关键：完全不要处理，让 TMP 自己走
+                    return;
+                }
+
+                string text = textInputField.text.TrimEnd('\r', '\n');
+
+                if (string.IsNullOrWhiteSpace(text))
+                    return;
+
+                SendTextMessage();
+
+                textInputField.text = "";
+                textInputField.ActivateInputField();
+                textInputField.MoveTextEnd(false);
             }
         }
 
@@ -605,7 +618,7 @@ namespace VsensAgent.UI
 
             if (_editModeButtonImage == null)
             {
-                _editModeButtonImage = editModeButton.GetComponent<Image>();
+                _editModeButtonImage = editModeButton.GetComponent<MaterialSymbol>();
             }
 
             if (_editModeButtonImage == null)

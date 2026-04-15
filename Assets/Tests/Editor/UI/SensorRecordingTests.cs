@@ -1,6 +1,7 @@
 using System.IO;
 using NUnit.Framework;
 using Sensor;
+using SimpleJSON;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -153,9 +154,9 @@ namespace VsensAgent.Tests.Editor.UI
                 return _distance.ToString("F3");
             }
 
-            public OVRSimpleJSON.JSONNode serialize()
+            public JSONNode serialize()
             {
-                return new OVRSimpleJSON.JSONNumber(_distance);
+                return new JSONNumber(_distance);
             }
         }
     }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Oculus.Interaction.Input;
 using UnityEngine;
 
 namespace Sensor
@@ -25,25 +24,9 @@ namespace Sensor
         public HandCondition controlledHand = HandCondition.Both;
         public HashSet<VirtualSensor> sensors = new();
 
-        public virtual bool CanAttachTo(VirtualSensor sensor, IHand usedHand = null)
+        public virtual bool CanAttachTo(VirtualSensor sensor)
         {
-            if (usedHand == null) return true;
-            if (handCondition == HandCondition.Left && usedHand == DevicesRef.Instance.LeftHand)
-            {
-                return true;
-            }
-
-            if (handCondition == HandCondition.Right && usedHand == DevicesRef.Instance.RightHand)
-            {
-                return true;
-            }
-
-            if (handCondition == HandCondition.Both)
-            {
-                return true;
-            }
-            
-            return false;
+            return true;
         }
         
         public void OnAttachTo(VirtualSensor sensor)
