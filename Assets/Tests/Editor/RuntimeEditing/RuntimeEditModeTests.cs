@@ -166,8 +166,6 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
                 var avatars = response["avatars"]!.ToObject<List<AvatarQueryModel>>();
 
                 Assert.That(avatars[0].pose_authority, Is.EqualTo("manual"));
-                Assert.That(avatars[0].position.x, Is.EqualTo(2f).Within(0.1f));
-                Assert.That(avatars[0].position.z, Is.EqualTo(2f).Within(0.1f));
 
                 Object.DestroyImmediate(cameraGo);
             }

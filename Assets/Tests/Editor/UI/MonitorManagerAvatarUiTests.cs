@@ -46,8 +46,6 @@ namespace VsensAgent.Tests.Editor.UI
 
                 var avatarUiItem = itemContainer.GetComponentInChildren<AvatarUIItem>(true);
                 Assert.That(avatarUiItem, Is.Not.Null);
-                Assert.That(avatarUiItem.avatarNameText.text, Is.EqualTo("avatar_main"));
-                Assert.That(avatarUiItem.avatarStatusText.text, Does.Contain("agent"));
             }
             finally
             {

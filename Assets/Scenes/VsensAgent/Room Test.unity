@@ -16775,6 +16775,10 @@ PrefabInstance:
       propertyPath: m_LocalRotation.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4943235420889190471, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: open
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5442302700096525397, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: withState
       value: 1
@@ -16806,6 +16810,14 @@ PrefabInstance:
     - target: {fileID: 6572861586638100436, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: withState
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6660881423744810128, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6660881423744810128, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6712068516378358490, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: withState
@@ -16884,6 +16896,14 @@ PrefabInstance:
     - target: {fileID: 8241526466322944450, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: movable
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8960418501327386101, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8960418501327386101, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9160230757952294286, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: withState
@@ -42468,7 +42488,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2109391050}
   m_HandleRect: {fileID: 2109391049}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:

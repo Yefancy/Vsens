@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,57 +11,49 @@ namespace SojaExiles
 		public Animator openandclose;
 		public bool open;
 		public Transform Player;
+		public Collider Collider;
 
-		void OnMouseOver()
+		private void Awake()
 		{
+			if (Collider == null)
 			{
-				if (Player)
-				{
-					float dist = Vector3.Distance(Player.position, transform.position);
-					if (dist < 15)
-					{
-						if (open == false)
-						{
-							if (Input.GetMouseButtonDown(0))
-							{
-								StartCoroutine(opening());
-							}
-						}
-						else
-						{
-							if (Input.GetMouseButtonDown(0))
-							{
-								StartCoroutine(closing());
-							}
-						}
+				Collider = GetComponent<Collider>();
+			}
+		}
 
-					}
-				}
+		void OnMouseDown()
+		{
+			ApplyDoorState(!open);
+		}
 
+		private void ApplyDoorState(bool shouldOpen)
+		{
+			if (openandclose != null)
+			{
+				openandclose.Play(shouldOpen ? "Opening" : "Closing");
 			}
 
+			open = shouldOpen;
 		}
 
 		IEnumerator opening()
 		{
 			print("you are opening the door");
-			openandclose.Play("Opening");
-			open = true;
+			ApplyDoorState(true);
 			yield return new WaitForSeconds(.5f);
 		}
 
 		IEnumerator closing()
 		{
 			print("you are closing the door");
-			openandclose.Play("Closing");
-			open = false;
+			ApplyDoorState(false);
 			yield return new WaitForSeconds(.5f);
 		}
 
 		public void ToggleDoor(bool openDoor)
 		{
 			if (open == openDoor) return; // No change needed
-			StartCoroutine(open ? closing() : opening());
+			ApplyDoorState(openDoor);
 		}
 		
 #if UNITY_EDITOR
