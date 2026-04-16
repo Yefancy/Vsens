@@ -15,7 +15,7 @@ namespace VsensAgent.Core
             /// <summary>
             /// WebSocket 服务器地址
             /// </summary>
-            public const string WS_SERVER_URL = "ws://localhost:8765";
+            public const string WS_SERVER_URL = "localhost:8765";
             
             /// <summary>
             /// WebSocket 重连间隔（秒）
