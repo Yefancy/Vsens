@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace SojaExiles
 
@@ -16,38 +17,49 @@ namespace SojaExiles
 			open = false;
 		}
 
-		void OnMouseOver()
+		void Update()
 		{
+			if (!Input.GetMouseButtonDown(0))
 			{
-				if (Player)
-				{
-					float dist = Vector3.Distance(Player.position, transform.position);
-					if (dist < 15)
-					{
-						if (open == false)
-						{
-							if (Input.GetMouseButtonDown(0))
-							{
-								StartCoroutine(opening());
-							}
-						}
-						else
-						{
-							if (open == true)
-							{
-								if (Input.GetMouseButtonDown(0))
-								{
-									StartCoroutine(closing());
-								}
-							}
-
-						}
-
-					}
-				}
-
+				return;
 			}
 
+			if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+			{
+				return;
+			}
+
+			if (Player == null || Vector3.Distance(Player.position, transform.position) >= 15f)
+			{
+				return;
+			}
+
+			var camera = Camera.main ?? FindFirstObjectByType<Camera>();
+			if (camera == null)
+			{
+				return;
+			}
+
+			var ray = camera.ScreenPointToRay(Input.mousePosition);
+			if (!Physics.Raycast(ray, out var hit, Mathf.Infinity))
+			{
+				return;
+			}
+
+			var hitTransform = hit.collider != null ? hit.collider.transform : null;
+			if (hitTransform == null || (hitTransform != transform && !hitTransform.IsChildOf(transform)))
+			{
+				return;
+			}
+
+			if (!open)
+			{
+				StartCoroutine(opening());
+			}
+			else
+			{
+				StartCoroutine(closing());
+			}
 		}
 
 		IEnumerator opening()

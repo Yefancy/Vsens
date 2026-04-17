@@ -17,39 +17,22 @@ namespace SojaExiles
 			open = false;
 		}
 
-		void OnMouseOver()
+		void Update()
 		{
+			if (!BpsPointerRaycast.IsPrimaryClickOn(this, Player, 10f))
 			{
-				if (Player)
-				{
-					float dist = Vector3.Distance(Player.position, transform.position);
-					if (dist < 10)
-					{
-						print("object name");
-						if (open == false)
-						{
-							if (Input.GetMouseButtonDown(0))
-							{
-								StartCoroutine(opening());
-							}
-						}
-						else
-						{
-							if (open == true)
-							{
-								if (Input.GetMouseButtonDown(0))
-								{
-									StartCoroutine(closing());
-								}
-							}
-
-						}
-
-					}
-				}
-
+				return;
 			}
 
+			print("object name");
+			if (!open)
+			{
+				StartCoroutine(opening());
+			}
+			else
+			{
+				StartCoroutine(closing());
+			}
 		}
 
 		IEnumerator opening()

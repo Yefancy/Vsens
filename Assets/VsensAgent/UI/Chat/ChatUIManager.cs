@@ -42,6 +42,13 @@ namespace VsensAgent.UI
         public bool disableCameraWhenFocused = true;    // 聚焦时禁用相机控制
         public KeyCode unfocusKey = Constants.InputKeys.UNFOCUS;     // 取消聚焦的快捷键
 
+        [Header("多行输入框")]
+        public bool expandInputWhenMultiline = true;    // 多行输入时向上扩展输入区域
+        public float inputMinHeight = 60f;              // 输入区域最小高度
+        public float inputMaxHeight = 180f;             // 输入区域最大高度，避免吃掉过多历史消息
+        public float inputTextVerticalPadding = 24f;    // 输入框内文字上下留白
+        public float inputHistoryGap = 10f;             // 输入区域和历史消息区域之间的间距
+
         [Header("Agent状态显示")]
         public TMP_Text agentStatusText;               // 聊天窗口顶部的状态标签
 
@@ -65,6 +72,14 @@ namespace VsensAgent.UI
         private ChatInteractionOptionsView _activeInteractionOptionsView;
         private Action<string, string[], string> _clarificationReplySender = WsClient.SendClarificationReply;
         private Action<string, string[], string> _proposalSelectSender = WsClient.SendProposalSelect;
+        private RectTransform inputAreaRect;
+        private RectTransform inputFieldRect;
+        private RectTransform messageScrollRectTransform;
+        private LayoutElement inputFieldLayoutElement;
+        private float baseInputAreaHeight = -1f;
+        private float baseMessageScrollBottomInset = -1f;
+        private float lastAppliedInputAreaHeight = -1f;
+        private float lastMeasuredInputWidth = -1f;
         private const string DefaultInputPlaceholder = "Type your message here... Or R to record voice.";
 
         // 事件定义
@@ -84,6 +99,8 @@ namespace VsensAgent.UI
 
             // 初始化
             InitializeUI();
+            CacheInputResizeLayout();
+            UpdateChatInputLayout();
             runtimeEditModeController = ResolveRuntimeEditModeController(createIfMissing: true);
             runtimeTransformHandleBridge = ResolveRuntimeTransformHandleBridge(createIfMissing: true);
             transformGizmoUI?.Initialize(OnTransformHandleTypeSelected);
@@ -125,6 +142,8 @@ namespace VsensAgent.UI
             // 订阅输入事件
             if (sendButton != null)
                 sendButton.onClick.AddListener(OnSendButtonClicked);
+            if (textInputField != null)
+                textInputField.onValueChanged.AddListener(OnTextInputValueChanged);
             // if (textInputField != null)
                 // textInputField.onSubmit.AddListener(OnTextInputSubmit);
             if (toggleViewButton != null)
@@ -145,6 +164,8 @@ namespace VsensAgent.UI
             
             if (sendButton != null)
                 sendButton.onClick.RemoveListener(OnSendButtonClicked);
+            if (textInputField != null)
+                textInputField.onValueChanged.RemoveListener(OnTextInputValueChanged);
             // if (textInputField != null)
                 // textInputField.onSubmit.RemoveListener(OnTextInputSubmit);
             if (toggleViewButton != null)
@@ -155,6 +176,9 @@ namespace VsensAgent.UI
 
         void Update()
         {
+            // Keep global input gates in sync with the actual TMP focus state.
+            UpdateInputFocusState();
+
             // 检测输入框聚焦变化
             CheckInputField();
             
@@ -163,6 +187,8 @@ namespace VsensAgent.UI
             
             // 修改后的自动聚焦逻辑
             HandleAutoFocus();
+            UpdateInputFocusState();
+            UpdateChatInputLayoutForWidthChange();
             UpdateEditModeButtonBG();
             UpdateTransformGizmoUI();
         }
@@ -227,6 +253,111 @@ namespace VsensAgent.UI
 
             // 添加欢迎消息
             AddSystemMessage("VsensAgent ready, say hi! Or press R to record voice.");
+        }
+
+        private void CacheInputResizeLayout()
+        {
+            inputFieldRect = textInputField != null ? textInputField.GetComponent<RectTransform>() : null;
+            inputAreaRect = inputFieldRect != null ? inputFieldRect.parent as RectTransform : null;
+            inputFieldLayoutElement = textInputField != null ? textInputField.GetComponent<LayoutElement>() : null;
+            messageScrollRectTransform = messageScrollRect != null ? messageScrollRect.GetComponent<RectTransform>() : null;
+
+            if (inputAreaRect != null && baseInputAreaHeight < 0f)
+                baseInputAreaHeight = Mathf.Max(inputMinHeight, inputAreaRect.rect.height);
+
+            if (messageScrollRectTransform != null && baseMessageScrollBottomInset < 0f)
+                baseMessageScrollBottomInset = messageScrollRectTransform.offsetMin.y;
+        }
+
+        private void OnTextInputValueChanged(string _)
+        {
+            UpdateChatInputLayout();
+        }
+
+        private void UpdateChatInputLayoutForWidthChange()
+        {
+            float width = GetInputTextMeasureWidth();
+            if (width <= 0f || Mathf.Abs(width - lastMeasuredInputWidth) < 0.5f)
+                return;
+
+            lastMeasuredInputWidth = width;
+            UpdateChatInputLayout();
+        }
+
+        private void UpdateChatInputLayout()
+        {
+            if (!expandInputWhenMultiline || textInputField == null)
+                return;
+
+            CacheInputResizeLayout();
+            if (inputAreaRect == null)
+                return;
+
+            float minHeight = Mathf.Max(1f, inputMinHeight, baseInputAreaHeight);
+            float maxHeight = Mathf.Max(minHeight, inputMaxHeight);
+            float desiredInputAreaHeight = Mathf.Clamp(CalculateDesiredInputAreaHeight(), minHeight, maxHeight);
+
+            if (Mathf.Abs(desiredInputAreaHeight - lastAppliedInputAreaHeight) < 0.5f)
+                return;
+
+            lastAppliedInputAreaHeight = desiredInputAreaHeight;
+
+            inputAreaRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, desiredInputAreaHeight);
+
+            if (inputFieldLayoutElement != null)
+            {
+                float fieldHeight = Mathf.Max(1f, desiredInputAreaHeight - GetInputAreaVerticalPadding());
+                inputFieldLayoutElement.minHeight = fieldHeight;
+                inputFieldLayoutElement.preferredHeight = fieldHeight;
+            }
+
+            if (messageScrollRectTransform != null)
+            {
+                Vector2 offsetMin = messageScrollRectTransform.offsetMin;
+                offsetMin.y = desiredInputAreaHeight + Mathf.Max(0f, inputHistoryGap);
+                if (baseMessageScrollBottomInset >= 0f)
+                    offsetMin.y = Mathf.Max(offsetMin.y, baseMessageScrollBottomInset);
+                messageScrollRectTransform.offsetMin = offsetMin;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            textInputField.ForceLabelUpdate();
+        }
+
+        private float CalculateDesiredInputAreaHeight()
+        {
+            float width = GetInputTextMeasureWidth();
+            if (width <= 0f || textInputField.textComponent == null)
+                return inputMinHeight;
+
+            string measureText = string.IsNullOrEmpty(textInputField.text) ? " " : textInputField.text;
+            if (measureText.EndsWith("\n", StringComparison.Ordinal) ||
+                measureText.EndsWith("\r", StringComparison.Ordinal))
+            {
+                measureText += " ";
+            }
+
+            Vector2 preferred = textInputField.textComponent.GetPreferredValues(measureText, width, 0f);
+            float inputFieldHeight = Mathf.Ceil(preferred.y + Mathf.Max(0f, inputTextVerticalPadding));
+            return inputFieldHeight + GetInputAreaVerticalPadding();
+        }
+
+        private float GetInputTextMeasureWidth()
+        {
+            RectTransform textViewport = textInputField != null ? textInputField.textViewport : null;
+            if (textViewport != null && textViewport.rect.width > 0f)
+                return textViewport.rect.width;
+
+            if (inputFieldRect != null && inputFieldRect.rect.width > 0f)
+                return Mathf.Max(1f, inputFieldRect.rect.width - 24f);
+
+            return 0f;
+        }
+
+        private float GetInputAreaVerticalPadding()
+        {
+            var layoutGroup = inputAreaRect != null ? inputAreaRect.GetComponent<HorizontalLayoutGroup>() : null;
+            return layoutGroup != null ? layoutGroup.padding.vertical : 0f;
         }
 
         // ========== 消息处理方法 ==========
@@ -412,6 +543,20 @@ namespace VsensAgent.UI
 
         /// <summary>
         /// 检测输入框聚焦状态变化并通知其他组件
+        /// </summary>
+        private void UpdateInputFocusState()
+        {
+            bool isFocused = textInputField != null && textInputField.isFocused;
+            if (isFocused == wasInputFocused)
+                return;
+
+            wasInputFocused = isFocused;
+            inputController?.OnChatFocusChanged(isFocused);
+            OnInputFocusChanged?.Invoke(isFocused);
+        }
+
+        /// <summary>
+        /// 处理输入框自身按键行为
         /// </summary>
         private void CheckInputField()
         {

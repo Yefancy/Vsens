@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using SojaExiles;
 using UnityEngine;
 
 public class TableFlipR: MonoBehaviour {
@@ -12,29 +13,16 @@ public class TableFlipR: MonoBehaviour {
 		open = false;
 	}
 
-	void OnMouseOver (){
-		{
-			if (Player) {
-				float dist = Vector3.Distance (Player.position, transform.position);
-				if (dist < 15) {
-					if (open == false) {
-						if (Input.GetMouseButtonDown (0)) {
-							StartCoroutine (opening ());
-						}
-					} else {
-						if (open == true) {
-							if (Input.GetMouseButtonDown (0)) {
-								StartCoroutine (closing ());
-							}
-						}
-
-					}
-
-				}
-			}
-
+	void Update (){
+		if (!BpsPointerRaycast.IsPrimaryClickOn(this, Player, 15f)) {
+			return;
 		}
 
+		if (!open) {
+			StartCoroutine (opening ());
+		} else {
+			StartCoroutine (closing ());
+		}
 	}
 
 	IEnumerator opening(){

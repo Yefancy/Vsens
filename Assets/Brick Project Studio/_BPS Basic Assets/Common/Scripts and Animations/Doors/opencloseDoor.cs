@@ -21,8 +21,13 @@ namespace SojaExiles
 			}
 		}
 
-		void OnMouseDown()
+		void Update()
 		{
+			if (!BpsPointerRaycast.IsPrimaryClickOn(this))
+			{
+				return;
+			}
+
 			ApplyDoorState(!open);
 		}
 

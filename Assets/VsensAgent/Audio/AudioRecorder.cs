@@ -1,7 +1,10 @@
 using UnityEngine;
 using System.IO;
+using TMPro;
+using UnityEngine.EventSystems;
 using VsensAgent.Network;
 using VsensAgent.Core;
+using VsensAgent.UI;
 
 namespace VsensAgent.Audio
 {
@@ -45,13 +48,21 @@ namespace VsensAgent.Audio
 
     void Update()
     {
+        bool textInputFocused = IsTextInputFocused();
+
         // only respond to R key if input is enabled
-        if (!inputEnabled) 
+        if (!inputEnabled || textInputFocused)
         {
             // when input is disabled, ignore R key presses and releases warning.
             if (Input.GetKeyDown(Constants.InputKeys.VOICE_RECORD))
             {
-                Debug.LogWarning("[AudioRecorder] ⚠️ R key pressed but input is DISABLED (chat focused)");
+                Debug.LogWarning("[AudioRecorder] ⚠️ R key pressed while chat input is focused; recording shortcut ignored.");
+            }
+
+            if (textInputFocused && isRecording)
+            {
+                Debug.LogWarning("[AudioRecorder] ⚠️ Recording stopped because chat input gained focus.");
+                StopRecording();
             }
             return;
         }
@@ -182,6 +193,24 @@ namespace VsensAgent.Audio
     public bool IsInputEnabled()
     {
         return inputEnabled;
+    }
+
+    private bool IsTextInputFocused()
+    {
+        var chatUI = ServiceLocator.Get<ChatUIManager>();
+        if (chatUI != null && chatUI.IsInputFocused())
+            return true;
+
+        var eventSystem = EventSystem.current;
+        if (eventSystem == null || eventSystem.currentSelectedGameObject == null)
+            return false;
+
+        var selectedObject = eventSystem.currentSelectedGameObject;
+        var inputField = selectedObject.GetComponent<TMP_InputField>() ??
+                         selectedObject.GetComponentInParent<TMP_InputField>() ??
+                         selectedObject.GetComponentInChildren<TMP_InputField>();
+
+        return inputField != null && inputField.isFocused;
     }
 }
 }

@@ -3,6 +3,7 @@ using UnityEngine.EventSystems;
 using VsensAgent.Core;
 using VsensAgent.SceneApi.V2;
 using System;
+using System.Collections.Generic;
 
 namespace VsensAgent.RuntimeEditing
 {
@@ -16,6 +17,7 @@ namespace VsensAgent.RuntimeEditing
 
         private IRuntimeEditableObject _selectedEditable;
         private float _selectedYawDegrees;
+        private readonly List<RaycastResult> _uiRaycastResults = new();
 
         public bool IsEditModeEnabled { get; private set; }
         public string SelectedObjectId { get; private set; } = string.Empty;
@@ -266,7 +268,7 @@ namespace VsensAgent.RuntimeEditing
                 return;
             }
 
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            if (IsPointerBlockedByUi())
             {
                 return;
             }
@@ -293,6 +295,39 @@ namespace VsensAgent.RuntimeEditing
 
             var ray = camera.ScreenPointToRay(Input.mousePosition);
             TryHandlePointerRay(ray);
+        }
+
+        private bool IsPointerBlockedByUi()
+        {
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return false;
+            }
+
+            // Legacy and common desktop path.
+            if (eventSystem.IsPointerOverGameObject())
+            {
+                return true;
+            }
+
+            // Touch path requires explicit finger id.
+            for (var index = 0; index < Input.touchCount; index++)
+            {
+                if (eventSystem.IsPointerOverGameObject(Input.GetTouch(index).fingerId))
+                {
+                    return true;
+                }
+            }
+
+            // Fallback for modules where IsPointerOverGameObject can miss edge cases.
+            var pointerData = new PointerEventData(eventSystem)
+            {
+                position = Input.mousePosition
+            };
+            _uiRaycastResults.Clear();
+            eventSystem.RaycastAll(pointerData, _uiRaycastResults);
+            return _uiRaycastResults.Count > 0;
         }
 
         private void ClearSelection()
