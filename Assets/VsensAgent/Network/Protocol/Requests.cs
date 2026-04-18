@@ -6,6 +6,14 @@ namespace VsensAgent.Network.Protocol
     /// 转录请求 - 发送音频文件进行转录和回复
     /// </summary>
     [Serializable]
+    public class ClientHelloRequest
+    {
+        public string type = "client.hello";
+        public string username;
+        public string us;
+    }
+
+    [Serializable]
     public class TranscribeRequest
     {
         public string type;

@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
 namespace VsensAgent.Tests.Editor.Network
 {
@@ -12,6 +13,13 @@ namespace VsensAgent.Tests.Editor.Network
         {
             var method = typeof(WsClient).GetMethod("HandleMessage", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(method, Is.Not.Null, "Expected WsClient.HandleMessage to exist.");
+            return method;
+        }
+
+        private static MethodInfo ResolveBuildHelloRequest()
+        {
+            var method = typeof(WsClient).GetMethod("BuildClientHelloRequest", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, "Expected WsClient.BuildClientHelloRequest to exist.");
             return method;
         }
 
@@ -81,6 +89,27 @@ namespace VsensAgent.Tests.Editor.Network
                 {
                     "{\"type\":\"error\",\"message\":\"TimeoutError\",\"details\":\"Timed out waiting for scene.query_avatars\"}"
                 });
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void BuildClientHelloRequest_IncludesUsernameAndUs()
+        {
+            var go = new GameObject("WsClientTests");
+
+            try
+            {
+                var client = go.AddComponent<WsClient>();
+                var request = ResolveBuildHelloRequest().Invoke(client, new object[] { "alice", "lab_a" }) as ClientHelloRequest;
+
+                Assert.That(request, Is.Not.Null);
+                Assert.That(request.type, Is.EqualTo("client.hello"));
+                Assert.That(request.username, Is.EqualTo("alice"));
+                Assert.That(request.us, Is.EqualTo("lab_a"));
             }
             finally
             {

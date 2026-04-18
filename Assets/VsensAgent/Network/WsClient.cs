@@ -22,6 +22,13 @@ namespace VsensAgent.Network
 
         private bool isConnecting = false;
         public bool IsConnecting => isConnecting;
+        public string ClientId => clientId;
+
+        private Action pendingOnConnected;
+        private Action<string> pendingOnFailed;
+        private string pendingUsername = string.Empty;
+        private string pendingUs = string.Empty;
+        private string clientId = string.Empty;
 
         // 事件定义
         public static event Action<AgentReplyMessage> OnAgentReply; // 统一的Agent回复事件（语音+文字）
@@ -42,7 +49,7 @@ namespace VsensAgent.Network
             ServiceLocator.Register<WsClient>(this);
         }
 
-        public void ConnectToServer(string serverUrl = null, Action onConnected = null, Action<string> onFailed = null)
+        public void ConnectToServer(string serverUrl = null, string username = null, string us = null, Action onConnected = null, Action<string> onFailed = null)
         {
             if (string.IsNullOrEmpty(serverUrl))
             {
@@ -51,6 +58,10 @@ namespace VsensAgent.Network
 
             var wsUrl = "ws://" + serverUrl;
             Debug.Log($"[WS] Connecting to {wsUrl}...");
+            pendingUsername = username ?? string.Empty;
+            pendingUs = us ?? string.Empty;
+            pendingOnConnected = onConnected;
+            pendingOnFailed = onFailed;
 
             _ = ConnectWebSocket(wsUrl, onConnected, onFailed);
         }
@@ -89,14 +100,14 @@ namespace VsensAgent.Network
                     isTryingReconnect = false;
 
                     Debug.Log("[WS] ✅ Connected.");
-                    onConnected?.Invoke();
+                    SendClientHello();
                 };
 
                 websocket.OnError += (e) =>
                 {
                     isConnecting = false;
                     Debug.LogError("[WS] ❌ Error: " + e);
-                    onFailed?.Invoke(e);
+                    pendingOnFailed?.Invoke(e);
                 };
 
                 websocket.OnClose += (e) =>
@@ -381,6 +392,21 @@ namespace VsensAgent.Network
                             $"[WS] ⚙️ Server config received: heartbeat={cfgMsg.heartbeat_interval_s}s, tts_in_push={cfgMsg.tts_in_push}");
                         break;
 
+                    case "client.hello_ack":
+                        var helloAck = JsonConvert.DeserializeObject<ClientHelloAckMessage>(json);
+                        if (helloAck == null)
+                        {
+                            Debug.LogWarning($"[WS] Failed to deserialize client.hello_ack payload: {json}");
+                            break;
+                        }
+
+                        clientId = helloAck.client_id ?? string.Empty;
+                        Debug.Log($"[WS] Client hello acknowledged: client_id={clientId}, username={helloAck.username}, us={helloAck.us}");
+                        pendingOnConnected?.Invoke();
+                        pendingOnConnected = null;
+                        pendingOnFailed = null;
+                        break;
+
                     default:
                         // 静默忽略未知消息类型，保持前向兼容性（不崩溃）
                         Debug.Log($"[WS] Ignoring unknown message type: '{typeWrapper.type}'");
@@ -648,6 +674,26 @@ namespace VsensAgent.Network
             {
                 Debug.LogError($"[WS] Failed during dispatch '{dispatchName}': {ex.Message}\nPayload: {payload}\n{ex}");
             }
+        }
+
+        private ClientHelloRequest BuildClientHelloRequest(string username, string us)
+        {
+            return new ClientHelloRequest
+            {
+                username = username ?? string.Empty,
+                us = us ?? string.Empty,
+            };
+        }
+
+        private void SendClientHello()
+        {
+            if (websocket == null || websocket.State != WebSocketState.Open)
+            {
+                return;
+            }
+
+            var payload = BuildClientHelloRequest(pendingUsername, pendingUs);
+            websocket.SendText(JsonConvert.SerializeObject(payload));
         }
 
         private async void OnApplicationQuit()

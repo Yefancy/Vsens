@@ -7,6 +7,16 @@ namespace VsensAgent.Network.Protocol
     /// 消息类型包装器 - 用于识别消息类型
     /// </summary>
     [Serializable]
+    public class ClientHelloAckMessage
+    {
+        public string type;
+        public string client_id;
+        public string username;
+        public string us;
+        public string connected_at;
+    }
+
+    [Serializable]
     public class MessageTypeWrapper
     {
         public string type;

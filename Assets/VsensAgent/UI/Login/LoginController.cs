@@ -37,6 +37,8 @@ public class LoginController : MonoBehaviour
 
         wsClient?.ConnectToServer(
             serverInput != null ? serverInput.text : null,
+            usernameInput != null ? usernameInput.text : null,
+            usInput != null ? usInput.text : null,
             onConnected: OnConnected,
             onFailed: OnConnectFailed
         );
