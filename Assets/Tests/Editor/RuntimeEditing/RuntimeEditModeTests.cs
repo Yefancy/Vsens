@@ -127,7 +127,7 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
         }
 
         [Test]
-        public void RuntimeEditMode_TryHandlePointerRay_MovesAvatarWithoutFloorCollider()
+        public void RuntimeEditMode_TryHandlePointerRay_DoesNotMoveSelectedAvatar()
         {
             ServiceLocator.Clear();
             var root = new GameObject("RuntimeEditPointerRoot");
@@ -159,13 +159,15 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
 
                 var ray = new Ray(camera.transform.position, (new Vector3(2f, 0f, 2f) - camera.transform.position).normalized);
 
-                Assert.That(controller.TryHandlePointerRay(ray), Is.True);
+                Assert.That(controller.TryHandlePointerRay(ray), Is.False);
 
                 var queryService = new SceneQueryService(registry, runtime);
                 var response = Newtonsoft.Json.Linq.JObject.FromObject(queryService.QueryAvatars());
                 var avatars = response["avatars"]!.ToObject<List<AvatarQueryModel>>();
 
-                Assert.That(avatars[0].pose_authority, Is.EqualTo("manual"));
+                Assert.That(avatars[0].pose_authority, Is.EqualTo("agent"));
+                Assert.That(avatars[0].position.x, Is.EqualTo(0f).Within(0.001f));
+                Assert.That(avatars[0].position.z, Is.EqualTo(0f).Within(0.001f));
 
                 Object.DestroyImmediate(cameraGo);
             }
@@ -211,6 +213,57 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
                 var ray = new Ray(avatarObject.transform.position + new Vector3(0f, 0f, -5f), Vector3.forward);
                 Assert.That(controller.TryHandlePointerRay(ray), Is.False);
                 Assert.That(controller.SelectedObjectId, Is.EqualTo(string.Empty));
+            }
+            finally
+            {
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEditMode_TryHandlePointerRay_DoesNotSwitchFromSensorToAvatar()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RuntimeEditAvatarSceneSwitchRoot");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+
+            try
+            {
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    new Vector3(0f, 0f, 0f),
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                var controller = root.AddComponent<RuntimeEditModeController>();
+                controller.Configure(runtime);
+                controller.SetEditMode(true);
+
+                var sensorObject = new GameObject("IMU-AvatarSwitchGuard");
+                sensorObject.AddComponent<TestEditableSensor>();
+
+                Assert.That(controller.TrySelectEditable("IMU-AvatarSwitchGuard"), Is.True);
+                Assert.That(controller.SelectedObjectId, Is.EqualTo("IMU-AvatarSwitchGuard"));
+
+                var avatarObject = runtime.GetManagedAvatarObject();
+                Assert.That(avatarObject, Is.Not.Null);
+                var collider = avatarObject.GetComponent<Collider>();
+                if (collider == null)
+                {
+                    collider = avatarObject.AddComponent<BoxCollider>();
+                }
+
+                var ray = new Ray(avatarObject.transform.position + new Vector3(0f, 0f, -5f), Vector3.forward);
+                Assert.That(controller.TryHandlePointerRay(ray), Is.False);
+                Assert.That(controller.SelectedObjectId, Is.EqualTo("IMU-AvatarSwitchGuard"));
+
+                Object.DestroyImmediate(sensorObject);
             }
             finally
             {
@@ -303,6 +356,70 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
                     Object.DestroyImmediate(manager.gameObject);
                 }
 
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEditMode_SelectingAvatar_CreatesRuntimeTransformHandle()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RuntimeEditAvatarHandleRoot");
+            var cameraGo = new GameObject("RuntimeEditAvatarHandleCamera");
+            var prefab = new GameObject("AvatarPrefab");
+            prefab.AddComponent<TestAvatarPlaybackDriver>();
+
+            try
+            {
+                var camera = cameraGo.AddComponent<Camera>();
+                camera.tag = "MainCamera";
+                camera.transform.position = new Vector3(0f, 2f, -4f);
+                camera.transform.LookAt(Vector3.zero);
+
+                root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar(
+                    "avatar_main",
+                    "smplx_male",
+                    new Vector3(0f, 0f, 0f),
+                    Vector3.zero,
+                    out var spawnError), Is.True, spawnError);
+
+                var controller = root.AddComponent<RuntimeEditModeController>();
+                controller.Configure(runtime);
+                controller.OverrideRuntimeCameraForTests(camera);
+                controller.SetEditMode(true);
+
+                Assert.That(controller.TrySelectEditable("avatar_main"), Is.True);
+
+                var bridge = root.GetComponent<RuntimeTransformHandleBridge>();
+                Assert.That(bridge, Is.Not.Null);
+                Assert.That(bridge.SupportsCurrentSelection, Is.True);
+                bridge.RefreshHandleBinding();
+
+                var handle = bridge.ActiveHandle ?? Object.FindFirstObjectByType<Handle>();
+                var avatarObject = runtime.GetManagedAvatarObject();
+                Assert.That(handle, Is.Not.Null);
+                Assert.That(handle.type, Is.EqualTo(HandleType.Position));
+                Assert.That(handle.target, Is.EqualTo(avatarObject.transform));
+
+                if (handle != null)
+                {
+                    Object.DestroyImmediate(handle.gameObject);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                var manager = Object.FindFirstObjectByType<TransformHandleManager>();
+                if (manager != null)
+                {
+                    Object.DestroyImmediate(manager.gameObject);
+                }
+
+                Object.DestroyImmediate(prefab);
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
             }

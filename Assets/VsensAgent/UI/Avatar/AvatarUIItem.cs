@@ -24,6 +24,7 @@ namespace VsensAgent.UI
         public GameObject detailContainer;       
         public Slider animationSlider;
         public Button playButton;
+        public Button deleteButton;
         public GameObject motionContainer;
         
         [Header("Display Settings")]
@@ -47,9 +48,11 @@ namespace VsensAgent.UI
         private readonly List<string> cachedMotionCatalog = new List<string>();
         private string cachedSelectedMotionId = string.Empty;
         private MaterialSymbol _playButtonImage;
+        private Action<string> removeRequested;
 
         public void Initialize(AvatarQueryModel avatarModel)
         {
+            EnsureDeleteButton();
             avatar = avatarModel;
             isInitialized = avatarModel != null;
             BindUiEvents();
@@ -63,6 +66,13 @@ namespace VsensAgent.UI
             isInitialized = avatarModel != null;
             UpdateDisplay();
             UpdateSelectionHighlight();
+        }
+
+        public void SetRemoveHandler(Action<string> handler)
+        {
+            EnsureDeleteButton();
+            removeRequested = handler;
+            BindDeleteButton();
         }
 
         public void UpdateDisplay()
@@ -147,6 +157,7 @@ namespace VsensAgent.UI
             return (detailToggle != null && target.transform.IsChildOf(detailToggle.transform))
                    || (animationSlider != null && target.transform.IsChildOf(animationSlider.transform))
                    || (playButton != null && target.transform.IsChildOf(playButton.transform))
+                   || (deleteButton != null && target.transform.IsChildOf(deleteButton.transform))
                    || (motionContainer != null && target.transform.IsChildOf(motionContainer.transform));
         }
 
@@ -270,6 +281,8 @@ namespace VsensAgent.UI
 
         private void Awake()
         {
+            EnsureDeleteButton();
+
             if (selectionHighlight != null)
             {
                 selectionHighlight.color = unselectedHighlightColor;
@@ -300,6 +313,10 @@ namespace VsensAgent.UI
         private void OnDestroy()
         {
             UnsubscribeSelectionEvents();
+            if (deleteButton != null)
+            {
+                deleteButton.onClick.RemoveListener(OnDeleteButtonClicked);
+            }
         }
 
         private void OnDetailToggleValueChanged(bool isOn)
@@ -319,6 +336,8 @@ namespace VsensAgent.UI
                 playButton.onClick.RemoveListener(OnPlayButtonClicked);
                 playButton.onClick.AddListener(OnPlayButtonClicked);
             }
+
+            BindDeleteButton();
 
             if (animationSlider != null)
             {
@@ -351,6 +370,148 @@ namespace VsensAgent.UI
             var entry = new EventTrigger.Entry { eventID = type };
             entry.callback.AddListener(data => callback(data));
             trigger.triggers.Add(entry);
+        }
+
+        private void BindDeleteButton()
+        {
+            if (deleteButton == null)
+            {
+                return;
+            }
+
+            deleteButton.onClick.RemoveListener(OnDeleteButtonClicked);
+            deleteButton.onClick.AddListener(OnDeleteButtonClicked);
+        }
+
+        private void OnDeleteButtonClicked()
+        {
+            if (avatar == null || string.IsNullOrWhiteSpace(avatar.avatar_id))
+            {
+                return;
+            }
+
+            removeRequested?.Invoke(avatar.avatar_id);
+        }
+
+        private void EnsureDeleteButton()
+        {
+            if (deleteButton == null)
+            {
+                var existing = transform.Find("DeleteButton");
+                if (existing != null)
+                {
+                    deleteButton = existing.GetComponent<Button>();
+                }
+            }
+
+            if (deleteButton == null)
+            {
+                var buttonObject = new GameObject("DeleteButton", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+                buttonObject.transform.SetParent(transform, false);
+                deleteButton = buttonObject.GetComponent<Button>();
+            }
+
+            PlaceDeleteButtonInHeader();
+
+            var image = deleteButton.GetComponent<Image>();
+            if (image == null)
+            {
+                image = deleteButton.gameObject.AddComponent<Image>();
+            }
+            image.color = new Color(0.75f, 0.16f, 0.16f, 0.95f);
+
+            var layout = deleteButton.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = deleteButton.gameObject.AddComponent<LayoutElement>();
+            }
+            layout.preferredWidth = 20f;
+            layout.preferredHeight = 20f;
+            layout.minWidth = 20f;
+            layout.minHeight = 20f;
+
+            var labelTransform = deleteButton.transform.Find("Label");
+            var labelObject = labelTransform != null
+                ? labelTransform.gameObject
+                : new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(deleteButton.transform, false);
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            if (label == null)
+            {
+                label = labelObject.AddComponent<TextMeshProUGUI>();
+            }
+            label.text = "X";
+            label.alignment = TextAlignmentOptions.Center;
+            label.fontSize = 16f;
+            label.color = Color.white;
+            if (TMP_Settings.defaultFontAsset != null)
+            {
+                label.font = TMP_Settings.defaultFontAsset;
+            }
+        }
+
+        private void PlaceDeleteButtonInHeader()
+        {
+            if (deleteButton == null)
+            {
+                return;
+            }
+
+            var headerParent = detailToggle != null && detailToggle.transform.parent != null
+                ? detailToggle.transform.parent
+                : (statusIndicator != null && statusIndicator.transform.parent != null ? statusIndicator.transform.parent : transform);
+
+            if (deleteButton.transform.parent != headerParent)
+            {
+                deleteButton.transform.SetParent(headerParent, false);
+            }
+
+            if (detailToggle != null)
+            {
+                deleteButton.transform.SetSiblingIndex(detailToggle.transform.GetSiblingIndex() + 1);
+            }
+
+            var buttonRect = deleteButton.GetComponent<RectTransform>();
+            var toggleRect = detailToggle != null ? detailToggle.GetComponent<RectTransform>() : null;
+            if (buttonRect == null || toggleRect == null)
+            {
+                return;
+            }
+
+            const float spacing = 4f;
+            var size = toggleRect.sizeDelta;
+            if (size.x <= 0f) size.x = 20f;
+            if (size.y <= 0f) size.y = 20f;
+
+            buttonRect.anchorMin = toggleRect.anchorMin;
+            buttonRect.anchorMax = toggleRect.anchorMax;
+            buttonRect.pivot = toggleRect.pivot;
+            buttonRect.sizeDelta = size;
+            buttonRect.localScale = Vector3.one;
+
+            var togglePosition = toggleRect.anchoredPosition;
+            var buttonPosition = togglePosition + new Vector2(size.x + spacing, 0f);
+            var parentRect = headerParent as RectTransform;
+            if (parentRect != null && parentRect.rect.width > 0f)
+            {
+                var buttonRight = buttonPosition.x + size.x * (1f - buttonRect.pivot.x);
+                var overflow = buttonRight - parentRect.rect.width;
+                if (overflow > 0f)
+                {
+                    var shift = overflow + spacing;
+                    togglePosition.x -= shift;
+                    buttonPosition.x -= shift;
+                    toggleRect.anchoredPosition = togglePosition;
+                }
+            }
+
+            buttonRect.anchoredPosition = buttonPosition;
         }
 
         private void RefreshAvatarModelFromRuntime()

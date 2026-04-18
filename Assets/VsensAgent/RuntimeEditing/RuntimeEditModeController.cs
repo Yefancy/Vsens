@@ -13,7 +13,6 @@ namespace VsensAgent.RuntimeEditing
         [SerializeField] private RuntimeEditableObjectRegistry editableRegistry;
         [SerializeField] private SceneRegistry sceneRegistry;
         [SerializeField] private Camera runtimeCamera;
-        [SerializeField] private float rotationSensitivity = 140f;
 
         private IRuntimeEditableObject _selectedEditable;
         private float _selectedYawDegrees;
@@ -76,6 +75,8 @@ namespace VsensAgent.RuntimeEditing
             var effectiveActionType = string.IsNullOrWhiteSpace(actionType)
                 ? (_selectedEditable is RuntimeEditableSensorAdapter ? "set_sensor" : "set_avatar_transform")
                 : actionType;
+
+            _selectedEditable.CommitTransformMutation(out _);
             RegisterManualMutation(effectiveActionType);
         }
 
@@ -149,6 +150,16 @@ namespace VsensAgent.RuntimeEditing
             return TrySelectEditable(objectId);
         }
 
+        public void ClearSelectionIfSelected(string objectId)
+        {
+            if (string.IsNullOrWhiteSpace(objectId) || !string.Equals(SelectedObjectId, objectId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            ClearSelection();
+        }
+
         public bool TryHandlePointerRay(Ray ray)
         {
             if (!IsEditModeEnabled)
@@ -188,6 +199,7 @@ namespace VsensAgent.RuntimeEditing
                     if (editableRegistry != null &&
                         editableRegistry.TryGetEditable(hit.collider != null ? hit.collider.gameObject : null, out var editable) &&
                         editable != null &&
+                        IsSceneSelectable(editable) &&
                         editable.ObjectId != _selectedEditable.ObjectId)
                     {
                         _selectedEditable = editable;
@@ -233,22 +245,10 @@ namespace VsensAgent.RuntimeEditing
                     continue;
                 }
 
-                if (TryMoveSelectionToGroundPoint(hit.point))
-                {
-                    return true;
-                }
-            }
-
-            var fallbackPlaneY = _selectedEditable.GetTransform() != null
-                ? _selectedEditable.GetTransform().position.y
-                : 0f;
-            var groundPlane = new Plane(Vector3.up, new Vector3(0f, fallbackPlaneY, 0f));
-            if (!groundPlane.Raycast(ray, out var enter))
-            {
                 return false;
             }
 
-            return TryMoveSelectionToGroundPoint(ray.GetPoint(enter));
+            return false;
         }
 
         private static bool IsSceneSelectable(IRuntimeEditableObject editable)
@@ -278,11 +278,6 @@ namespace VsensAgent.RuntimeEditing
                 TryHandleSelectionOrMove();
             }
 
-            if (_selectedEditable != null && Input.GetMouseButton(1))
-            {
-                _selectedYawDegrees += Input.GetAxis("Mouse X") * rotationSensitivity * Time.deltaTime;
-                TryRotateSelectionYaw(_selectedYawDegrees);
-            }
         }
 
         private void TryHandleSelectionOrMove()

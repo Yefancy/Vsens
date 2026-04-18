@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using VsensAgent.Core;
+using VsensAgent.RuntimeEditing;
 using VsensAgent.SceneApi.V2;
 using VsensAgent.VirtualObject.Sensor;
 using Sensor;
@@ -201,6 +203,13 @@ namespace VsensAgent.UI
             }
             
             uiItem.Initialize(sensor);
+            uiItem.SetRemoveHandler(sensorInstance =>
+            {
+                if (sensorInstance != null)
+                {
+                    TryRemoveSensor(sensorInstance.name);
+                }
+            });
             sensorUIItems[sensor.name] = uiItem;
             
             if (showDebugInfo)
@@ -432,12 +441,149 @@ namespace VsensAgent.UI
             }
 
             uiItem.Initialize(avatar);
+            uiItem.SetRemoveHandler(avatarId => TryRemoveAvatar(avatarId));
             avatarUIItems[avatar.avatar_id] = uiItem;
 
             if (showDebugInfo)
             {
                 Debug.Log($"[SensorMonitorManager] 👤 Created UI item for avatar: {avatar.avatar_id}");
             }
+        }
+
+        public bool TryRemoveSensor(string sensorName)
+        {
+            if (string.IsNullOrWhiteSpace(sensorName))
+            {
+                return false;
+            }
+
+            sensorManager ??= VsensAgentSensorManager.Instance
+                ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                    ? ServiceLocator.Get<VsensAgentSensorManager>()
+                    : FindFirstObjectByType<VsensAgentSensorManager>());
+
+            bool removed;
+            string error = null;
+            if (sensorManager != null)
+            {
+                removed = sensorManager.TryRemoveSensor(sensorName, out error);
+            }
+            else
+            {
+                var sensor = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                    .FirstOrDefault(candidate => candidate != null && candidate.name == sensorName);
+                removed = sensor != null;
+                if (removed)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(sensor.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(sensor.gameObject);
+                    }
+                }
+                else
+                {
+                    error = $"Sensor '{sensorName}' not found.";
+                }
+            }
+
+            if (!removed)
+            {
+                Debug.LogWarning($"[SensorMonitorManager] ⚠️ Failed to remove sensor '{sensorName}': {error}");
+                return false;
+            }
+
+            ClearEditSelection(sensorName);
+            RegisterMutation(sensorName, "remove_sensor");
+            RemoveSensorUiItem(sensorName);
+            RefreshSensorList();
+            return true;
+        }
+
+        public bool TryRemoveAvatar(string avatarId)
+        {
+            avatarId = string.IsNullOrWhiteSpace(avatarId) ? "avatar_main" : avatarId;
+            avatarRuntimeManager ??= ServiceLocator.IsRegistered<AvatarRuntimeManager>()
+                ? ServiceLocator.Get<AvatarRuntimeManager>()
+                : FindFirstObjectByType<AvatarRuntimeManager>();
+            if (avatarRuntimeManager == null)
+            {
+                Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot remove avatar: AvatarRuntimeManager not found.");
+                return false;
+            }
+
+            if (!avatarRuntimeManager.TryRemoveAvatar(avatarId, out var error))
+            {
+                Debug.LogWarning($"[SensorMonitorManager] ⚠️ Failed to remove avatar '{avatarId}': {error}");
+                return false;
+            }
+
+            ClearEditSelection(avatarId);
+            RegisterMutation(avatarId, "remove_avatar");
+            RemoveAvatarUiItem(avatarId);
+            RefreshSensorList();
+            return true;
+        }
+
+        private void RemoveSensorUiItem(string sensorName)
+        {
+            if (!sensorUIItems.TryGetValue(sensorName, out var uiItem))
+            {
+                return;
+            }
+
+            if (uiItem != null && uiItem.gameObject != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(uiItem.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(uiItem.gameObject);
+                }
+            }
+
+            sensorUIItems.Remove(sensorName);
+        }
+
+        private void RemoveAvatarUiItem(string avatarId)
+        {
+            if (!avatarUIItems.TryGetValue(avatarId, out var uiItem))
+            {
+                return;
+            }
+
+            if (uiItem != null && uiItem.gameObject != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(uiItem.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(uiItem.gameObject);
+                }
+            }
+
+            avatarUIItems.Remove(avatarId);
+        }
+
+        private void ClearEditSelection(string objectId)
+        {
+            var editController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            editController?.ClearSelectionIfSelected(objectId);
+        }
+
+        private void RegisterMutation(string targetId, string actionType)
+        {
+            sceneRegistry ??= ServiceLocator.IsRegistered<SceneRegistry>()
+                ? ServiceLocator.Get<SceneRegistry>()
+                : FindFirstObjectByType<SceneRegistry>();
+            sceneRegistry?.RegisterMutation("ui.monitor", targetId, actionType);
         }
     }
 }

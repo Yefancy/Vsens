@@ -59,5 +59,11 @@ namespace VsensAgent.RuntimeEditing
             error = null;
             return true;
         }
+
+        public bool CommitTransformMutation(out string error)
+        {
+            error = null;
+            return _sensor != null;
+        }
     }
 }

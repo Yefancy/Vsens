@@ -172,6 +172,37 @@ namespace VsensAgent.Tests.Editor.SceneApi
         }
 
         [Test]
+        public void RemoveSensor_ControlAction_DestroysSensor()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RemoveSensorControlRoot");
+
+            try
+            {
+                root.AddComponent<VsensAgent.VirtualObject.Sensor.VsensAgentSensorManager>();
+                var controlManager = root.AddComponent<ControlManager>();
+
+                var sensorObject = new GameObject("IMU-RemoveAction");
+                sensorObject.AddComponent<TestVirtualSensor>();
+
+                var ctrl = new ControlObject
+                {
+                    target = "IMU-RemoveAction",
+                    action = "remove_sensor",
+                    parameters = new Dictionary<string, object>()
+                };
+
+                Assert.That(controlManager.TryExecuteControlAction(ctrl, out var errorCode, out var errorMessage), Is.True, $"{errorCode}: {errorMessage}");
+                Assert.That(sensorObject == null, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
         public void SpawnAvatar_ReducesRequestedHeightTowardFloor()
         {
             ServiceLocator.Clear();

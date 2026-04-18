@@ -31,7 +31,7 @@ namespace VsensAgent.RuntimeEditing
 
         public Handle ActiveHandle => _activeHandle;
         public HandleType CurrentHandleType => _currentHandleType;
-        public bool SupportsCurrentSelection => GetSelectedSensorTransform() != null;
+        public bool SupportsCurrentSelection => ResolveController() != null && GetSelectedHandleTarget() != null;
 
         private void Awake()
         {
@@ -68,7 +68,7 @@ namespace VsensAgent.RuntimeEditing
 
         public void RefreshHandleBinding()
         {
-            controller ??= GetComponent<RuntimeEditModeController>();
+            ResolveController();
             if (controller == null)
             {
                 DestroyActiveHandle();
@@ -82,15 +82,14 @@ namespace VsensAgent.RuntimeEditing
             }
 
             var selectedObjectId = controller.SelectedObjectId;
-            var sensorTransform = GetSelectedSensorTransform();
-            var sensor = sensorTransform != null ? sensorTransform.GetComponent<VirtualSensor>() : null;
-            if (sensor == null)
+            var target = GetSelectedHandleTarget();
+            if (target == null)
             {
                 DestroyActiveHandle();
                 return;
             }
 
-            if (_activeHandle != null && _activeObjectId == selectedObjectId && _activeTarget == sensor.transform)
+            if (_activeHandle != null && _activeObjectId == selectedObjectId && _activeTarget == target)
             {
                 return;
             }
@@ -111,18 +110,18 @@ namespace VsensAgent.RuntimeEditing
             Handle handle = null;
             try
             {
-                handle = manager.CreateHandle(sensor.transform);
+                handle = manager.CreateHandle(target);
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[RuntimeTransformHandleBridge] CreateHandle threw for '{sensor.name}': {ex}");
-                handle = TryCreateFallbackHandle(manager, sensor.transform);
+                Debug.LogError($"[RuntimeTransformHandleBridge] CreateHandle threw for '{target.name}': {ex}");
+                handle = TryCreateFallbackHandle(manager, target);
             }
 
             if (handle == null)
             {
-                Debug.LogWarning($"[RuntimeTransformHandleBridge] CreateHandle returned null for '{sensor.name}'.");
-                handle = TryCreateFallbackHandle(manager, sensor.transform);
+                Debug.LogWarning($"[RuntimeTransformHandleBridge] CreateHandle returned null for '{target.name}'.");
+                handle = TryCreateFallbackHandle(manager, target);
                 if (handle == null)
                 {
                     return;
@@ -137,7 +136,7 @@ namespace VsensAgent.RuntimeEditing
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[RuntimeTransformHandleBridge] Handle post-config threw for '{sensor.name}': {ex}");
+                Debug.LogError($"[RuntimeTransformHandleBridge] Handle post-config threw for '{target.name}': {ex}");
                 if (handle != null)
                 {
                     if (Application.isPlaying)
@@ -154,7 +153,7 @@ namespace VsensAgent.RuntimeEditing
 
             _activeHandle = handle;
             _activeObjectId = selectedObjectId;
-            _activeTarget = sensor.transform;
+            _activeTarget = target;
         }
 
         public void SetHandleType(HandleType handleType)
@@ -173,9 +172,19 @@ namespace VsensAgent.RuntimeEditing
             RefreshHandleBinding();
         }
 
+        private RuntimeEditModeController ResolveController()
+        {
+            if (controller == null)
+            {
+                controller = GetComponent<RuntimeEditModeController>();
+            }
+
+            return controller;
+        }
+
         private void OnHandleInteractionEnd(Handle _)
         {
-            controller?.NotifySelectedObjectMutated("set_sensor");
+            controller?.NotifySelectedObjectMutated();
         }
 
         private TransformHandleManager EnsureHandleManager()
@@ -232,11 +241,16 @@ namespace VsensAgent.RuntimeEditing
             return handleCamera;
         }
 
-        private Transform GetSelectedSensorTransform()
+        private Transform GetSelectedHandleTarget()
         {
             var selectedTransform = controller != null ? controller.GetSelectedTransform() : null;
-            var sensor = selectedTransform != null ? selectedTransform.GetComponentInParent<VirtualSensor>() : null;
-            return sensor != null ? sensor.transform : null;
+            if (selectedTransform == null)
+            {
+                return null;
+            }
+
+            var sensor = selectedTransform.GetComponentInParent<VirtualSensor>();
+            return sensor != null ? sensor.transform : selectedTransform;
         }
 
         private void ApplyHandleDisplaySettings(Handle handle)

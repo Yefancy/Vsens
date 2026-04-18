@@ -66,5 +66,24 @@ namespace VsensAgent.RuntimeEditing
             bool ok = _runtimeManager.TrySetManualAvatarPose(_avatarId, null, yawDegrees, out error);
             return ok;
         }
+
+        public bool CommitTransformMutation(out string error)
+        {
+            if (_runtimeManager == null)
+            {
+                error = "Avatar runtime manager is not available.";
+                return false;
+            }
+
+            var transform = GetTransform();
+            if (transform == null)
+            {
+                error = "Avatar transform is not available.";
+                return false;
+            }
+
+            var logicalYaw = AvatarRuntimeManager.GetLogicalRotationEuler(transform.rotation).y;
+            return _runtimeManager.TrySetManualAvatarPose(_avatarId, transform.position, logicalYaw, out error);
+        }
     }
 }

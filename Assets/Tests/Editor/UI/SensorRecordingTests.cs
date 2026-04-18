@@ -123,6 +123,72 @@ namespace VsensAgent.Tests.Editor.UI
             }
         }
 
+        [Test]
+        public void TryRemoveSensor_DestroysSensorGameObject()
+        {
+            var root = new GameObject("SensorRemoveRoot");
+
+            try
+            {
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                var sensorObject = new GameObject("DISTANCE-Remove");
+                sensorObject.AddComponent<TestRecordingSensor>();
+
+                Assert.That(manager.TryRemoveSensor("DISTANCE-Remove", out var error), Is.True, error);
+                Assert.That(sensorObject == null, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void SensorUiDeleteButton_RemovesSensorAndItem()
+        {
+            var root = new GameObject("SensorUiDeleteRoot");
+            var monitorRoot = new GameObject("MonitorRoot");
+            var itemContainer = new GameObject("ItemContainer").transform;
+            itemContainer.SetParent(monitorRoot.transform, false);
+            var sensorItemPrefab = CreateSensorItemPrefab();
+
+            try
+            {
+                root.AddComponent<SensorDataCenter>().Start();
+                root.AddComponent<VsensAgentSensorManager>();
+
+                var sensorObject = new GameObject("DISTANCE-UiDelete");
+                sensorObject.AddComponent<TestRecordingSensor>();
+
+                var monitor = monitorRoot.AddComponent<MonitorManager>();
+                monitor.itemContainer = itemContainer;
+                monitor.sensorItemPrefab = sensorItemPrefab;
+                monitor.RefreshSensorList();
+
+                var item = itemContainer.GetComponentInChildren<SensorUIItem>(true);
+                Assert.That(item, Is.Not.Null);
+                Assert.That(item.deleteButton, Is.Not.Null);
+
+                item.deleteButton.onClick.Invoke();
+
+                Assert.That(sensorObject == null, Is.True);
+                Assert.That(itemContainer.GetComponentInChildren<SensorUIItem>(true), Is.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sensorItemPrefab);
+                Object.DestroyImmediate(monitorRoot);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static GameObject CreateSensorItemPrefab()
+        {
+            var root = new GameObject("SensorItemPrefab");
+            root.AddComponent<SensorUIItem>();
+            return root;
+        }
+
         private class TestRecordingSensor : VirtualSensor
         {
             public void EmitSample(float time, float distance)

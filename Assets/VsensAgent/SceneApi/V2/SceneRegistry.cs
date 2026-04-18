@@ -372,7 +372,11 @@ namespace VsensAgent.SceneApi.V2
             caps.Add("highlight");
             if (describer.HasProperty("with_state")) caps.Add("set_state");
             if (describer.HasProperty("movable")) caps.Add("set_transform");
-            if (describer.HasProperty("sensor")) caps.Add("set_sensor");
+            if (describer.HasProperty("sensor"))
+            {
+                caps.Add("set_sensor");
+                caps.Add("remove_sensor");
+            }
             if (describer.HasProperty("avatar"))
             {
                 caps.Add("spawn_avatar");

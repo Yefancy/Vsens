@@ -109,6 +109,53 @@ namespace VsensAgent.Tests.Editor.UI
             }
         }
 
+        [Test]
+        public void AvatarUiDeleteButton_RemovesAvatarAndItem()
+        {
+            ServiceLocator.Clear();
+            var runtimeRoot = new GameObject("RuntimeRoot");
+            var uiRoot = new GameObject("MonitorRoot");
+            var itemContainer = new GameObject("ItemContainer").transform;
+            itemContainer.SetParent(uiRoot.transform, false);
+            var avatarPrefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
+
+            try
+            {
+                var runtime = runtimeRoot.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(avatarPrefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", Vector3.zero, Vector3.zero, out var spawnError), Is.True, spawnError);
+
+                var manager = uiRoot.AddComponent<MonitorManager>();
+                manager.itemContainer = itemContainer;
+                manager.sensorItemPrefab = CreateSensorItemPrefab();
+                manager.avatarItemPrefab = CreateAvatarItemPrefab();
+                manager.RefreshSensorList();
+
+                var avatarUiItem = itemContainer.GetComponentInChildren<AvatarUIItem>(true);
+                Assert.That(avatarUiItem, Is.Not.Null);
+                Assert.That(avatarUiItem.deleteButton, Is.Not.Null);
+
+                avatarUiItem.deleteButton.onClick.Invoke();
+
+                Assert.That(runtime.GetManagedAvatarObject(), Is.Null);
+                Assert.That(itemContainer.GetComponentInChildren<AvatarUIItem>(true), Is.Null);
+            }
+            finally
+            {
+                var manager = uiRoot.GetComponent<MonitorManager>();
+                if (manager != null)
+                {
+                    Object.DestroyImmediate(manager.sensorItemPrefab);
+                    Object.DestroyImmediate(manager.avatarItemPrefab);
+                }
+
+                Object.DestroyImmediate(avatarPrefab);
+                Object.DestroyImmediate(uiRoot);
+                Object.DestroyImmediate(runtimeRoot);
+                ServiceLocator.Clear();
+            }
+        }
+
         private static GameObject CreateAvatarItemPrefab()
         {
             var root = new GameObject("AvatarItemPrefab");

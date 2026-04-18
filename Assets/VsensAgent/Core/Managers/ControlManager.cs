@@ -8,6 +8,7 @@ using Sensor;
 using VsensAgent.Network;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
+using VsensAgent.RuntimeEditing;
 using VsensAgent.SceneApi.V2;
 
 namespace VsensAgent
@@ -76,6 +77,35 @@ namespace VsensAgent
                         return false;
                     }
                 }
+                return true;
+            }
+
+            if (ctrl.action == "remove_sensor")
+            {
+                if (string.IsNullOrWhiteSpace(ctrl.target))
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                    errorMessage = "remove_sensor requires target sensor object name.";
+                    return false;
+                }
+
+                ResolveSensorManager();
+                if (sensorManager == null)
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                    errorMessage = "VsensAgentSensorManager not found.";
+                    return false;
+                }
+
+                var sensor = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                    .FirstOrDefault(candidate => candidate != null && candidate.name == ctrl.target);
+                if (sensor == null)
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.TARGET_NOT_FOUND;
+                    errorMessage = $"Sensor '{ctrl.target}' not found.";
+                    return false;
+                }
+
                 return true;
             }
 
@@ -212,6 +242,12 @@ namespace VsensAgent
             if (ctrl.action == "set_sensor")
             {
                 HandleSetSensorAction(ctrl);
+                return;
+            }
+
+            if (ctrl.action == "remove_sensor")
+            {
+                HandleRemoveSensorAction(ctrl);
                 return;
             }
 
@@ -513,6 +549,42 @@ namespace VsensAgent
         }
 
         // ===================== SENSOR CONTROL METHODS =====================
+
+        [SerializeField] private VsensAgentSensorManager sensorManager;
+
+        private void ResolveSensorManager()
+        {
+            if (sensorManager != null)
+            {
+                return;
+            }
+
+            sensorManager = VsensAgentSensorManager.Instance
+                ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                    ? ServiceLocator.Get<VsensAgentSensorManager>()
+                    : FindFirstObjectByType<VsensAgentSensorManager>());
+        }
+
+        private void HandleRemoveSensorAction(ControlObject ctrl)
+        {
+            ResolveSensorManager();
+            if (sensorManager == null)
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ Cannot remove sensor: VsensAgentSensorManager not found.");
+                return;
+            }
+
+            var sensorName = ctrl != null ? ctrl.target : string.Empty;
+            if (!sensorManager.TryRemoveSensor(sensorName, out var error))
+            {
+                Debug.LogWarning($"[ControlManager] ⚠️ Failed to remove sensor '{sensorName}': {error}");
+                return;
+            }
+
+            ClearEditSelection(sensorName);
+            RegisterMutation("control.local", sensorName, "remove_sensor");
+            Debug.Log($"[ControlManager] 🗑️ Removed sensor: {sensorName}");
+        }
 
         /// <summary>
         /// 处理传感器创建和修改命令
@@ -970,6 +1042,12 @@ namespace VsensAgent
             sceneRegistry.RegisterMutation(source, targetId, actionType);
         }
 
+        private void ClearEditSelection(string objectId)
+        {
+            var editController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            editController?.ClearSelectionIfSelected(objectId);
+        }
+
         private static bool IsAvatarAction(string action)
         {
             switch (action)
@@ -1083,6 +1161,7 @@ namespace VsensAgent
                     ok = avatarRuntimeManager.TryRemoveAvatar(avatarId, out errorMessage);
                     if (ok)
                     {
+                        ClearEditSelection(avatarId);
                         RegisterMutation("control.local", avatarId, ctrl.action);
                     }
                     break;

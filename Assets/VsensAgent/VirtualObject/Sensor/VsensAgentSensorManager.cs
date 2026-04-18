@@ -260,6 +260,45 @@ namespace VsensAgent.VirtualObject.Sensor
             return _registeredSensors.Any(prefab => prefab.SensorDefinition().getSensorName() == sensorName);
         }
 
+        public bool TryRemoveSensor(string sensorObjectName, out string error)
+        {
+            if (string.IsNullOrWhiteSpace(sensorObjectName))
+            {
+                error = "Sensor object name is required.";
+                return false;
+            }
+
+            var sensor = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && candidate.name == sensorObjectName);
+            if (sensor == null)
+            {
+                error = $"Sensor '{sensorObjectName}' not found.";
+                return false;
+            }
+
+            UnregisterSensor(sensor);
+            ResolveSensorDataCenter()?.UnregisterSensor(sensor);
+
+            var sensorObject = sensor.gameObject;
+            if (sensorObject == null)
+            {
+                error = $"Sensor '{sensorObjectName}' has no GameObject.";
+                return false;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(sensorObject);
+            }
+            else
+            {
+                DestroyImmediate(sensorObject);
+            }
+
+            error = null;
+            return true;
+        }
+
         [CanBeNull]
         public VirtualSensor CreateSensorByName(string sensorName, Transform parent)
         {
