@@ -1,14 +1,13 @@
 using NUnit.Framework;
 using SojaExiles;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace VsensAgent.Tests.Editor.Doors
 {
     public class OpenCloseDoorTests
     {
         [Test]
-        public void OnMouseDown_TogglesDoorWithoutPlayerReference()
+        public void ToggleDoor_ChangesDoorStateWithoutPlayerReference()
         {
             var go = new GameObject("Door");
             try
@@ -20,8 +19,7 @@ namespace VsensAgent.Tests.Editor.Doors
                 door.open = false;
                 door.Player = null;
 
-                LogAssert.Expect(LogType.Assert, "Assertion failed on expression: 'ShouldRunBehaviour()'");
-                go.SendMessage("OnMouseDown", SendMessageOptions.DontRequireReceiver);
+                door.ToggleDoor(true);
 
                 Assert.That(door.open, Is.True);
             }

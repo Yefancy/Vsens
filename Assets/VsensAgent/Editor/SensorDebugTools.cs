@@ -158,7 +158,7 @@ namespace VsensAgent.Editor
 
             // ===== 信息显示 =====
             GUILayout.Label("场景信息", EditorStyles.boldLabel);
-            var sensorDataCenter = FindObjectOfType<SensorDataCenter>();
+            var sensorDataCenter = FindFirstObjectByType<SensorDataCenter>();
             if (sensorDataCenter != null)
             {
                 EditorGUILayout.HelpBox($"✅ SensorDataCenter 已找到\n采样率: {sensorDataCenter.samplingRate} Hz", MessageType.Info);
@@ -168,7 +168,7 @@ namespace VsensAgent.Editor
                 EditorGUILayout.HelpBox("⚠️ 场景中未找到 SensorDataCenter", MessageType.Warning);
             }
 
-            var sensors = FindObjectsOfType<VirtualSensor>();
+            var sensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None);
             EditorGUILayout.HelpBox($"场景中传感器数量: {sensors.Length}", MessageType.None);
 
             EditorGUILayout.EndScrollView();
@@ -296,7 +296,7 @@ namespace VsensAgent.Editor
             // 如果SensorDataCenter存在且需要自动注册，立即注册
             if (autoRegister)
             {
-                var sensorDataCenter = FindObjectOfType<SensorDataCenter>();
+                var sensorDataCenter = FindFirstObjectByType<SensorDataCenter>();
                 if (sensorDataCenter != null && Application.isPlaying)
                 {
                     sensorDataCenter.RegisterSensor(sensor);
@@ -343,7 +343,7 @@ namespace VsensAgent.Editor
         /// </summary>
         private void FindAllSensors()
         {
-            var allSensors = FindObjectsOfType<VirtualSensor>();
+            var allSensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None);
             Debug.Log($"=== 场景中共找到 {allSensors.Length} 个传感器 ===");
             
             var imuSensors = new List<VirtualIMUSensor>();
@@ -371,7 +371,7 @@ namespace VsensAgent.Editor
         /// </summary>
         private void DeleteAllSensors()
         {
-            var allSensors = FindObjectsOfType<VirtualSensor>();
+            var allSensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None);
             int count = allSensors.Length;
             
             foreach (var sensor in allSensors)

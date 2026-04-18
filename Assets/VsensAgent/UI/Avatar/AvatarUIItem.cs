@@ -48,6 +48,7 @@ namespace VsensAgent.UI
         private readonly List<string> cachedMotionCatalog = new List<string>();
         private string cachedSelectedMotionId = string.Empty;
         private MaterialSymbol _playButtonImage;
+        private Image _playButtonBackground;
         private Action<string> removeRequested;
 
         public void Initialize(AvatarQueryModel avatarModel)
@@ -397,11 +398,7 @@ namespace VsensAgent.UI
         {
             if (deleteButton == null)
             {
-                var existing = transform.Find("DeleteButton");
-                if (existing != null)
-                {
-                    deleteButton = existing.GetComponent<Button>();
-                }
+                deleteButton = FindExistingDeleteButton();
             }
 
             if (deleteButton == null)
@@ -454,6 +451,20 @@ namespace VsensAgent.UI
             {
                 label.font = TMP_Settings.defaultFontAsset;
             }
+        }
+
+        private Button FindExistingDeleteButton()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var button in buttons)
+            {
+                if (button != null && button.gameObject.name == "DeleteButton")
+                {
+                    return button;
+                }
+            }
+
+            return null;
         }
 
         private void PlaceDeleteButtonInHeader()
@@ -549,8 +560,18 @@ namespace VsensAgent.UI
             if (_playButtonImage != null)
             {
                 _playButtonImage.color = isPlaying ? playingColor : Color.white;
+                return;
             }
-            
+
+            if (_playButtonBackground == null)
+            {
+                _playButtonBackground = playButton.GetComponent<Image>();
+            }
+
+            if (_playButtonBackground != null)
+            {
+                _playButtonBackground.color = isPlaying ? playingColor : Color.white;
+            }
         }
 
         private void RefreshSlider(float normalizedProgress)

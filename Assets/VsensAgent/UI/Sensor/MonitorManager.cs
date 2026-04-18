@@ -98,8 +98,6 @@ namespace VsensAgent.UI
 
         void Update()
         {
-            if (sensorManager == null) return;
-            
             // 定时更新传感器数据
             if (Time.time >= nextUpdateTime)
             {
@@ -114,7 +112,10 @@ namespace VsensAgent.UI
                 nextRefreshTime = Time.time + listRefreshInterval;
             }
 
-            RefreshRecordingUi();
+            if (sensorManager != null || recordingButtonImage != null || recordingTimerText != null)
+            {
+                RefreshRecordingUi();
+            }
         }
 
         /// <summary>
@@ -124,9 +125,9 @@ namespace VsensAgent.UI
         {
             if (sensorManager == null || itemContainer == null)
             {
-                Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot refresh sensor list - missing references");
                 if (itemContainer == null)
                 {
+                    Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot refresh sensor list - missing item container");
                     return;
                 }
             }
@@ -193,6 +194,12 @@ namespace VsensAgent.UI
         /// </summary>
         private void CreateSensorUIItem(VirtualSensor sensor)
         {
+            if (sensorItemPrefab == null)
+            {
+                Debug.LogWarning("[SensorMonitorManager] ⚠️ Cannot create sensor UI item - missing sensor item prefab");
+                return;
+            }
+
             GameObject itemObj = Instantiate(sensorItemPrefab, itemContainer);
             itemObj.SetActive(true);
             SensorUIItem uiItem = itemObj.GetComponent<SensorUIItem>();
@@ -574,7 +581,9 @@ namespace VsensAgent.UI
 
         private void ClearEditSelection(string objectId)
         {
-            var editController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            var editController = ServiceLocator.IsRegistered<RuntimeEditModeController>()
+                ? ServiceLocator.Get<RuntimeEditModeController>()
+                : FindFirstObjectByType<RuntimeEditModeController>();
             editController?.ClearSelectionIfSelected(objectId);
         }
 

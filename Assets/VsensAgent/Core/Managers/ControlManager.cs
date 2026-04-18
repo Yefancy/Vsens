@@ -1044,7 +1044,9 @@ namespace VsensAgent
 
         private void ClearEditSelection(string objectId)
         {
-            var editController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            var editController = ServiceLocator.IsRegistered<RuntimeEditModeController>()
+                ? ServiceLocator.Get<RuntimeEditModeController>()
+                : FindFirstObjectByType<RuntimeEditModeController>();
             editController?.ClearSelectionIfSelected(objectId);
         }
 

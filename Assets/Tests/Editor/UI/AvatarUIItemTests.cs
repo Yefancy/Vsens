@@ -1,4 +1,3 @@
-using com.convalise.UnityMaterialSymbols;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -38,7 +37,7 @@ namespace VsensAgent.Tests.Editor.UI
                 item.Initialize(runtime.GetAvatarQueryModels(null)[0]);
                 item.UpdateDisplay();
 
-                var playButtonImage = item.playButton.GetComponent<MaterialSymbol>();
+                var playButtonImage = item.playButton.GetComponent<Image>();
                 Assert.That(playButtonImage.color, Is.EqualTo(Color.green));
 
                 item.playButton.onClick.Invoke();

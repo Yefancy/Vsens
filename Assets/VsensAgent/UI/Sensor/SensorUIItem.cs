@@ -156,17 +156,29 @@ namespace VsensAgent.UI
                         
             if (activeButton != null)
             {
-                activeButton.GetComponent<Image>().color = sensor.IsActive ? activeColor : inactiveColor;
+                var image = activeButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    image.color = sensor.IsActive ? activeColor : inactiveColor;
+                }
             }
 
             if (previewButton != null)
             {
-                previewButton.GetComponent<Image>().color = sensor.ShowPreview ? activeColor : inactiveColor;
+                var image = previewButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    image.color = sensor.ShowPreview ? activeColor : inactiveColor;
+                }
             }
 
             if (graphButton != null)
             {
-                graphButton.GetComponent<Image>().color = sensor.ShowGraph ? activeColor : inactiveColor;
+                var image = graphButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    image.color = sensor.ShowGraph ? activeColor : inactiveColor;
+                }
             }
 
             // 更新传感器数据显示
@@ -212,7 +224,7 @@ namespace VsensAgent.UI
                 {
                     string description = virtualSensor.GetSensorDescription();
                     
-                    if (detailToggle.isOn)
+                    if (detailToggle != null && detailToggle.isOn)
                     {
                         return description;
                     }
@@ -288,40 +300,6 @@ namespace VsensAgent.UI
             }
 
             TrySelectSensorForEditing();
-        }
-
-        /// <summary>
-        /// 选择按钮点击事件
-        /// </summary>
-        private void OnSelectButtonClicked()
-        {
-            if (sensor == null) return;
-            
-            Debug.Log($"[SensorUIItem] 🎯 Selected sensor: {sensor.name}");
-            
-            // 可以在这里添加选择传感器的逻辑
-            // 例如：在场景中高亮显示传感器，或显示详细信息面板
-            HighlightSensorInScene();
-        }
-
-        /// <summary>
-        /// 在场景中高亮显示传感器
-        /// </summary>
-        private void HighlightSensorInScene()
-        {
-            if (sensor == null || sensor.gameObject == null) return;
-            
-            // 可以添加视觉效果，例如：
-            // - 改变传感器颜色
-            // - 添加轮廓效果
-            // - 移动相机聚焦到传感器
-            
-            // 这里只是一个示例：让相机看向传感器
-            Camera mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                Debug.Log($"[SensorUIItem] 📷 Camera looking at sensor: {sensor.name} at position {sensor.transform.position}");
-            }
         }
 
         /// <summary>
@@ -474,11 +452,7 @@ namespace VsensAgent.UI
         {
             if (deleteButton == null)
             {
-                var existing = transform.Find("DeleteButton");
-                if (existing != null)
-                {
-                    deleteButton = existing.GetComponent<Button>();
-                }
+                deleteButton = FindExistingDeleteButton();
             }
 
             if (deleteButton == null)
@@ -531,6 +505,20 @@ namespace VsensAgent.UI
             {
                 label.font = TMP_Settings.defaultFontAsset;
             }
+        }
+
+        private Button FindExistingDeleteButton()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var button in buttons)
+            {
+                if (button != null && button.gameObject.name == "DeleteButton")
+                {
+                    return button;
+                }
+            }
+
+            return null;
         }
 
         private void PlaceDeleteButtonInHeader()
@@ -591,11 +579,6 @@ namespace VsensAgent.UI
             buttonRect.anchoredPosition = buttonPosition;
         }
 
-        private void OnItemSelectedFromButton()
-        {
-            TrySelectSensorForEditing();
-        }
-
         private void TrySelectSensorForEditing()
         {
             var editController = GetEditController();
@@ -615,7 +598,9 @@ namespace VsensAgent.UI
                 return cachedEditController;
             }
 
-            cachedEditController = ServiceLocator.Get<RuntimeEditModeController>() ?? FindFirstObjectByType<RuntimeEditModeController>();
+            cachedEditController = ServiceLocator.IsRegistered<RuntimeEditModeController>()
+                ? ServiceLocator.Get<RuntimeEditModeController>()
+                : FindFirstObjectByType<RuntimeEditModeController>();
             return cachedEditController;
         }
 

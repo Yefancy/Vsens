@@ -23,7 +23,7 @@ namespace Sensor
         [Tooltip("to visualize the Graph Chart.")]
         [SerializeField] [AllowNull] public GameObject graphChart;
         [Tooltip("to visualize the object when it is selected.")]
-        [SerializeField] [AllowNull] public Rigidbody rigidbody;
+        [SerializeField] [AllowNull] public new Rigidbody rigidbody;
         [Tooltip("duration for transform mode. grabbing time less than the duration, the sensor will be in selecting mode.")]
         public float modeSwitchTime = 1.0f;
         [Tooltip("jitter duration. the sensor will jitter for 1 second to notify the user that the sensor is in transform mode.")]

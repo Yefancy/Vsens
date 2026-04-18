@@ -207,7 +207,7 @@ namespace VsensAgent.UI
                 label.font = _fontAsset;
             }
             label.fontSize = 18f;
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Overflow;
             label.color = Color.white;
             label.raycastTarget = false;
