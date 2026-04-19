@@ -4,6 +4,7 @@ using Sensor;
 using TransformHandles;
 using UnityEngine;
 using System;
+using VsensAgent.SceneHistory;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -28,10 +29,21 @@ namespace VsensAgent.RuntimeEditing
         private bool _configurationFailed;
         private TransformHandleSettings _runtimeSettings;
         private HandleType _currentHandleType = HandleType.Position;
+        private SceneTransformSnapshot _interactionStartSnapshot;
 
         public Handle ActiveHandle => _activeHandle;
         public HandleType CurrentHandleType => _currentHandleType;
         public bool SupportsCurrentSelection => ResolveController() != null && GetSelectedHandleTarget() != null;
+
+        public void CaptureInteractionStartForTests()
+        {
+            CaptureInteractionStartSnapshotIfNeeded();
+        }
+
+        public void CompleteInteractionForTests()
+        {
+            OnHandleInteractionEnd(_activeHandle);
+        }
 
         private void Awake()
         {
@@ -132,6 +144,8 @@ namespace VsensAgent.RuntimeEditing
             {
                 ApplyHandleType(handle);
                 ApplyHandleDisplaySettings(handle);
+                handle.OnInteractionStartEvent += OnHandleInteractionStart;
+                handle.OnInteractionEvent += OnHandleInteraction;
                 handle.OnInteractionEndEvent += OnHandleInteractionEnd;
             }
             catch (Exception ex)
@@ -182,9 +196,50 @@ namespace VsensAgent.RuntimeEditing
             return controller;
         }
 
+        private void OnHandleInteractionStart(Handle _)
+        {
+            CaptureInteractionStartSnapshotIfNeeded();
+        }
+
+        private void OnHandleInteraction(Handle _)
+        {
+            CaptureInteractionStartSnapshotIfNeeded();
+        }
+
+        private void CaptureInteractionStartSnapshotIfNeeded()
+        {
+            if (_interactionStartSnapshot != null)
+            {
+                return;
+            }
+
+            if (_activeTarget == null)
+            {
+                _interactionStartSnapshot = null;
+                return;
+            }
+
+            _interactionStartSnapshot = SceneTransformSnapshot.Capture(_activeObjectId, _activeTarget);
+        }
+
         private void OnHandleInteractionEnd(Handle _)
         {
             controller?.NotifySelectedObjectMutated();
+            if (_activeTarget == null || _interactionStartSnapshot == null)
+            {
+                return;
+            }
+
+            var actionType = _activeTarget.GetComponentInParent<VirtualSensor>() != null
+                ? "set_sensor"
+                : "set_avatar_transform";
+            SceneActionHistory.GetOrCreate()?.TryRecordTransformChange(
+                "user",
+                actionType,
+                _activeObjectId,
+                _interactionStartSnapshot,
+                SceneTransformSnapshot.Capture(_activeObjectId, _activeTarget));
+            _interactionStartSnapshot = null;
         }
 
         private TransformHandleManager EnsureHandleManager()
@@ -429,6 +484,8 @@ namespace VsensAgent.RuntimeEditing
         {
             if (_activeHandle != null)
             {
+                _activeHandle.OnInteractionStartEvent -= OnHandleInteractionStart;
+                _activeHandle.OnInteractionEvent -= OnHandleInteraction;
                 _activeHandle.OnInteractionEndEvent -= OnHandleInteractionEnd;
                 if (Application.isPlaying)
                 {
@@ -443,6 +500,7 @@ namespace VsensAgent.RuntimeEditing
             _activeHandle = null;
             _activeObjectId = string.Empty;
             _activeTarget = null;
+            _interactionStartSnapshot = null;
         }
     }
 }

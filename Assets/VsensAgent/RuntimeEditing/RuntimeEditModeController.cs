@@ -4,6 +4,7 @@ using VsensAgent.Core;
 using VsensAgent.SceneApi.V2;
 using System;
 using System.Collections.Generic;
+using VsensAgent.SceneHistory;
 
 namespace VsensAgent.RuntimeEditing
 {
@@ -114,12 +115,15 @@ namespace VsensAgent.RuntimeEditing
                 return false;
             }
 
+            var transform = _selectedEditable.GetTransform();
+            var before = SceneTransformSnapshot.Capture(SelectedObjectId, transform);
             if (!_selectedEditable.TryMoveToGroundPoint(worldPoint, out _))
             {
                 return false;
             }
 
             RegisterManualMutation("set_avatar_transform");
+            RecordManualTransformChange("set_avatar_transform", before);
             return true;
         }
 
@@ -135,6 +139,8 @@ namespace VsensAgent.RuntimeEditing
                 return false;
             }
 
+            var transform = _selectedEditable.GetTransform();
+            var before = SceneTransformSnapshot.Capture(SelectedObjectId, transform);
             _selectedYawDegrees = yawDegrees;
             if (!_selectedEditable.TryRotateYaw(yawDegrees, out _))
             {
@@ -142,6 +148,7 @@ namespace VsensAgent.RuntimeEditing
             }
 
             RegisterManualMutation("set_avatar_transform");
+            RecordManualTransformChange("set_avatar_transform", before);
             return true;
         }
 
@@ -399,6 +406,22 @@ namespace VsensAgent.RuntimeEditing
 
             var mutationType = _selectedEditable is RuntimeEditableSensorAdapter ? "set_sensor" : actionType;
             sceneRegistry.RegisterMutation("runtime_edit", SelectedObjectId, mutationType);
+        }
+
+        private void RecordManualTransformChange(string actionType, SceneTransformSnapshot before)
+        {
+            if (_selectedEditable == null || before == null)
+            {
+                return;
+            }
+
+            var transform = _selectedEditable.GetTransform();
+            SceneActionHistory.GetOrCreate()?.TryRecordTransformChange(
+                "user",
+                actionType,
+                SelectedObjectId,
+                before,
+                SceneTransformSnapshot.Capture(SelectedObjectId, transform));
         }
     }
 }

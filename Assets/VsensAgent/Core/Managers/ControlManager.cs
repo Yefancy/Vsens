@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using VsensAgent.VirtualObject.Sensor;
 using Sensor;
@@ -10,6 +11,7 @@ using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
 using VsensAgent.RuntimeEditing;
 using VsensAgent.SceneApi.V2;
+using VsensAgent.SceneHistory;
 
 namespace VsensAgent
 {
@@ -18,6 +20,7 @@ namespace VsensAgent
         [SerializeField] private Material highlightMaterial;
         [SerializeField] private SceneRegistry sceneRegistry;
         [SerializeField] private AvatarRuntimeManager avatarRuntimeManager;
+        [SerializeField] private SceneActionHistory sceneActionHistory;
         void OnEnable()
         {
             WsClient.OnControl += HandleControlBatch; // 统一处理批量控制
@@ -395,6 +398,7 @@ namespace VsensAgent
                 return;
             }
 
+            var before = SceneTransformSnapshot.Capture(obj.name, obj.transform);
             bool transformChanged = false;
 
             // 处理位置参数 - 后端格式：position: [x, y, z]
@@ -437,6 +441,13 @@ namespace VsensAgent
             {
                 Debug.Log($"[ControlManager] ✅ Successfully transformed '{obj.name}'");
                 RegisterMutation("control.local", obj, ctrl.action);
+                RecordTransformChange(
+                    "agent",
+                    ctrl.action,
+                    obj.name,
+                    before,
+                    SceneTransformSnapshot.Capture(obj.name, obj.transform),
+                    ctrl);
             }
             else
             {
@@ -612,12 +623,14 @@ namespace VsensAgent
 
                 // 2. 检查是否是修改现有传感器
                 GameObject existingSensor = null;
+                SceneTransformSnapshot beforeTransform = null;
                 if (!string.IsNullOrEmpty(ctrl.target))
                 {
                     existingSensor = GameObject.Find(ctrl.target);
                     if (existingSensor != null)
                     {
                         Debug.Log($"[ControlManager] 🔄 Modifying existing sensor: {ctrl.target}");
+                        beforeTransform = SceneTransformSnapshot.Capture(existingSensor.name, existingSensor.transform);
                     }
                     else
                     {
@@ -716,6 +729,17 @@ namespace VsensAgent
                     if (createdNewSensor || transformChanged || sensorSpecificChanged)
                     {
                         RegisterMutation("control.local", sensorObj, ctrl.action);
+                    }
+
+                    if (!createdNewSensor)
+                    {
+                        RecordTransformChange(
+                            "agent",
+                            ctrl.action,
+                            sensorObj.name,
+                            beforeTransform,
+                            SceneTransformSnapshot.Capture(sensorObj.name, sensorObj.transform),
+                            ctrl);
                     }
                 }
                 else
@@ -1026,6 +1050,34 @@ namespace VsensAgent
             }
         }
 
+        private void ResolveSceneActionHistory()
+        {
+            if (sceneActionHistory != null)
+            {
+                return;
+            }
+
+            sceneActionHistory = SceneActionHistory.GetOrCreate();
+        }
+
+        private void RecordTransformChange(
+            string source,
+            string actionType,
+            string targetId,
+            SceneTransformSnapshot before,
+            SceneTransformSnapshot after,
+            ControlObject ctrl)
+        {
+            ResolveSceneActionHistory();
+            if (sceneActionHistory == null)
+            {
+                return;
+            }
+
+            var rawJson = ctrl != null ? JsonConvert.SerializeObject(ctrl) : null;
+            sceneActionHistory.TryRecordTransformChange(source, actionType, targetId, before, after, rawJson);
+        }
+
         private void RegisterMutation(string source, GameObject target, string actionType)
         {
             RegisterMutation(source, target != null ? target.name : string.Empty, actionType);
@@ -1169,6 +1221,8 @@ namespace VsensAgent
                     break;
 
                 case "set_avatar_transform":
+                    var avatarObjectBefore = avatarRuntimeManager.GetManagedAvatarObject();
+                    var beforeTransform = SceneTransformSnapshot.Capture(avatarId, avatarObjectBefore != null ? avatarObjectBefore.transform : null);
                     ok = avatarRuntimeManager.TrySetAvatarTransform(
                         avatarId,
                         TryParseVector3Parameter(ctrl.parameters, "position"),
@@ -1179,6 +1233,14 @@ namespace VsensAgent
                     if (ok)
                     {
                         RegisterMutation("control.local", avatarId, ctrl.action);
+                        var avatarObjectAfter = avatarRuntimeManager.GetManagedAvatarObject();
+                        RecordTransformChange(
+                            "agent",
+                            ctrl.action,
+                            avatarId,
+                            beforeTransform,
+                            SceneTransformSnapshot.Capture(avatarId, avatarObjectAfter != null ? avatarObjectAfter.transform : null),
+                            ctrl);
                     }
                     break;
 

@@ -480,6 +480,64 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
             }
         }
 
+        [Test]
+        public void RuntimeTransformHandleBridge_RecordsSensorTransformChangeOnInteractionEnd()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RuntimeEditSensorHistoryRoot");
+            var cameraGo = new GameObject("RuntimeEditHistoryCamera");
+
+            try
+            {
+                var camera = cameraGo.AddComponent<Camera>();
+                camera.tag = "MainCamera";
+                camera.transform.position = new Vector3(0f, 2f, -4f);
+                camera.transform.LookAt(Vector3.zero);
+
+                root.AddComponent<SceneRegistry>();
+                var history = root.AddComponent<VsensAgent.SceneHistory.SceneActionHistory>();
+                var controller = root.AddComponent<RuntimeEditModeController>();
+                controller.OverrideRuntimeCameraForTests(camera);
+                controller.SetEditMode(true);
+
+                var sensorObject = new GameObject("IMU-History");
+                sensorObject.AddComponent<TestEditableSensor>();
+
+                Assert.That(controller.TrySelectEditable("IMU-History"), Is.True);
+
+                var bridge = root.GetComponent<RuntimeTransformHandleBridge>();
+                Assert.That(bridge, Is.Not.Null);
+                bridge.RefreshHandleBinding();
+                bridge.CaptureInteractionStartForTests();
+
+                sensorObject.transform.position = new Vector3(1f, 2f, 3f);
+                bridge.CompleteInteractionForTests();
+
+                Assert.That(history.OperationLog.Count, Is.EqualTo(1));
+                Assert.That(history.OperationLog[0].source, Is.EqualTo("user"));
+                Assert.That(history.OperationLog[0].actionType, Is.EqualTo("set_sensor"));
+                Assert.That(history.OperationLog[0].targetId, Is.EqualTo("IMU-History"));
+
+                Object.DestroyImmediate(sensorObject);
+                if (bridge.ActiveHandle != null)
+                {
+                    Object.DestroyImmediate(bridge.ActiveHandle.gameObject);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                var manager = Object.FindFirstObjectByType<TransformHandleManager>();
+                if (manager != null)
+                {
+                    Object.DestroyImmediate(manager.gameObject);
+                }
+
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
         private class TestEditableSensor : VirtualSensor
         {
             public override void UpdateWorking(float time, float deltaTime)
