@@ -66,9 +66,13 @@ public class SensorObjectDescriber : ObjectDescriber
         if (_sensor != null)
         {
             var parent = _sensor.transform.parent;
-            if (parent != null && parent.TryGetComponent(out ObjectDescriber parentDescriber))
+            if (parent != null)
             {
-                data["attachTo"] = parentDescriber.GetObjectName();
+                var parentDescriber = parent.GetComponentInParent<ObjectDescriber>();
+                if (parentDescriber != null)
+                {
+                    data["attachTo"] = parentDescriber.GetObjectName();
+                }
             }
             data["sensor"] = _sensor.GetSensorDescription();
         }

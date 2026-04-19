@@ -54,7 +54,7 @@ namespace Sensor
             base.Start();
             _lastPosition = transform.position;
             _lastRotation = transform.rotation.eulerAngles;
-            graphController = graphChart.GetComponent<LineChartController>();
+            graphController = graphChart == null ? null : graphChart.GetComponent<LineChartController>();
         }
 
         /// <summary>

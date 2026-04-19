@@ -6,7 +6,7 @@ using VsensAgent.Network;
 public class LoginController : MonoBehaviour
 {
     public GameObject loginPanel;
-    public GameObject workspacePanel;
+    public GameObject mainPanel;
     public WsClient wsClient; 
     public TMP_InputField serverInput;
     public TMP_InputField usernameInput;
@@ -52,8 +52,8 @@ public class LoginController : MonoBehaviour
         if (loginPanel != null)
             loginPanel.SetActive(false);
 
-        if (workspacePanel != null)
-            workspacePanel.SetActive(true);
+        if (mainPanel != null)
+            mainPanel.SetActive(true);
     }
 
     private void OnConnectFailed(string error)
@@ -85,8 +85,8 @@ public class LoginController : MonoBehaviour
         if (loginPanel != null)
             loginPanel.SetActive(true);
 
-        if (workspacePanel != null)
-            workspacePanel.SetActive(false);
+        if (mainPanel != null)
+            mainPanel.SetActive(false);
     }
 
     private void SetLoginStateIdle(string errorMessage = null)
@@ -112,7 +112,7 @@ public class LoginController : MonoBehaviour
         if (loginPanel != null)
             loginPanel.SetActive(true);
 
-        if (workspacePanel != null)
-            workspacePanel.SetActive(false);
+        if (mainPanel != null)
+            mainPanel.SetActive(false);
     }
 }

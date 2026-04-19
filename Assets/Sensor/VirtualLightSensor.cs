@@ -36,7 +36,7 @@ namespace Sensor
         {
             base.Start();
             barChart.ProgressTextFormatter = f => f.ToString("F2") + " lux";
-            graphController = graphChart.GetComponent<LineChartController>();
+            graphController = graphChart == null ? null : graphChart?.GetComponent<LineChartController>();
         }
 
         public override void UpdateWorking(float time, float deltaTime)
