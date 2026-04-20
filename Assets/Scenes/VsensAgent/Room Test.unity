@@ -19565,7 +19565,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 898763c50aaa46b45bbf5ee8fc624a37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VsensAgent.Network.HeartbeatManager
-  heartbeatInterval: 1
+  heartbeatInterval: 10
   enableHeartbeat: 1
   pauseWhenAgentBusy: 1
 --- !u!114 &1739722869
