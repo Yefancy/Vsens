@@ -12,16 +12,26 @@ namespace VsensAgent.UI
     {
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private string defaultAgentStatus = "Agent: Idle";
+        [SerializeField] private Color hoverHintColor = new Color(0.78f, 0.56f, 0.12f, 1f);
 
         private string agentStatus;
         private string hoverHint;
         private string transientMessage;
         private float transientUntil;
         private SceneActionHistory sceneActionHistory;
+        private Color defaultTextColor;
+        private bool hasDefaultTextColor;
 
         private void Awake()
         {
             statusText ??= GetComponentInChildren<TMP_Text>(true);
+
+            if (statusText != null)
+            {
+                defaultTextColor = statusText.color;
+                hasDefaultTextColor = true;
+            }
+
             agentStatus = defaultAgentStatus;
             ServiceLocator.Register<UniversalStatusBar>(this);
             UpdateDisplayedText();
@@ -150,8 +160,14 @@ namespace VsensAgent.UI
 
             if (!string.IsNullOrEmpty(hoverHint))
             {
+                statusText.color = hoverHintColor;
                 statusText.text = hoverHint;
                 return;
+            }
+
+            if (hasDefaultTextColor)
+            {
+                statusText.color = defaultTextColor;
             }
 
             if (!string.IsNullOrEmpty(transientMessage))

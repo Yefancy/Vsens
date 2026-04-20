@@ -30,7 +30,7 @@ namespace VsensAgent.Network
         /// </summary>
         [SerializeField]
         [Tooltip("取消勾选可在保持 WsClient 连接的同时停止发送心跳（调试用）。")]
-        private bool enableHeartbeat = true;
+        private bool enableHeartbeat = false;
 
         /// <summary>
         /// 当 Agent 正忙（非 idle）时是否暂停心跳。
@@ -130,6 +130,12 @@ namespace VsensAgent.Network
         // ------------------------------------------------------------------ //
         //  Public API — Inspector / runtime configuration
         // ------------------------------------------------------------------ //
+
+        /// <summary>当前是否启用了 heartbeat（用户期望状态）。</summary>
+        public bool IsHeartbeatEnabled => enableHeartbeat;
+
+        /// <summary>当前 heartbeat 协程是否在运行。</summary>
+        public bool IsHeartbeatLoopRunning => _heartbeatCoroutine != null;
 
         /// <summary>启用或禁用心跳（运行时可调用）。</summary>
         public void SetHeartbeatEnabled(bool enabled)
