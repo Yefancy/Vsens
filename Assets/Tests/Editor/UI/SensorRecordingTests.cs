@@ -24,7 +24,7 @@ namespace VsensAgent.Tests.Editor.UI
                 dataCenter.Start();
 
                 var manager = root.AddComponent<VsensAgentSensorManager>();
-                manager.SetEditorExportDirectoryResolver(() => exportRoot);
+                manager.SetExportDirectoryResolver(() => exportRoot);
 
                 var sensorObject = new GameObject("DistanceSensor");
                 sensorObject.transform.SetParent(root.transform, false);
@@ -70,7 +70,7 @@ namespace VsensAgent.Tests.Editor.UI
                 dataCenter.Start();
 
                 var manager = root.AddComponent<VsensAgentSensorManager>();
-                manager.SetEditorExportDirectoryResolver(() => string.Empty);
+                manager.SetExportDirectoryResolver(() => string.Empty);
 
                 var monitor = root.AddComponent<MonitorManager>();
                 monitor.recordingButton = new GameObject("RecordingButton").AddComponent<Button>();

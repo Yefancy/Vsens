@@ -335,17 +335,21 @@ namespace VsensAgent.UI
                 RefreshRecordingUi();
                 return;
             }
-            
-            var result = sensorManager.StopSensorRecordingAndExport();
-            if (result.saved)
+
+            sensorManager.StopSensorRecordingAndExportAsync(result =>
             {
-                Debug.Log($"[SensorMonitorManager] 💾 Sensor recording saved to {result.directoryPath}");
-            }
-            else if (result.canceled)
-            {
-                Debug.Log("[SensorMonitorManager] ℹ️ Sensor recording export canceled.");
-            }
-            
+                if (result.saved)
+                {
+                    Debug.Log($"[SensorMonitorManager] 💾 Sensor recording saved to {result.directoryPath}");
+                }
+                else if (result.canceled)
+                {
+                    Debug.Log("[SensorMonitorManager] ℹ️ Sensor recording export canceled.");
+                }
+
+                RefreshRecordingUi();
+            });
+
             RefreshRecordingUi();
         }
 

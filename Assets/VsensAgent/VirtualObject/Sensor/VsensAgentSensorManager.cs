@@ -5,11 +5,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Sensor;
+using SimpleFileBrowser;
 using UnityEngine;
 using VsensAgent.Core;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace VsensAgent.VirtualObject.Sensor
 {
@@ -40,8 +38,7 @@ namespace VsensAgent.VirtualObject.Sensor
         private SensorDataCenter _sensorDataCenter;
         private bool _isRecording;
         private float _recordingStartRealtime;
-        private Func<string> _editorExportDirectoryResolver;
-        private Func<string> _playerExportDirectoryResolver;
+        private Func<string> _exportDirectoryResolver;
 
         public bool IsRecording => _isRecording;
         public float RecordingDurationSeconds => _isRecording ? Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime) : 0f;
@@ -95,36 +92,92 @@ namespace VsensAgent.VirtualObject.Sensor
             return true;
         }
 
-        public void SetEditorExportDirectoryResolver(Func<string> resolver)
+        public void SetExportDirectoryResolver(Func<string> resolver)
         {
-            _editorExportDirectoryResolver = resolver;
+            _exportDirectoryResolver = resolver;
         }
 
-        public void SetPlayerExportDirectoryResolver(Func<string> resolver)
+        public void StopSensorRecordingAndExportAsync(Action<RecordingExportResult> onCompleted)
         {
-            _playerExportDirectoryResolver = resolver;
+            if (!TryStopSensorRecording(out var capturedData, out var immediateResult))
+            {
+                onCompleted?.Invoke(immediateResult);
+                return;
+            }
+
+            var configuredBaseDirectory = ResolveConfiguredExportBaseDirectory();
+            if (configuredBaseDirectory != null)
+            {
+                onCompleted?.Invoke(ExportCapturedData(capturedData, configuredBaseDirectory));
+                return;
+            }
+
+            var initialPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.DesktopDirectory);
+            if (!FileBrowser.ShowSaveDialog(
+                    paths =>
+                    {
+                        var selectedDirectory = paths != null && paths.Length > 0 ? paths[0] : string.Empty;
+                        onCompleted?.Invoke(ExportCapturedData(capturedData, selectedDirectory));
+                    },
+                    () => onCompleted?.Invoke(new RecordingExportResult(false, true, string.Empty, 0)),
+                    FileBrowser.PickMode.FilesAndFolders,
+                    false,
+                    initialPath,
+                    "sensor_data",
+                    "Choose Folder For Recorded Sensor Data"))
+            {
+                Debug.LogWarning("[VsensAgentSensorManager] ⚠️ Failed to open SimpleFileBrowser for export directory selection.");
+                onCompleted?.Invoke(new RecordingExportResult(false, true, string.Empty, 0));
+            }
         }
 
         public RecordingExportResult StopSensorRecordingAndExport()
         {
+            if (!TryStopSensorRecording(out var capturedData, out var immediateResult))
+            {
+                return immediateResult;
+            }
+
+            var configuredBaseDirectory = ResolveConfiguredExportBaseDirectory();
+            if (configuredBaseDirectory == null)
+            {
+                Debug.LogWarning("[VsensAgentSensorManager] ⚠️ Synchronous export requires a configured export directory resolver. Use StopSensorRecordingAndExportAsync for interactive export.");
+                return new RecordingExportResult(false, true, string.Empty, 0);
+            }
+
+            return ExportCapturedData(capturedData, configuredBaseDirectory);
+        }
+
+        private bool TryStopSensorRecording(out Dictionary<VirtualSensor, List<SensorData>> capturedData, out RecordingExportResult result)
+        {
+            capturedData = null;
+
             var dataCenter = ResolveSensorDataCenter();
             if (dataCenter == null)
             {
                 Debug.LogError("[VsensAgentSensorManager] ❌ Cannot stop recording: SensorDataCenter not found.");
                 _isRecording = false;
-                return new RecordingExportResult(false, false, string.Empty, 0);
+                result = new RecordingExportResult(false, false, string.Empty, 0);
+                return false;
             }
 
-            var capturedData = dataCenter.StopRecording();
+            capturedData = dataCenter.StopRecording();
             _isRecording = false;
 
             if (capturedData == null || capturedData.Count == 0)
             {
                 Debug.LogWarning("[VsensAgentSensorManager] ⚠️ No recorded sensor data to export.");
-                return new RecordingExportResult(false, false, string.Empty, 0);
+                result = new RecordingExportResult(false, false, string.Empty, 0);
+                return false;
             }
 
-            var targetDirectory = ResolveExportDirectory();
+            result = default;
+            return true;
+        }
+
+        private RecordingExportResult ExportCapturedData(Dictionary<VirtualSensor, List<SensorData>> capturedData, string baseDirectory)
+        {
+            var targetDirectory = ResolveExportDirectory(baseDirectory);
             if (string.IsNullOrWhiteSpace(targetDirectory))
             {
                 Debug.Log("[VsensAgentSensorManager] ℹ️ Export canceled by user.");
@@ -207,9 +260,8 @@ namespace VsensAgent.VirtualObject.Sensor
             return Regex.Replace(value, invalidRegex, "_");
         }
 
-        private string ResolveExportDirectory()
+        private string ResolveExportDirectory(string baseDirectory)
         {
-            var baseDirectory = ResolveExportBaseDirectory();
             if (string.IsNullOrWhiteSpace(baseDirectory))
             {
                 return string.Empty;
@@ -218,29 +270,13 @@ namespace VsensAgent.VirtualObject.Sensor
             return Path.Combine(baseDirectory, DefaultExportFolderName());
         }
 
-        private string ResolveExportBaseDirectory()
+        private string ResolveConfiguredExportBaseDirectory()
         {
-#if UNITY_EDITOR
-            if (_editorExportDirectoryResolver != null)
+            if (_exportDirectoryResolver != null)
             {
-                return _editorExportDirectoryResolver();
+                return _exportDirectoryResolver();
             }
-
-            var selectedFolder = EditorUtility.SaveFolderPanel("Choose Folder For Recorded Sensor Data", "", string.Empty);
-            if (!string.IsNullOrWhiteSpace(selectedFolder))
-            {
-                return selectedFolder;
-            }
-
-            return string.Empty;
-#else
-            if (_playerExportDirectoryResolver != null)
-            {
-                return _playerExportDirectoryResolver();
-            }
-
-            return System.Environment.GetFolderPath(System.Environment.SpecialFolder.DesktopDirectory);
-#endif
+            return null;
         }
 
         private static string DefaultExportFolderName()

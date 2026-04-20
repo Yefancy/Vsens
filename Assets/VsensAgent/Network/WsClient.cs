@@ -23,13 +23,16 @@ namespace VsensAgent.Network
         private bool isConnecting = false;
         public bool IsConnecting => isConnecting;
         public string ClientId => clientId;
-
+        public string Username => pendingUsername;
+        public string Us => pendingUs;
+        
         private Action pendingOnConnected;
         private Action<string> pendingOnFailed;
         private string pendingUsername = string.Empty;
         private string pendingUs = string.Empty;
         private string clientId = string.Empty;
 
+        
         // 事件定义
         public static event Action<AgentReplyMessage> OnAgentReply; // 统一的Agent回复事件（语音+文字）
         public static event Action<ControlObject[]> OnControl; // 统一使用数组
