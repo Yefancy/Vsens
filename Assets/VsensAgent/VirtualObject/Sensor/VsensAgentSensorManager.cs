@@ -8,6 +8,7 @@ using Sensor;
 using SimpleFileBrowser;
 using UnityEngine;
 using VsensAgent.Core;
+using VsensAgent.Network;
 
 namespace VsensAgent.VirtualObject.Sensor
 {
@@ -39,6 +40,7 @@ namespace VsensAgent.VirtualObject.Sensor
         private bool _isRecording;
         private float _recordingStartRealtime;
         private Func<string> _exportDirectoryResolver;
+        private WsClient _wsClient;
 
         public bool IsRecording => _isRecording;
         public float RecordingDurationSeconds => _isRecording ? Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime) : 0f;
@@ -278,10 +280,20 @@ namespace VsensAgent.VirtualObject.Sensor
             }
             return null;
         }
-
-        private static string DefaultExportFolderName()
+        
+        private WsClient ResolveWsClient()
         {
-            return $"vsens_sensor_recording_{System.DateTime.Now:yyyyMMdd_HHmmss}";
+            if (_wsClient == null)
+            {
+                _wsClient = ServiceLocator.Get<WsClient>();
+            }
+            return _wsClient;
+        }
+
+        private string DefaultExportFolderName()
+        {
+            var ws = ResolveWsClient();
+            return $"{ws?.Username ?? "anonymous"}_{ws?.Us ?? "unknown"}_{DateTime.Now:yyyyMMdd_HHmmss}";
         }
 
         public List<string> GetRegisteredSensorNames()
