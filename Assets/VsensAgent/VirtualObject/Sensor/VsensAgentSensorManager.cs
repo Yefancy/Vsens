@@ -9,6 +9,7 @@ using SimpleFileBrowser;
 using UnityEngine;
 using VsensAgent.Core;
 using VsensAgent.Network;
+using VsensAgent.Network.Protocol;
 
 namespace VsensAgent.VirtualObject.Sensor
 {
@@ -41,6 +42,7 @@ namespace VsensAgent.VirtualObject.Sensor
         private float _recordingStartRealtime;
         private Func<string> _exportDirectoryResolver;
         private WsClient _wsClient;
+        private Action<object> _recordingSnapshotSender;
 
         public bool IsRecording => _isRecording;
         public float RecordingDurationSeconds => _isRecording ? Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime) : 0f;
@@ -97,6 +99,11 @@ namespace VsensAgent.VirtualObject.Sensor
         public void SetExportDirectoryResolver(Func<string> resolver)
         {
             _exportDirectoryResolver = resolver;
+        }
+
+        public void SetRecordingSnapshotSender(Action<object> sender)
+        {
+            _recordingSnapshotSender = sender;
         }
 
         public void StopSensorRecordingAndExportAsync(Action<RecordingExportResult> onCompleted)
@@ -285,7 +292,9 @@ namespace VsensAgent.VirtualObject.Sensor
         {
             if (_wsClient == null)
             {
-                _wsClient = ServiceLocator.Get<WsClient>();
+                _wsClient = ServiceLocator.IsRegistered<WsClient>()
+                    ? ServiceLocator.Get<WsClient>()
+                    : FindFirstObjectByType<WsClient>();
             }
             return _wsClient;
         }
@@ -294,6 +303,72 @@ namespace VsensAgent.VirtualObject.Sensor
         {
             var ws = ResolveWsClient();
             return $"{ws?.Username ?? "anonymous"}_{ws?.Us ?? "unknown"}_{DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
+        public bool TryBuildRecordingSnapshotUploadRequest(
+            RecordingExportResult exportResult,
+            out SensorRecordingSnapshotUploadRequest request)
+        {
+            request = null;
+
+            if (!exportResult.saved || exportResult.canceled || string.IsNullOrWhiteSpace(exportResult.directoryPath))
+            {
+                return false;
+            }
+
+            if (!Directory.Exists(exportResult.directoryPath))
+            {
+                Debug.LogWarning($"[VsensAgentSensorManager] ⚠️ Recording export directory does not exist: {exportResult.directoryPath}");
+                return false;
+            }
+
+            var csvFiles = Directory.GetFiles(exportResult.directoryPath, "*.csv")
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (csvFiles.Length == 0)
+            {
+                Debug.LogWarning($"[VsensAgentSensorManager] ⚠️ No CSV files found for recording snapshot upload in {exportResult.directoryPath}");
+                return false;
+            }
+
+            request = new SensorRecordingSnapshotUploadRequest
+            {
+                timestamp_label = Path.GetFileName(exportResult.directoryPath),
+                local_export_directory = exportResult.directoryPath,
+                files = csvFiles.Select(BuildRecordingSnapshotUploadFile).ToArray(),
+            };
+            return true;
+        }
+
+        public bool TryUploadRecordingSnapshot(RecordingExportResult exportResult)
+        {
+            if (!TryBuildRecordingSnapshotUploadRequest(exportResult, out var request))
+            {
+                return false;
+            }
+
+            var sender = _recordingSnapshotSender ?? WsClient.SendMessage;
+            sender?.Invoke(request);
+            Debug.Log($"[VsensAgentSensorManager] ☁️ Uploaded recording snapshot metadata for {request.timestamp_label} ({request.files?.Length ?? 0} files).");
+            return true;
+        }
+
+        private static SensorRecordingSnapshotUploadFile BuildRecordingSnapshotUploadFile(string filePath)
+        {
+            var fileName = Path.GetFileName(filePath);
+            var sensorName = Path.GetFileNameWithoutExtension(fileName);
+            var separatorIndex = sensorName.LastIndexOf('_');
+            if (separatorIndex > 0)
+            {
+                sensorName = sensorName.Substring(0, separatorIndex);
+            }
+
+            return new SensorRecordingSnapshotUploadFile
+            {
+                file_name = fileName,
+                sensor_name = sensorName,
+                csv_content = File.ReadAllText(filePath),
+            };
         }
 
         public List<string> GetRegisteredSensorNames()

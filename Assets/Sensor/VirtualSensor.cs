@@ -40,6 +40,7 @@ namespace Sensor
         public bool canSelected = true;
         public bool interactable = true;
         public bool canDeselect = true;
+        public bool isPreview = false;
 
         /// <summary>
         /// to check if the sensor is working, if ture the sensor will collect data, otherwise it wont.

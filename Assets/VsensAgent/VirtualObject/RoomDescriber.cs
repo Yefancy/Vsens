@@ -2,6 +2,7 @@ using SimpleJSON;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class RoomDescriber : MonoBehaviour
 {
@@ -21,6 +22,8 @@ public class RoomDescriber : MonoBehaviour
         var objects = new JSONObject();
         foreach (var objectDescriber in GetComponentsInChildren<ObjectDescriber>())
         {
+            if (objectDescriber == null || !objectDescriber.isActiveAndEnabled)
+                continue;
             var data = objectDescriber.GetDescription();
             var objectName = objectDescriber.GetObjectName();
             objects.Add(objectName, data);

@@ -111,4 +111,21 @@ namespace VsensAgent.Network.Protocol
         public string note;
         public string scene_snapshot;
     }
+
+    [Serializable]
+    public class SensorRecordingSnapshotUploadFile
+    {
+        public string file_name;
+        public string sensor_name;
+        public string csv_content;
+    }
+
+    [Serializable]
+    public class SensorRecordingSnapshotUploadRequest
+    {
+        public string type = "sensor.recording_snapshot";
+        public string timestamp_label;
+        public string local_export_directory;
+        public SensorRecordingSnapshotUploadFile[] files;
+    }
 }

@@ -219,4 +219,14 @@ namespace VsensAgent.Network.Protocol
         public string code;
         public string request_id;
     }
+
+    [Serializable]
+    public class SensorRecordingSnapshotAckMessage
+    {
+        public string type;
+        public string timestamp_label;
+        public string saved_directory;
+        public string[] saved_files;
+        public int saved_file_count;
+    }
 }

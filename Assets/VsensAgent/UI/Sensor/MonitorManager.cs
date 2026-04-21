@@ -133,7 +133,10 @@ namespace VsensAgent.UI
             }
             
             // 获取场景中所有的VirtualSensor
-            var allSensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None);
+            var allSensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                .Where(s => s != null && s.gameObject.activeInHierarchy && !s.isPreview)
+                .Where(s => s.GetComponent<SensorObjectDescriber>()?.IsInited ?? false)
+                .ToArray();
             
             if (showDebugInfo)
             {
@@ -341,6 +344,10 @@ namespace VsensAgent.UI
                 if (result.saved)
                 {
                     Debug.Log($"[SensorMonitorManager] 💾 Sensor recording saved to {result.directoryPath}");
+                    if (!sensorManager.TryUploadRecordingSnapshot(result))
+                    {
+                        Debug.LogWarning("[SensorMonitorManager] ⚠️ Sensor recording saved locally, but snapshot upload was skipped.");
+                    }
                 }
                 else if (result.canceled)
                 {

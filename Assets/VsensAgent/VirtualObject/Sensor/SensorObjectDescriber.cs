@@ -12,6 +12,8 @@ public class SensorObjectDescriber : ObjectDescriber
     private static Dictionary<string, int> sensorCounters = new Dictionary<string, int>();
     
     public VirtualSensor Sesnor => _sensor;
+    private bool IsInit;
+    public bool IsInited => IsInit;
     
     protected new void Awake()
     {
@@ -20,19 +22,22 @@ public class SensorObjectDescriber : ObjectDescriber
             _sensor = GetComponent<VirtualSensor>();
         }
 
-        // 设置传感器的唯一名称
-        if (_sensor != null)
-        {
-            SetSensorName();
-        }
-
         base.Awake();
     }
-    
+
+    private void Start()
+    {
+        // 设置传感器的唯一名称
+        if (!IsInited && _sensor != null)
+        {
+            SetupSensorName();
+        }
+    }
+
     /// <summary>
     /// 为传感器设置唯一的名称：传感器类型-序号
     /// </summary>
-    private void SetSensorName()
+    private void SetupSensorName()
     {
         string sensorType = _sensor.SensorDefinition().getSensorName();
         
@@ -58,6 +63,7 @@ public class SensorObjectDescriber : ObjectDescriber
         gameObject.name = sensorName;
         
         Debug.Log($"[SensorObjectDescriber] Set sensor name to: {sensorName}");
+        IsInit = true;
     }
     
     public override JSONObject GetDescription()

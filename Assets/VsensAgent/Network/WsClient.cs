@@ -410,6 +410,18 @@ namespace VsensAgent.Network
                         pendingOnFailed = null;
                         break;
 
+                    case "sensor.recording_snapshot_ack":
+                        var recordingAck = JsonConvert.DeserializeObject<SensorRecordingSnapshotAckMessage>(json);
+                        if (recordingAck == null)
+                        {
+                            Debug.LogWarning($"[WS] Failed to deserialize sensor.recording_snapshot_ack payload: {json}");
+                            break;
+                        }
+
+                        Debug.Log(
+                            $"[WS] Recording snapshot synced: {recordingAck.timestamp_label} -> {recordingAck.saved_directory} ({recordingAck.saved_file_count} files)");
+                        break;
+
                     default:
                         // 静默忽略未知消息类型，保持前向兼容性（不崩溃）
                         Debug.Log($"[WS] Ignoring unknown message type: '{typeWrapper.type}'");

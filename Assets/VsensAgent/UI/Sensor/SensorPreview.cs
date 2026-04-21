@@ -186,6 +186,12 @@ namespace VsensAgent.UI.Sensor
             }
 
             previewInstance = Instantiate(sensorPrefab.gameObject);
+            if (previewInstance.TryGetComponent<VirtualSensor>(out var sensor))
+            {
+                sensor.isPreview = true;
+                Destroy(sensor);
+            }
+
             previewInstance.name = $"{sensorPrefab.gameObject.name}_Preview";
 
             foreach (var behaviour in previewInstance.GetComponentsInChildren<MonoBehaviour>(true))

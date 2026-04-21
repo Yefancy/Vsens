@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Sensor;
 using SimpleJSON;
@@ -60,6 +61,69 @@ namespace VsensAgent.Tests.Editor.UI
         }
 
         [Test]
+        public void BuildRecordingSnapshotUploadRequest_CollectsCsvContentsAndMetadata()
+        {
+            var root = new GameObject("RecordingUploadRoot");
+            var exportRoot = Path.Combine(Path.GetTempPath(), $"sensor_recording_upload_{System.Guid.NewGuid():N}");
+
+            try
+            {
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                var timestampedDirectory = Path.Combine(exportRoot, "alice_lab_20260421_101010");
+                Directory.CreateDirectory(timestampedDirectory);
+                File.WriteAllText(Path.Combine(timestampedDirectory, "IMU-01_IMU.csv"), "tag,time,ax,ay,az\nIMU-01,0.0,1,2,3\n");
+                File.WriteAllText(Path.Combine(timestampedDirectory, "DISTANCE-01_DISTANCE.csv"), "tag,time,distance\nDISTANCE-01,0.0,0.5\n");
+
+                var built = manager.TryBuildRecordingSnapshotUploadRequest(
+                    new VsensAgentSensorManager.RecordingExportResult(true, false, timestampedDirectory, 2),
+                    out var request);
+
+                Assert.That(built, Is.True);
+                Assert.That(request, Is.Not.Null);
+                Assert.That(request.type, Is.EqualTo("sensor.recording_snapshot"));
+                Assert.That(request.timestamp_label, Is.EqualTo("alice_lab_20260421_101010"));
+                Assert.That(request.local_export_directory, Is.EqualTo(timestampedDirectory));
+                Assert.That(request.files, Has.Length.EqualTo(2));
+                Assert.That(request.files.Select(file => file.file_name), Is.EquivalentTo(new[]
+                {
+                    "IMU-01_IMU.csv",
+                    "DISTANCE-01_DISTANCE.csv"
+                }));
+                Assert.That(request.files.All(file => !string.IsNullOrWhiteSpace(file.csv_content)), Is.True);
+            }
+            finally
+            {
+                if (Directory.Exists(exportRoot))
+                {
+                    Directory.Delete(exportRoot, true);
+                }
+
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void BuildRecordingSnapshotUploadRequest_ReturnsFalseWhenExportWasCanceled()
+        {
+            var root = new GameObject("RecordingUploadCanceledRoot");
+
+            try
+            {
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                var built = manager.TryBuildRecordingSnapshotUploadRequest(
+                    new VsensAgentSensorManager.RecordingExportResult(false, true, string.Empty, 0),
+                    out var request);
+
+                Assert.That(built, Is.False);
+                Assert.That(request, Is.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void MonitorManager_RecordingButtonAndTimerReflectRecordingState()
         {
             var root = new GameObject("MonitorRecordingRoot");
@@ -90,6 +154,105 @@ namespace VsensAgent.Tests.Editor.UI
                 Assert.That(monitor.recordingButtonImage.color, Is.EqualTo(monitor.recordingButtonIdleColor));
                 Assert.That(monitor.recordingTimerText.gameObject.activeSelf, Is.False);
 
+                Object.DestroyImmediate(monitor.recordingButton.gameObject);
+                Object.DestroyImmediate(monitor.recordingTimerText.gameObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void MonitorManager_StopRecording_UploadsSnapshotOnlyAfterSuccessfulExport()
+        {
+            var root = new GameObject("MonitorRecordingUploadRoot");
+            var exportRoot = Path.Combine(Path.GetTempPath(), $"monitor_recording_upload_{System.Guid.NewGuid():N}");
+
+            try
+            {
+                var dataCenter = root.AddComponent<SensorDataCenter>();
+                dataCenter.Start();
+
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                manager.SetExportDirectoryResolver(() => exportRoot);
+
+                object sentPayload = null;
+                manager.SetRecordingSnapshotSender(payload => sentPayload = payload);
+
+                var sensorObject = new GameObject("DistanceSensor");
+                sensorObject.transform.SetParent(root.transform, false);
+                var sensor = sensorObject.AddComponent<TestRecordingSensor>();
+                dataCenter.RegisterSensor(sensor);
+
+                var monitor = root.AddComponent<MonitorManager>();
+                monitor.recordingButton = new GameObject("RecordingButton").AddComponent<Button>();
+                monitor.recordingButtonImage = monitor.recordingButton.gameObject.AddComponent<Image>();
+                monitor.recordingTimerText = new GameObject("RecordingTimer").AddComponent<TextMeshProUGUI>();
+
+                var startMethod = typeof(MonitorManager).GetMethod("Start", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                startMethod?.Invoke(monitor, null);
+
+                monitor.recordingButton.onClick.Invoke();
+                sensor.EmitSample(0.1f, 1.5f);
+                monitor.recordingButton.onClick.Invoke();
+
+                Assert.That(sentPayload, Is.Not.Null);
+                var request = sentPayload as VsensAgent.Network.Protocol.SensorRecordingSnapshotUploadRequest;
+                Assert.That(request, Is.Not.Null);
+                Assert.That(request.files, Has.Length.EqualTo(1));
+
+                Object.DestroyImmediate(sensorObject);
+                Object.DestroyImmediate(monitor.recordingButton.gameObject);
+                Object.DestroyImmediate(monitor.recordingTimerText.gameObject);
+            }
+            finally
+            {
+                if (Directory.Exists(exportRoot))
+                {
+                    Directory.Delete(exportRoot, true);
+                }
+
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void MonitorManager_StopRecording_DoesNotUploadWhenExportIsCanceled()
+        {
+            var root = new GameObject("MonitorRecordingCancelRoot");
+
+            try
+            {
+                var dataCenter = root.AddComponent<SensorDataCenter>();
+                dataCenter.Start();
+
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                manager.SetExportDirectoryResolver(() => string.Empty);
+
+                object sentPayload = null;
+                manager.SetRecordingSnapshotSender(payload => sentPayload = payload);
+
+                var sensorObject = new GameObject("DistanceSensor");
+                sensorObject.transform.SetParent(root.transform, false);
+                var sensor = sensorObject.AddComponent<TestRecordingSensor>();
+                dataCenter.RegisterSensor(sensor);
+
+                var monitor = root.AddComponent<MonitorManager>();
+                monitor.recordingButton = new GameObject("RecordingButton").AddComponent<Button>();
+                monitor.recordingButtonImage = monitor.recordingButton.gameObject.AddComponent<Image>();
+                monitor.recordingTimerText = new GameObject("RecordingTimer").AddComponent<TextMeshProUGUI>();
+
+                var startMethod = typeof(MonitorManager).GetMethod("Start", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                startMethod?.Invoke(monitor, null);
+
+                monitor.recordingButton.onClick.Invoke();
+                sensor.EmitSample(0.1f, 1.5f);
+                monitor.recordingButton.onClick.Invoke();
+
+                Assert.That(sentPayload, Is.Null);
+
+                Object.DestroyImmediate(sensorObject);
                 Object.DestroyImmediate(monitor.recordingButton.gameObject);
                 Object.DestroyImmediate(monitor.recordingTimerText.gameObject);
             }
