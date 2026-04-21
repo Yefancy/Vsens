@@ -30,7 +30,7 @@ namespace Sensor
         }
 
         [SerializeField] private bool showBarPreview = true;
-        [SerializeField] public float validDistance = 2;
+        [SerializeField] public float validDistance = 10;
         [SerializeField] private LayerMask hitMask = Physics.DefaultRaycastLayers;
         [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
         [SerializeField] private bool ignoreOwnColliders = true;

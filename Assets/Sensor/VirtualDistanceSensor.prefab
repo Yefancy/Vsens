@@ -209,7 +209,13 @@ MonoBehaviour:
   canDeselect: 1
   sensorAttachable: {fileID: 0}
   showBarPreview: 1
-  validDistance: 3
+  validDistance: 10
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  triggerInteraction: 1
+  ignoreOwnColliders: 1
+  rayOriginOffset: 0.02
   barChart: {fileID: 7855963295389892336}
   indicatorLine: {fileID: 3137231767508832965}
   startPoint: {fileID: 1807803004464180953}

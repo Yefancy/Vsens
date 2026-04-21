@@ -7840,6 +7840,34 @@ PrefabInstance:
       propertyPath: withState
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Range
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Color.b
+      value: 0.5896226
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Color.g
+      value: 0.77379787
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1597491152468863662, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      propertyPath: m_UseColorTemperature
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2294928327753656315, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       propertyPath: withState
       value: 1
@@ -8324,6 +8352,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3961469376666052334, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1484435392}
+    - targetCorrespondingSourceObject: {fileID: 5367844878590239239, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 988196281}
+    - targetCorrespondingSourceObject: {fileID: 603794447257230700, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2089052929}
+    - targetCorrespondingSourceObject: {fileID: 3638948849925705390, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1257327808}
   m_SourcePrefab: {fileID: 100100000, guid: fc69750e99aa04343889e924cba5b705, type: 3}
 --- !u!4 &716733179 stripped
 Transform:
@@ -10783,6 +10820,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 987006411}
   m_CullTransparentMesh: 1
+--- !u!1 &988196278 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5367844878590239239, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &988196281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 988196278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad08b0bdad6af425eb7714e165a24d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sensor.LightRegistration
 --- !u!1 &988928795
 GameObject:
   m_ObjectHideFlags: 0
@@ -13852,6 +13906,23 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
   m_PrefabInstance: {fileID: 9190006078706173079}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1257327800 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3638948849925705390, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1257327808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257327800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad08b0bdad6af425eb7714e165a24d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sensor.LightRegistration
 --- !u!1 &1267016826
 GameObject:
   m_ObjectHideFlags: 1
@@ -21734,6 +21805,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1931692108}
   - component: {fileID: 1931692107}
+  - component: {fileID: 1931692109}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -21821,6 +21893,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &1931692109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1931692106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad08b0bdad6af425eb7714e165a24d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sensor.LightRegistration
 --- !u!1 &1932009156
 GameObject:
   m_ObjectHideFlags: 0
@@ -23380,6 +23464,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2081653039}
   m_CullTransparentMesh: 1
+--- !u!1 &2089052926 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 603794447257230700, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2089052929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2089052926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad08b0bdad6af425eb7714e165a24d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sensor.LightRegistration
 --- !u!1 &2090684666
 GameObject:
   m_ObjectHideFlags: 0
@@ -24543,15 +24644,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.578
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.639
+      value: 2.153
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 4.926
+      value: 4.657
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalRotation.w
