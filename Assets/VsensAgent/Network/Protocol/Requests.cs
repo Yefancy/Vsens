@@ -1,4 +1,5 @@
 using System;
+using VsensAgent.SceneHistory;
 
 namespace VsensAgent.Network.Protocol
 {
@@ -127,5 +128,66 @@ namespace VsensAgent.Network.Protocol
         public string timestamp_label;
         public string local_export_directory;
         public SensorRecordingSnapshotUploadFile[] files;
+    }
+
+    [Serializable]
+    public class DataAnalysisStartRequest
+    {
+        public string type = "data.analysis_start";
+        public string selector;
+        public int recent_n = 3;
+        public string timestamp_label;
+        public string analysis_focus = "har_evidence";
+        public string[] analysis_scope;
+    }
+
+    [Serializable]
+    public class UnityVector3Log
+    {
+        public float x;
+        public float y;
+        public float z;
+    }
+
+    [Serializable]
+    public class UnityQuaternionLog
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float w;
+    }
+
+    [Serializable]
+    public class UnitySceneTransformSnapshotLog
+    {
+        public string objectId;
+        public UnityVector3Log position;
+        public UnityQuaternionLog rotation;
+        public UnityVector3Log localScale;
+        public string parentName;
+    }
+
+    [Serializable]
+    public class UnitySceneActionRecordLog
+    {
+        public string actionId;
+        public string source;
+        public string actionType;
+        public string targetId;
+        public string timestampUtc;
+        public string description;
+        public string rawActionJson;
+        public string revertedActionId;
+        public UnitySceneTransformSnapshotLog beforeTransform;
+        public UnitySceneTransformSnapshotLog afterTransform;
+    }
+
+    [Serializable]
+    public class UnitySceneActionLogRequest
+    {
+        public string type = "unity.scene_action";
+        public string scene_name;
+        public UnitySceneActionRecordLog record;
     }
 }

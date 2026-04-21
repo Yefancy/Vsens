@@ -112,6 +112,11 @@ namespace VsensAgent
                 return true;
             }
 
+            if (ctrl.action == "data_analysis")
+            {
+                return true;
+            }
+
             if (IsAvatarAction(ctrl.action))
             {
                 return TryValidateAvatarAction(ctrl, out errorCode, out errorMessage);
@@ -251,6 +256,12 @@ namespace VsensAgent
             if (ctrl.action == "remove_sensor")
             {
                 HandleRemoveSensorAction(ctrl);
+                return;
+            }
+
+            if (ctrl.action == "data_analysis")
+            {
+                HandleDataAnalysisAction(ctrl);
                 return;
             }
 
@@ -765,6 +776,43 @@ namespace VsensAgent
                     Debug.LogError("  - All required components are attached to the sensor prefab");
                 }
             }
+        }
+
+        private void HandleDataAnalysisAction(ControlObject ctrl)
+        {
+            string selector = ParseStringParameter(ctrl.parameters, "selector", "latest");
+            string timestampLabel = ParseStringParameter(ctrl.parameters, "timestamp_label", null);
+            string analysisFocus = ParseStringParameter(ctrl.parameters, "analysis_focus", "har_evidence");
+            int recentN = 3;
+            if (ctrl.parameters != null && ctrl.parameters.TryGetValue("recent_n", out var recentNValue) && recentNValue != null)
+            {
+                int.TryParse(recentNValue.ToString(), out recentN);
+                if (recentN <= 0)
+                {
+                    recentN = 3;
+                }
+            }
+
+            string[] analysisScope = new[]
+            {
+                "descriptive_stats",
+                "change_point",
+                "anomaly",
+            };
+            if (ctrl.parameters != null && ctrl.parameters.TryGetValue("analysis_scope", out var scopeValue) && scopeValue is JArray scopeArray)
+            {
+                analysisScope = scopeArray.Select(token => token?.ToString())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .ToArray();
+            }
+
+            Debug.Log($"[ControlManager] 📈 Forwarding data_analysis request with selector='{selector}', recent_n={recentN}, timestamp='{timestampLabel}'");
+            WsClient.SendDataAnalysisStart(
+                selector: string.IsNullOrWhiteSpace(selector) ? "latest" : selector,
+                recentN: recentN,
+                timestampLabel: string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel,
+                analysisFocus: analysisFocus,
+                analysisScope: analysisScope);
         }
 
         /// <summary>

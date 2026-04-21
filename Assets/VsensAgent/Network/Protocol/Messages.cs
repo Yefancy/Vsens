@@ -128,6 +128,22 @@ namespace VsensAgent.Network.Protocol
         public string reason;
     }
 
+    [Serializable]
+    public class DataAnalysisResultMessage
+    {
+        public string type;
+        public string status;
+        public string job_id;
+        public string job_kind;
+        public string reply;
+        public string summary;
+        public string har_judgement;
+        public int recording_count;
+        public string[] recording_keys;
+        public string[] aggregate_findings;
+        public string scene_context_summary;
+    }
+
     /// <summary>
     /// Agent状态广播消息 - Python端主动推送的Agent运行状态
     /// 状态值: idle | listening | transcribing | thinking | planning |

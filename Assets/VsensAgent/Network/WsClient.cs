@@ -8,6 +8,9 @@ using Newtonsoft.Json;
 using VsensAgent.Agent;
 using VsensAgent.Network.Protocol;
 using VsensAgent.Core;
+using VsensAgent.SceneHistory;
+using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 namespace VsensAgent.Network
 {
@@ -16,6 +19,9 @@ namespace VsensAgent.Network
         private static WebSocket websocket;
         private static bool isTryingReconnect = false;
         private static float reconnectInterval = Constants.Network.RECONNECT_INTERVAL;
+        private static readonly string[] DefaultDataAnalysisScope = { "descriptive_stats", "change_point", "anomaly" };
+        private static readonly Queue<UnitySceneActionLogRequest> PendingSceneActionLogs = new();
+        private const int MaxPendingSceneActionLogs = 512;
 
         // Agent行为控制器引用
         public AgentBehaviorController agentBehaviorController;
@@ -25,12 +31,17 @@ namespace VsensAgent.Network
         public string ClientId => clientId;
         public string Username => pendingUsername;
         public string Us => pendingUs;
+        public bool HasIdentifiedSession => IsConnected && !string.IsNullOrWhiteSpace(clientId);
         
         private Action pendingOnConnected;
         private Action<string> pendingOnFailed;
         private string pendingUsername = string.Empty;
         private string pendingUs = string.Empty;
         private string clientId = string.Empty;
+
+        [Header("Data Analysis Defaults")]
+        [SerializeField] private int defaultRecentAnalysisCount = 3;
+        [SerializeField] private string defaultAnalysisFocus = "har_evidence";
 
         
         // 事件定义
@@ -43,6 +54,7 @@ namespace VsensAgent.Network
         public static event Action<ClarificationRequestMessage> OnClarificationRequest;
         public static event Action<ProposalReadyMessage> OnProposalReady;
         public static event Action<JobLifecycleMessage> OnJobLifecycle;
+        public static event Action<DataAnalysisResultMessage> OnDataAnalysisResult;
         public static event Action<AgentPushMessage> OnAgentPush; // Phase 3: 心跳触发的主动推送
         public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
@@ -50,6 +62,21 @@ namespace VsensAgent.Network
         {
             // 注册到服务定位器
             ServiceLocator.Register<WsClient>(this);
+        }
+
+        public void RequestLatestDataAnalysis()
+        {
+            SendDataAnalysisLatest(defaultAnalysisFocus);
+        }
+
+        public void RequestAllDataAnalysis()
+        {
+            SendDataAnalysisAll(defaultAnalysisFocus);
+        }
+
+        public void RequestRecentDataAnalysis()
+        {
+            SendDataAnalysisRecent(defaultRecentAnalysisCount, defaultAnalysisFocus);
         }
 
         public void ConnectToServer(string serverUrl = null, string username = null, string us = null, Action onConnected = null, Action<string> onFailed = null)
@@ -352,6 +379,7 @@ namespace VsensAgent.Network
 
                     case "job.started":
                     case "job.status":
+                    case "job.completed":
                     case "job.cancelled":
                         var jobMsg = JsonConvert.DeserializeObject<JobLifecycleMessage>(json);
                         if (jobMsg == null)
@@ -360,7 +388,20 @@ namespace VsensAgent.Network
                             break;
                         }
 
+                        StopThinkingAnimation();
                         SafeInvoke(() => OnJobLifecycle?.Invoke(jobMsg), "job.OnJobLifecycle", json);
+                        break;
+
+                    case "data.analysis_result":
+                        var analysisMsg = JsonConvert.DeserializeObject<DataAnalysisResultMessage>(json);
+                        if (analysisMsg == null)
+                        {
+                            Debug.LogWarning($"[WS] Failed to deserialize data.analysis_result payload: {json}");
+                            break;
+                        }
+
+                        StopThinkingAnimation();
+                        SafeInvoke(() => OnDataAnalysisResult?.Invoke(analysisMsg), "data.analysis_result.OnDataAnalysisResult", json);
                         break;
 
                     case "agent_push":
@@ -405,6 +446,7 @@ namespace VsensAgent.Network
 
                         clientId = helloAck.client_id ?? string.Empty;
                         Debug.Log($"[WS] Client hello acknowledged: client_id={clientId}, username={helloAck.username}, us={helloAck.us}");
+                        FlushPendingSceneActionLogs();
                         pendingOnConnected?.Invoke();
                         pendingOnConnected = null;
                         pendingOnFailed = null;
@@ -581,6 +623,67 @@ namespace VsensAgent.Network
             }
         }
 
+        public static void SendDataAnalysisStart(
+            string selector,
+            int recentN = 3,
+            string timestampLabel = null,
+            string analysisFocus = "har_evidence",
+            string[] analysisScope = null)
+        {
+            if (websocket != null && websocket.State == WebSocketState.Open)
+            {
+                var payload = new DataAnalysisStartRequest()
+                {
+                    selector = string.IsNullOrWhiteSpace(selector) ? "latest" : selector,
+                    recent_n = recentN <= 0 ? 3 : recentN,
+                    timestamp_label = string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel,
+                    analysis_focus = string.IsNullOrWhiteSpace(analysisFocus) ? "har_evidence" : analysisFocus,
+                    analysis_scope = analysisScope ?? DefaultDataAnalysisScope,
+                };
+
+                websocket.SendText(JsonConvert.SerializeObject(payload));
+                StartThinkingAnimation();
+            }
+            else
+            {
+                Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send data analysis request.");
+            }
+        }
+
+        public static void SendDataAnalysisLatest(string analysisFocus = "har_evidence", string[] analysisScope = null)
+        {
+            SendDataAnalysisStart(
+                selector: "latest",
+                analysisFocus: analysisFocus,
+                analysisScope: analysisScope);
+        }
+
+        public static void SendDataAnalysisAll(string analysisFocus = "har_evidence", string[] analysisScope = null)
+        {
+            SendDataAnalysisStart(
+                selector: "all",
+                analysisFocus: analysisFocus,
+                analysisScope: analysisScope);
+        }
+
+        public static void SendDataAnalysisRecent(int recentN = 3, string analysisFocus = "har_evidence", string[] analysisScope = null)
+        {
+            SendDataAnalysisStart(
+                selector: "recent_n",
+                recentN: recentN,
+                analysisFocus: analysisFocus,
+                analysisScope: analysisScope);
+        }
+
+        public static void SendDataAnalysisByLabel(string timestampLabel, string analysisFocus = "har_evidence", string[] analysisScope = null)
+        {
+            SendDataAnalysisStart(
+                selector: "by_label",
+                timestampLabel: timestampLabel,
+                analysisFocus: analysisFocus,
+                analysisScope: analysisScope);
+        }
+
         /// <summary>
         /// 硬中断 — 取消正在进行的LLM调用，清除活动计划，Agent回到idle状态
         /// Python端返回: { "type": "interrupt_ack", "message": "Stopped." }
@@ -628,6 +731,35 @@ namespace VsensAgent.Network
             }
 
             websocket.SendText(JsonConvert.SerializeObject(payload));
+        }
+
+        public static void SendSceneActionLog(SceneActionRecord record, string sceneName = null)
+        {
+            if (record == null)
+            {
+                return;
+            }
+
+            var payload = new UnitySceneActionLogRequest
+            {
+                scene_name = string.IsNullOrWhiteSpace(sceneName) ? SceneManager.GetActiveScene().name : sceneName,
+                record = record.ToNetworkLog()
+            };
+
+            try
+            {
+                if (HasOpenIdentifiedSession())
+                {
+                    websocket.SendText(JsonConvert.SerializeObject(payload));
+                    return;
+                }
+
+                EnqueuePendingSceneActionLog(payload);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[WS] Failed to send unity.scene_action log: {ex.Message}\n{ex}");
+            }
         }
 
         /// <summary>
@@ -709,6 +841,43 @@ namespace VsensAgent.Network
 
             var payload = BuildClientHelloRequest(pendingUsername, pendingUs);
             websocket.SendText(JsonConvert.SerializeObject(payload));
+        }
+
+        private static bool HasOpenIdentifiedSession()
+        {
+            var wsClient = ServiceLocator.IsRegistered<WsClient>() ? ServiceLocator.Get<WsClient>() : null;
+            return websocket != null &&
+                   websocket.State == WebSocketState.Open &&
+                   wsClient != null &&
+                   !string.IsNullOrWhiteSpace(wsClient.clientId);
+        }
+
+        private static void EnqueuePendingSceneActionLog(UnitySceneActionLogRequest payload)
+        {
+            if (payload == null)
+            {
+                return;
+            }
+
+            while (PendingSceneActionLogs.Count >= MaxPendingSceneActionLogs)
+            {
+                PendingSceneActionLogs.Dequeue();
+            }
+
+            PendingSceneActionLogs.Enqueue(payload);
+        }
+
+        private static void FlushPendingSceneActionLogs()
+        {
+            if (!HasOpenIdentifiedSession())
+            {
+                return;
+            }
+
+            while (PendingSceneActionLogs.Count > 0)
+            {
+                websocket.SendText(JsonConvert.SerializeObject(PendingSceneActionLogs.Dequeue()));
+            }
         }
 
         private async void OnApplicationQuit()

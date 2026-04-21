@@ -124,6 +124,7 @@ namespace VsensAgent.UI
             WsClient.OnClarificationRequest += OnClarificationRequestReceived;
             WsClient.OnProposalReady += OnProposalReadyReceived;
             WsClient.OnJobLifecycle += OnJobLifecycleReceived;
+            WsClient.OnDataAnalysisResult += OnDataAnalysisResultReceived;
             WsClient.OnAgentPush   += OnAgentPushReceived;  // Phase 3: 心跳触发的主动推送
             
             // 从服务定位器获取AudioRecorder引用
@@ -160,6 +161,7 @@ namespace VsensAgent.UI
             WsClient.OnClarificationRequest -= OnClarificationRequestReceived;
             WsClient.OnProposalReady -= OnProposalReadyReceived;
             WsClient.OnJobLifecycle -= OnJobLifecycleReceived;
+            WsClient.OnDataAnalysisResult -= OnDataAnalysisResultReceived;
             WsClient.OnAgentPush   -= OnAgentPushReceived;  // Phase 3
             
             if (sendButton != null)
@@ -1003,6 +1005,16 @@ namespace VsensAgent.UI
             AddSystemMessage(FormatJobLifecycle(job));
         }
 
+        private void OnDataAnalysisResultReceived(DataAnalysisResultMessage result)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            AddAgentMessage(FormatDataAnalysisResult(result));
+        }
+
         private bool TrySendPendingInteraction(string messageContent)
         {
             if (_pendingClarification != null)
@@ -1291,13 +1303,37 @@ namespace VsensAgent.UI
             {
                 case "job.started":
                     return $"Job started: {job.job_kind} ({job.job_id})";
+                case "job.completed":
+                    return $"Job completed: {job.job_kind} ({job.job_id})";
                 case "job.cancelled":
                     return string.IsNullOrWhiteSpace(job.reason)
                         ? $"Job cancelled: {job.job_kind} ({job.job_id})"
                         : $"Job cancelled: {job.job_kind} ({job.job_id}) - {job.reason}";
                 default:
-                    return $"Job status: {job.job_kind} ({job.job_id}) - {job.status}";
+                    return string.IsNullOrWhiteSpace(job.reason)
+                        ? $"Job status: {job.job_kind} ({job.job_id}) - {job.status}"
+                        : $"Job status: {job.job_kind} ({job.job_id}) - {job.status}: {job.reason}";
             }
+        }
+
+        private string FormatDataAnalysisResult(DataAnalysisResultMessage result)
+        {
+            var lines = new List<string>();
+            if (!string.IsNullOrWhiteSpace(result.reply))
+            {
+                lines.Add(result.reply);
+            }
+            else if (!string.IsNullOrWhiteSpace(result.summary))
+            {
+                lines.Add(result.summary);
+            }
+
+            if (result.recording_keys != null && result.recording_keys.Length > 0)
+            {
+                lines.Add($"Recordings: {string.Join(", ", result.recording_keys)}");
+            }
+
+            return string.Join("\n", lines);
         }
 
         // ========== 滚动控制方法 ==========

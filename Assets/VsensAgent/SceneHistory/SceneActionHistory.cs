@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sensor;
 using UnityEngine;
 using VsensAgent.Core;
+using VsensAgent.Network;
 using VsensAgent.RuntimeEditing;
 using VsensAgent.SceneApi.V2;
 
@@ -92,6 +93,7 @@ namespace VsensAgent.SceneHistory
             undoStack.Push(record);
             OperationRecorded?.Invoke(record);
             NotifyAvailabilityChanged();
+            WsClient.SendSceneActionLog(record);
             return true;
         }
 
@@ -142,6 +144,7 @@ namespace VsensAgent.SceneHistory
             operationLog.Add(revertRecord);
             OperationRecorded?.Invoke(revertRecord);
             NotifyAvailabilityChanged();
+            WsClient.SendSceneActionLog(revertRecord);
             return true;
         }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using Newtonsoft.Json;
 using UnityEngine;
 using VsensAgent.Core;
 using VsensAgent.Network.Protocol;
@@ -98,6 +99,45 @@ namespace VsensAgent.Tests.Editor.SceneHistory
                 Object.DestroyImmediate(prefab);
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void SceneActionRecordNetworkLog_SerializesWithoutUnitySelfReferenceLoop()
+        {
+            var target = new GameObject("SerializableObject");
+
+            try
+            {
+                target.transform.position = new Vector3(1f, 2f, 3f);
+                target.transform.rotation = Quaternion.Euler(10f, 20f, 30f);
+                target.transform.localScale = new Vector3(2f, 2f, 2f);
+
+                var record = new SceneActionRecord
+                {
+                    actionId = "action_001",
+                    source = "user",
+                    actionType = "set_transform",
+                    targetId = target.name,
+                    timestampUtc = "2026-04-21T10:11:12.123Z",
+                    beforeTransform = SceneTransformSnapshot.Capture(target.name, target.transform),
+                    afterTransform = SceneTransformSnapshot.Capture(target.name, target.transform)
+                };
+
+                var payload = new UnitySceneActionLogRequest
+                {
+                    scene_name = "Room Test",
+                    record = record.ToNetworkLog()
+                };
+
+                var json = JsonConvert.SerializeObject(payload);
+                Assert.That(json, Does.Contain("\"unity.scene_action\"").Or.Contain("\"type\":\"unity.scene_action\""));
+                Assert.That(json, Does.Not.Contain("normalized"));
+                Assert.That(json, Does.Contain("\"position\":{\"x\":1.0"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
             }
         }
     }
