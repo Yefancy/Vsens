@@ -8603,8 +8603,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Enter text...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 109995c43df93483ab981cd95d0081e2, type: 2}
-  m_sharedMaterial: {fileID: 8845115418621248210, guid: 109995c43df93483ab981cd95d0081e2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: cfd9487f0cad04f54adc95c47ea428f6, type: 2}
+  m_sharedMaterial: {fileID: -7780229074737366495, guid: cfd9487f0cad04f54adc95c47ea428f6, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -10284,8 +10284,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u200B"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 109995c43df93483ab981cd95d0081e2, type: 2}
-  m_sharedMaterial: {fileID: 8845115418621248210, guid: 109995c43df93483ab981cd95d0081e2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: cfd9487f0cad04f54adc95c47ea428f6, type: 2}
+  m_sharedMaterial: {fileID: -7780229074737366495, guid: cfd9487f0cad04f54adc95c47ea428f6, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -13597,7 +13597,7 @@ MonoBehaviour:
   m_CaretWidth: 1
   m_ReadOnly: 0
   m_RichText: 1
-  m_GlobalFontAsset: {fileID: 11400000, guid: 109995c43df93483ab981cd95d0081e2, type: 2}
+  m_GlobalFontAsset: {fileID: 11400000, guid: cfd9487f0cad04f54adc95c47ea428f6, type: 2}
   m_OnFocusSelectAll: 1
   m_ResetOnDeActivation: 1
   m_KeepTextSelectionVisible: 0
@@ -24665,7 +24665,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.578
+      value: -0.462
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.y
@@ -24673,7 +24673,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 4.657
+      value: 4.809
       objectReference: {fileID: 0}
     - target: {fileID: 8776024414792090343, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: m_LocalRotation.w
