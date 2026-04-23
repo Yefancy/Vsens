@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System;
+using System.IO;
 using com.convalise.UnityMaterialSymbols;
 using VsensAgent.Data;
 using VsensAgent.Audio;
@@ -55,6 +56,8 @@ namespace VsensAgent.UI
         // 私有变量
         private List<ChatMessage> messageHistory = new List<ChatMessage>();
         private Dictionary<string, GameObject> messageUIObjects = new Dictionary<string, GameObject>();
+        private readonly Dictionary<string, string> _delegatedTaskMessageIdsByJobId = new Dictionary<string, string>();
+        private readonly Dictionary<string, List<LocalDelegatedTaskArtifact>> _delegatedTaskArtifactsByJobId = new Dictionary<string, List<LocalDelegatedTaskArtifact>>();
         private Coroutine autoScrollCoroutine;
         private AudioRecorder audioRecorder;
         private bool isRecording = false;
@@ -81,6 +84,16 @@ namespace VsensAgent.UI
         private float lastAppliedInputAreaHeight = -1f;
         private float lastMeasuredInputWidth = -1f;
         private const string DefaultInputPlaceholder = "Type your message here... Or R to record voice.";
+
+        [Serializable]
+        private class LocalDelegatedTaskArtifact
+        {
+            public string fileName;
+            public string kind;
+            public string label;
+            public string serverPath;
+            public string localPath;
+        }
 
         // 事件定义
         public static System.Action<string> OnUserMessageSent;          // 用户发送消息事件
@@ -125,6 +138,7 @@ namespace VsensAgent.UI
             WsClient.OnProposalReady += OnProposalReadyReceived;
             WsClient.OnJobLifecycle += OnJobLifecycleReceived;
             WsClient.OnDelegatedTaskResult += OnDelegatedTaskResultReceived;
+            WsClient.OnDelegatedTaskArtifactsSnapshot += OnDelegatedTaskArtifactsSnapshotReceived;
             WsClient.OnAgentPush   += OnAgentPushReceived;  // Phase 3: 心跳触发的主动推送
             
             // 从服务定位器获取AudioRecorder引用
@@ -162,6 +176,7 @@ namespace VsensAgent.UI
             WsClient.OnProposalReady -= OnProposalReadyReceived;
             WsClient.OnJobLifecycle -= OnJobLifecycleReceived;
             WsClient.OnDelegatedTaskResult -= OnDelegatedTaskResultReceived;
+            WsClient.OnDelegatedTaskArtifactsSnapshot -= OnDelegatedTaskArtifactsSnapshotReceived;
             WsClient.OnAgentPush   -= OnAgentPushReceived;  // Phase 3
             
             if (sendButton != null)
@@ -367,9 +382,9 @@ namespace VsensAgent.UI
         /// <summary>
         /// 添加消息到聊天历史
         /// </summary>
-        public void AddMessage(ChatMessage message)
+        public ChatMessage AddMessage(ChatMessage message)
         {
-            if (message == null) return;
+            if (message == null) return null;
 
             // 添加到历史记录
             messageHistory.Add(message);
@@ -397,25 +412,27 @@ namespace VsensAgent.UI
 
             // 触发事件
             OnMessageAdded?.Invoke(message);
+            return message;
         }
 
-        public void AddUserMessage(string content)
+        public ChatMessage AddUserMessage(string content)
         {
             var message = new ChatMessage(content, ChatMessage.MessageType.User);
             AddMessage(message);
             OnUserMessageSent?.Invoke(content);
+            return message;
         }
 
-        public void AddAgentMessage(string content, string audioPath = "")
+        public ChatMessage AddAgentMessage(string content, string audioPath = "")
         {
             var message = new ChatMessage(content, ChatMessage.MessageType.Agent, audioPath);
-            AddMessage(message);
+            return AddMessage(message);
         }
 
-        public void AddSystemMessage(string content)
+        public ChatMessage AddSystemMessage(string content)
         {
             var message = new ChatMessage(content, ChatMessage.MessageType.System);
-            AddMessage(message);
+            return AddMessage(message);
         }
 
         // ========== UI创建方法 ==========
@@ -490,7 +507,7 @@ namespace VsensAgent.UI
         /// </summary>
         private void OnSendButtonClicked()
         {
-            if (_agentIsIdle)
+            if (_agentIsIdle || _pendingClarification != null || _pendingProposal != null)
                 SendTextMessage();
             else
                 WsClient.SendAgentInterrupt();
@@ -885,6 +902,7 @@ namespace VsensAgent.UI
                 case "executing":    return "⚙️ Executing";
                 case "speaking":     return "🔊 Speaking";
                 case "waiting":      return "⏳ Waiting";
+                case "waiting_subagent": return "⏳ Waiting For Worker";
                 case "scripting":    return "📝 Scripting";
                 default:             return state;
             }
@@ -1012,7 +1030,29 @@ namespace VsensAgent.UI
                 return;
             }
 
-            AddAgentMessage(FormatDelegatedTaskResult(result));
+            var message = AddAgentMessage(FormatDelegatedTaskResult(result));
+            if (message != null && !string.IsNullOrWhiteSpace(result.job_id))
+            {
+                _delegatedTaskMessageIdsByJobId[result.job_id] = message.messageId;
+                AttachDelegatedTaskArtifactsToMessage(result.job_id);
+            }
+        }
+
+        private void OnDelegatedTaskArtifactsSnapshotReceived(DelegatedTaskArtifactsSnapshotMessage snapshot)
+        {
+            if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.job_id))
+            {
+                return;
+            }
+
+            var localArtifacts = PersistDelegatedTaskArtifacts(snapshot);
+            if (localArtifacts.Count == 0)
+            {
+                return;
+            }
+
+            _delegatedTaskArtifactsByJobId[snapshot.job_id] = localArtifacts;
+            AttachDelegatedTaskArtifactsToMessage(snapshot.job_id);
         }
 
         private bool TrySendPendingInteraction(string messageContent)
@@ -1323,20 +1363,182 @@ namespace VsensAgent.UI
             {
                 lines.Add(result.reply);
             }
-            if (result.artifacts != null && result.artifacts.Length > 0)
+
+            return string.Join("\n", lines);
+        }
+
+        private List<LocalDelegatedTaskArtifact> PersistDelegatedTaskArtifacts(DelegatedTaskArtifactsSnapshotMessage snapshot)
+        {
+            var localArtifacts = new List<LocalDelegatedTaskArtifact>();
+            if (snapshot.artifacts == null || snapshot.artifacts.Length == 0)
             {
-                lines.Add("Artifacts:");
-                foreach (var artifact in result.artifacts)
+                return localArtifacts;
+            }
+
+            var targetRoot = Path.Combine(Application.persistentDataPath, "DelegatedTaskArtifacts", snapshot.job_id);
+            Directory.CreateDirectory(targetRoot);
+
+            foreach (var artifact in snapshot.artifacts)
+            {
+                if (artifact == null || string.IsNullOrWhiteSpace(artifact.file_name) || string.IsNullOrWhiteSpace(artifact.content_base64))
                 {
-                    if (artifact == null || string.IsNullOrWhiteSpace(artifact.path))
+                    continue;
+                }
+
+                try
+                {
+                    var safeName = Path.GetFileName(artifact.file_name);
+                    var localPath = Path.Combine(targetRoot, safeName);
+                    var bytes = Convert.FromBase64String(artifact.content_base64);
+                    File.WriteAllBytes(localPath, bytes);
+                    localArtifacts.Add(new LocalDelegatedTaskArtifact
                     {
-                        continue;
-                    }
-                    lines.Add($"- {artifact.kind}: {artifact.path}");
+                        fileName = safeName,
+                        kind = artifact.kind ?? "file",
+                        label = string.IsNullOrWhiteSpace(artifact.label) ? Path.GetFileNameWithoutExtension(safeName) : artifact.label,
+                        serverPath = artifact.server_path ?? string.Empty,
+                        localPath = localPath,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ChatUIManager] Failed to persist delegated artifact '{artifact.file_name}': {ex.Message}");
                 }
             }
 
-            return string.Join("\n", lines);
+            return localArtifacts;
+        }
+
+        private void AttachDelegatedTaskArtifactsToMessage(string jobId)
+        {
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return;
+            }
+            if (!_delegatedTaskMessageIdsByJobId.TryGetValue(jobId, out var messageId))
+            {
+                return;
+            }
+            if (!_delegatedTaskArtifactsByJobId.TryGetValue(jobId, out var artifacts) || artifacts == null || artifacts.Count == 0)
+            {
+                return;
+            }
+            if (!messageUIObjects.TryGetValue(messageId, out var messageUI) || messageUI == null)
+            {
+                return;
+            }
+
+            var existing = messageUI.transform.Find("DelegatedTaskAttachments");
+            if (existing != null)
+            {
+                Destroy(existing.gameObject);
+            }
+
+            var root = new GameObject("DelegatedTaskAttachments", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            root.transform.SetParent(messageUI.transform, false);
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0f, 0f);
+            rootRect.anchorMax = new Vector2(1f, 0f);
+            rootRect.sizeDelta = Vector2.zero;
+
+            var layout = root.GetComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.spacing = 6f;
+            layout.padding = new RectOffset(8, 8, 8, 0);
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+
+            var fitter = root.GetComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            CreateAttachmentHeader(root.transform);
+            foreach (var artifact in artifacts)
+            {
+                CreateAttachmentButton(root.transform, artifact);
+            }
+        }
+
+        private void CreateAttachmentHeader(Transform parent)
+        {
+            var header = new GameObject("Header", typeof(RectTransform));
+            header.transform.SetParent(parent, false);
+            var text = header.AddComponent<TextMeshProUGUI>();
+            text.text = "Attachments";
+            text.fontSize = 22f;
+            text.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            text.enableWordWrapping = false;
+        }
+
+        private void CreateAttachmentButton(Transform parent, LocalDelegatedTaskArtifact artifact)
+        {
+            var buttonObject = new GameObject("Attachment", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            buttonObject.transform.SetParent(parent, false);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0.12f);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.onClick.AddListener(() => OpenDelegatedTaskArtifact(artifact));
+
+            var layoutElement = buttonObject.GetComponent<LayoutElement>();
+            layoutElement.minHeight = 34f;
+            layoutElement.preferredHeight = 34f;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(10f, 4f);
+            labelRect.offsetMax = new Vector2(-10f, -4f);
+
+            var label = labelObject.AddComponent<TextMeshProUGUI>();
+            var typeLabel = string.IsNullOrWhiteSpace(artifact.kind) ? "file" : artifact.kind;
+            label.text = $"[{typeLabel}] {artifact.fileName}";
+            label.fontSize = 20f;
+            label.color = Color.white;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.raycastTarget = false;
+        }
+
+        private void OpenDelegatedTaskArtifact(LocalDelegatedTaskArtifact artifact)
+        {
+            if (artifact == null || string.IsNullOrWhiteSpace(artifact.localPath))
+            {
+                return;
+            }
+            if (!File.Exists(artifact.localPath))
+            {
+                AddSystemMessage($"⚠️ Attachment not found: {artifact.fileName}");
+                return;
+            }
+
+            try
+            {
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+                System.Diagnostics.Process.Start("open", $"\"{artifact.localPath}\"");
+#elif UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = artifact.localPath,
+                    UseShellExecute = true,
+                });
+#elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+                System.Diagnostics.Process.Start("xdg-open", $"\"{artifact.localPath}\"");
+#else
+                var normalizedPath = artifact.localPath.Replace("\\", "/");
+                Application.OpenURL($"file://{normalizedPath}");
+#endif
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogWarning($"[ChatUIManager] Failed to open delegated artifact '{artifact.localPath}': {ex.Message}");
+                AddSystemMessage($"⚠️ Failed to open attachment: {artifact.fileName}");
+            }
         }
 
         // ========== 滚动控制方法 ==========

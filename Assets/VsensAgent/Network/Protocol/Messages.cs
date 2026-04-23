@@ -134,6 +134,29 @@ namespace VsensAgent.Network.Protocol
         public string path;
         public string kind;
         public string label;
+        public string file_name;
+        public string server_path;
+        public string local_path;
+    }
+
+    [Serializable]
+    public class DelegatedTaskArtifactSnapshotItemMessage
+    {
+        public string file_name;
+        public string kind;
+        public string label;
+        public string server_path;
+        public string content_base64;
+    }
+
+    [Serializable]
+    public class DelegatedTaskArtifactsSnapshotMessage
+    {
+        public string type;
+        public string job_id;
+        public string job_kind;
+        public string task_type;
+        public DelegatedTaskArtifactSnapshotItemMessage[] artifacts;
     }
 
     [Serializable]
@@ -152,7 +175,7 @@ namespace VsensAgent.Network.Protocol
     /// <summary>
     /// Agent状态广播消息 - Python端主动推送的Agent运行状态
     /// 状态值: idle | listening | transcribing | thinking | planning |
-    ///         executing | speaking | waiting | scripting
+    ///         executing | speaking | waiting | waiting_subagent | scripting
     /// </summary>
     [Serializable]
     public class AgentStatusMessage

@@ -54,6 +54,7 @@ namespace VsensAgent.Network
         public static event Action<ProposalReadyMessage> OnProposalReady;
         public static event Action<JobLifecycleMessage> OnJobLifecycle;
         public static event Action<DelegatedTaskResultMessage> OnDelegatedTaskResult;
+        public static event Action<DelegatedTaskArtifactsSnapshotMessage> OnDelegatedTaskArtifactsSnapshot;
         public static event Action<AgentPushMessage> OnAgentPush; // Phase 3: 心跳触发的主动推送
         public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
@@ -387,7 +388,10 @@ namespace VsensAgent.Network
                             break;
                         }
 
-                        StopThinkingAnimation();
+                        if (typeWrapper.type == "job.completed" || typeWrapper.type == "job.cancelled")
+                        {
+                            StopThinkingAnimation();
+                        }
                         SafeInvoke(() => OnJobLifecycle?.Invoke(jobMsg), "job.OnJobLifecycle", json);
                         break;
 
@@ -401,6 +405,20 @@ namespace VsensAgent.Network
 
                         StopThinkingAnimation();
                         SafeInvoke(() => OnDelegatedTaskResult?.Invoke(taskMsg), "task.result.OnDelegatedTaskResult", json);
+                        break;
+
+                    case "task.artifacts_snapshot":
+                        var artifactSnapshotMsg = JsonConvert.DeserializeObject<DelegatedTaskArtifactsSnapshotMessage>(json);
+                        if (artifactSnapshotMsg == null)
+                        {
+                            Debug.LogWarning($"[WS] Failed to deserialize task.artifacts_snapshot payload: {json}");
+                            break;
+                        }
+
+                        SafeInvoke(
+                            () => OnDelegatedTaskArtifactsSnapshot?.Invoke(artifactSnapshotMsg),
+                            "task.artifacts_snapshot.OnDelegatedTaskArtifactsSnapshot",
+                            json);
                         break;
 
                     case "agent_push":

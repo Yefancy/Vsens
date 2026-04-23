@@ -110,7 +110,7 @@ namespace VsensAgent.Agent
     /// <summary>
     /// 处理Python端主动推送的Agent状态（Phase 1）
     /// 状态: idle | listening | transcribing | thinking | planning |
-    ///         executing | speaking | waiting | scripting
+    ///         executing | speaking | waiting | waiting_subagent | scripting
     /// </summary>
     private void HandleAgentStatus(AgentStatusMessage msg)
     {
@@ -124,6 +124,7 @@ namespace VsensAgent.Agent
             case "scripting":
             case "transcribing":
             case "executing":
+            case "waiting_subagent":
                 StartThinking();
                 break;
 
