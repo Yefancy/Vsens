@@ -23,7 +23,7 @@ namespace VsensAgent.UI
         [SerializeField] private AnalysisSelector selector = AnalysisSelector.Latest;
         [SerializeField] private int recentN = 3;
         [SerializeField] private string timestampLabel = string.Empty;
-        [SerializeField] private string analysisFocus = "har_evidence";
+        [SerializeField] private string analysisGoal = "Analyze the selected recordings and summarize which placement works best.";
 
         [Header("UI")]
         [SerializeField] private Graphic tintTarget;
@@ -57,8 +57,8 @@ namespace VsensAgent.UI
 
             WsClient.OnJobLifecycle -= OnJobLifecycle;
             WsClient.OnJobLifecycle += OnJobLifecycle;
-            WsClient.OnDataAnalysisResult -= OnDataAnalysisResult;
-            WsClient.OnDataAnalysisResult += OnDataAnalysisResult;
+            WsClient.OnDelegatedTaskResult -= OnDelegatedTaskResult;
+            WsClient.OnDelegatedTaskResult += OnDelegatedTaskResult;
 
             ApplyIdleVisualState();
         }
@@ -71,7 +71,7 @@ namespace VsensAgent.UI
             }
 
             WsClient.OnJobLifecycle -= OnJobLifecycle;
-            WsClient.OnDataAnalysisResult -= OnDataAnalysisResult;
+            WsClient.OnDelegatedTaskResult -= OnDelegatedTaskResult;
         }
 
         private void Update()
@@ -92,16 +92,16 @@ namespace VsensAgent.UI
             switch (selector)
             {
                 case AnalysisSelector.All:
-                    WsClient.SendDataAnalysisAll(analysisFocus);
+                    WsClient.SendAnalysisTaskAll(analysisGoal);
                     break;
                 case AnalysisSelector.RecentN:
-                    WsClient.SendDataAnalysisRecent(recentN, analysisFocus);
+                    WsClient.SendAnalysisTaskRecent(recentN, analysisGoal);
                     break;
                 case AnalysisSelector.ByLabel:
-                    WsClient.SendDataAnalysisByLabel(timestampLabel, analysisFocus);
+                    WsClient.SendAnalysisTaskByLabel(timestampLabel, analysisGoal);
                     break;
                 default:
-                    WsClient.SendDataAnalysisLatest(analysisFocus);
+                    WsClient.SendAnalysisTaskLatest(analysisGoal);
                     break;
             }
 
@@ -127,6 +127,11 @@ namespace VsensAgent.UI
             recentN = Mathf.Max(1, value);
         }
 
+        public void SetAnalysisGoal(string value)
+        {
+            analysisGoal = value ?? string.Empty;
+        }
+
         private void OnClick()
         {
             RequestAnalysis();
@@ -134,7 +139,7 @@ namespace VsensAgent.UI
 
         private void OnJobLifecycle(JobLifecycleMessage job)
         {
-            if (job == null || job.job_kind != "data_analysis")
+            if (job == null || job.job_kind != "delegated_task")
             {
                 return;
             }
@@ -159,7 +164,7 @@ namespace VsensAgent.UI
             }
         }
 
-        private void OnDataAnalysisResult(DataAnalysisResultMessage result)
+        private void OnDelegatedTaskResult(DelegatedTaskResultMessage result)
         {
             if (result == null)
             {

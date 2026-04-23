@@ -131,14 +131,14 @@ namespace VsensAgent.Network.Protocol
     }
 
     [Serializable]
-    public class DataAnalysisStartRequest
+    public class DelegatedTaskStartRequest
     {
-        public string type = "data.analysis_start";
+        public string type = "task.start";
+        public string task_type = "analysis";
+        public string goal;
         public string selector;
         public int recent_n = 3;
         public string timestamp_label;
-        public string analysis_focus = "har_evidence";
-        public string[] analysis_scope;
     }
 
     [Serializable]

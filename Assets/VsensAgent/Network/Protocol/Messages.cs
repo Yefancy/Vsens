@@ -129,19 +129,24 @@ namespace VsensAgent.Network.Protocol
     }
 
     [Serializable]
-    public class DataAnalysisResultMessage
+    public class DelegatedTaskArtifactMessage
+    {
+        public string path;
+        public string kind;
+        public string label;
+    }
+
+    [Serializable]
+    public class DelegatedTaskResultMessage
     {
         public string type;
         public string status;
         public string job_id;
         public string job_kind;
+        public string task_type;
         public string reply;
-        public string summary;
-        public string har_judgement;
-        public int recording_count;
-        public string[] recording_keys;
-        public string[] aggregate_findings;
-        public string scene_context_summary;
+        public string[] questions_for_agent;
+        public DelegatedTaskArtifactMessage[] artifacts;
     }
 
     /// <summary>

@@ -19,7 +19,6 @@ namespace VsensAgent.Network
         private static WebSocket websocket;
         private static bool isTryingReconnect = false;
         private static float reconnectInterval = Constants.Network.RECONNECT_INTERVAL;
-        private static readonly string[] DefaultDataAnalysisScope = { "descriptive_stats", "change_point", "anomaly" };
         private static readonly Queue<UnitySceneActionLogRequest> PendingSceneActionLogs = new();
         private const int MaxPendingSceneActionLogs = 512;
 
@@ -39,9 +38,9 @@ namespace VsensAgent.Network
         private string pendingUs = string.Empty;
         private string clientId = string.Empty;
 
-        [Header("Data Analysis Defaults")]
+        [Header("Delegated Task Defaults")]
         [SerializeField] private int defaultRecentAnalysisCount = 3;
-        [SerializeField] private string defaultAnalysisFocus = "har_evidence";
+        [SerializeField] private string defaultAnalysisGoal = "Analyze the recent recordings and summarize the key findings.";
 
         
         // 事件定义
@@ -54,7 +53,7 @@ namespace VsensAgent.Network
         public static event Action<ClarificationRequestMessage> OnClarificationRequest;
         public static event Action<ProposalReadyMessage> OnProposalReady;
         public static event Action<JobLifecycleMessage> OnJobLifecycle;
-        public static event Action<DataAnalysisResultMessage> OnDataAnalysisResult;
+        public static event Action<DelegatedTaskResultMessage> OnDelegatedTaskResult;
         public static event Action<AgentPushMessage> OnAgentPush; // Phase 3: 心跳触发的主动推送
         public static event Action<ServerConfigMessage> OnServerConfig; // Phase 3: 连接时接收服务器配置
 
@@ -66,17 +65,17 @@ namespace VsensAgent.Network
 
         public void RequestLatestDataAnalysis()
         {
-            SendDataAnalysisLatest(defaultAnalysisFocus);
+            SendAnalysisTaskLatest(defaultAnalysisGoal);
         }
 
         public void RequestAllDataAnalysis()
         {
-            SendDataAnalysisAll(defaultAnalysisFocus);
+            SendAnalysisTaskAll(defaultAnalysisGoal);
         }
 
         public void RequestRecentDataAnalysis()
         {
-            SendDataAnalysisRecent(defaultRecentAnalysisCount, defaultAnalysisFocus);
+            SendAnalysisTaskRecent(defaultRecentAnalysisCount, defaultAnalysisGoal);
         }
 
         public void ConnectToServer(string serverUrl = null, string username = null, string us = null, Action onConnected = null, Action<string> onFailed = null)
@@ -392,16 +391,16 @@ namespace VsensAgent.Network
                         SafeInvoke(() => OnJobLifecycle?.Invoke(jobMsg), "job.OnJobLifecycle", json);
                         break;
 
-                    case "data.analysis_result":
-                        var analysisMsg = JsonConvert.DeserializeObject<DataAnalysisResultMessage>(json);
-                        if (analysisMsg == null)
+                    case "task.result":
+                        var taskMsg = JsonConvert.DeserializeObject<DelegatedTaskResultMessage>(json);
+                        if (taskMsg == null)
                         {
-                            Debug.LogWarning($"[WS] Failed to deserialize data.analysis_result payload: {json}");
+                            Debug.LogWarning($"[WS] Failed to deserialize task.result payload: {json}");
                             break;
                         }
 
                         StopThinkingAnimation();
-                        SafeInvoke(() => OnDataAnalysisResult?.Invoke(analysisMsg), "data.analysis_result.OnDataAnalysisResult", json);
+                        SafeInvoke(() => OnDelegatedTaskResult?.Invoke(taskMsg), "task.result.OnDelegatedTaskResult", json);
                         break;
 
                     case "agent_push":
@@ -623,22 +622,22 @@ namespace VsensAgent.Network
             }
         }
 
-        public static void SendDataAnalysisStart(
+        public static void SendDelegatedTaskStart(
+            string taskType,
+            string goal,
             string selector,
             int recentN = 3,
-            string timestampLabel = null,
-            string analysisFocus = "har_evidence",
-            string[] analysisScope = null)
+            string timestampLabel = null)
         {
             if (websocket != null && websocket.State == WebSocketState.Open)
             {
-                var payload = new DataAnalysisStartRequest()
+                var payload = new DelegatedTaskStartRequest()
                 {
+                    task_type = string.IsNullOrWhiteSpace(taskType) ? "analysis" : taskType,
+                    goal = goal ?? string.Empty,
                     selector = string.IsNullOrWhiteSpace(selector) ? "latest" : selector,
                     recent_n = recentN <= 0 ? 3 : recentN,
                     timestamp_label = string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel,
-                    analysis_focus = string.IsNullOrWhiteSpace(analysisFocus) ? "har_evidence" : analysisFocus,
-                    analysis_scope = analysisScope ?? DefaultDataAnalysisScope,
                 };
 
                 websocket.SendText(JsonConvert.SerializeObject(payload));
@@ -646,42 +645,45 @@ namespace VsensAgent.Network
             }
             else
             {
-                Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send data analysis request.");
+                Debug.LogWarning("[WS] ⚠️ WebSocket not connected, cannot send delegated task request.");
             }
         }
 
-        public static void SendDataAnalysisLatest(string analysisFocus = "har_evidence", string[] analysisScope = null)
+        public static void SendAnalysisTaskLatest(string goal)
         {
-            SendDataAnalysisStart(
+            SendDelegatedTaskStart(
+                taskType: "analysis",
+                goal: goal,
                 selector: "latest",
-                analysisFocus: analysisFocus,
-                analysisScope: analysisScope);
+                recentN: 3);
         }
 
-        public static void SendDataAnalysisAll(string analysisFocus = "har_evidence", string[] analysisScope = null)
+        public static void SendAnalysisTaskAll(string goal)
         {
-            SendDataAnalysisStart(
+            SendDelegatedTaskStart(
+                taskType: "analysis",
+                goal: goal,
                 selector: "all",
-                analysisFocus: analysisFocus,
-                analysisScope: analysisScope);
+                recentN: 3);
         }
 
-        public static void SendDataAnalysisRecent(int recentN = 3, string analysisFocus = "har_evidence", string[] analysisScope = null)
+        public static void SendAnalysisTaskRecent(int recentN = 3, string goal = null)
         {
-            SendDataAnalysisStart(
+            SendDelegatedTaskStart(
+                taskType: "analysis",
+                goal: goal,
                 selector: "recent_n",
                 recentN: recentN,
-                analysisFocus: analysisFocus,
-                analysisScope: analysisScope);
+                timestampLabel: null);
         }
 
-        public static void SendDataAnalysisByLabel(string timestampLabel, string analysisFocus = "har_evidence", string[] analysisScope = null)
+        public static void SendAnalysisTaskByLabel(string timestampLabel, string goal)
         {
-            SendDataAnalysisStart(
+            SendDelegatedTaskStart(
+                taskType: "analysis",
+                goal: goal,
                 selector: "by_label",
-                timestampLabel: timestampLabel,
-                analysisFocus: analysisFocus,
-                analysisScope: analysisScope);
+                timestampLabel: timestampLabel);
         }
 
         /// <summary>

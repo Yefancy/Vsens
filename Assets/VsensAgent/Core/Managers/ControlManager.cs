@@ -112,7 +112,7 @@ namespace VsensAgent
                 return true;
             }
 
-            if (ctrl.action == "data_analysis")
+            if (ctrl.action == "delegate_task")
             {
                 return true;
             }
@@ -259,9 +259,9 @@ namespace VsensAgent
                 return;
             }
 
-            if (ctrl.action == "data_analysis")
+            if (ctrl.action == "delegate_task")
             {
-                HandleDataAnalysisAction(ctrl);
+                HandleDelegateTaskAction(ctrl);
                 return;
             }
 
@@ -778,11 +778,12 @@ namespace VsensAgent
             }
         }
 
-        private void HandleDataAnalysisAction(ControlObject ctrl)
+        private void HandleDelegateTaskAction(ControlObject ctrl)
         {
-            string selector = ParseStringParameter(ctrl.parameters, "selector", "latest");
+            string taskType = ParseStringParameter(ctrl.parameters, "task_type", "analysis");
+            string goal = ParseStringParameter(ctrl.parameters, "goal", string.Empty);
+            string selector = ParseStringParameter(ctrl.parameters, "selector", "recent_n");
             string timestampLabel = ParseStringParameter(ctrl.parameters, "timestamp_label", null);
-            string analysisFocus = ParseStringParameter(ctrl.parameters, "analysis_focus", "har_evidence");
             int recentN = 3;
             if (ctrl.parameters != null && ctrl.parameters.TryGetValue("recent_n", out var recentNValue) && recentNValue != null)
             {
@@ -793,26 +794,13 @@ namespace VsensAgent
                 }
             }
 
-            string[] analysisScope = new[]
-            {
-                "descriptive_stats",
-                "change_point",
-                "anomaly",
-            };
-            if (ctrl.parameters != null && ctrl.parameters.TryGetValue("analysis_scope", out var scopeValue) && scopeValue is JArray scopeArray)
-            {
-                analysisScope = scopeArray.Select(token => token?.ToString())
-                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                    .ToArray();
-            }
-
-            Debug.Log($"[ControlManager] 📈 Forwarding data_analysis request with selector='{selector}', recent_n={recentN}, timestamp='{timestampLabel}'");
-            WsClient.SendDataAnalysisStart(
-                selector: string.IsNullOrWhiteSpace(selector) ? "latest" : selector,
+            Debug.Log($"[ControlManager] 📈 Forwarding delegate_task request task_type='{taskType}', selector='{selector}', recent_n={recentN}, timestamp='{timestampLabel}'");
+            WsClient.SendDelegatedTaskStart(
+                taskType: string.IsNullOrWhiteSpace(taskType) ? "analysis" : taskType,
+                goal: goal,
+                selector: string.IsNullOrWhiteSpace(selector) ? "recent_n" : selector,
                 recentN: recentN,
-                timestampLabel: string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel,
-                analysisFocus: analysisFocus,
-                analysisScope: analysisScope);
+                timestampLabel: string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel);
         }
 
         /// <summary>

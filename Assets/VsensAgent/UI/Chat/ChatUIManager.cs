@@ -124,7 +124,7 @@ namespace VsensAgent.UI
             WsClient.OnClarificationRequest += OnClarificationRequestReceived;
             WsClient.OnProposalReady += OnProposalReadyReceived;
             WsClient.OnJobLifecycle += OnJobLifecycleReceived;
-            WsClient.OnDataAnalysisResult += OnDataAnalysisResultReceived;
+            WsClient.OnDelegatedTaskResult += OnDelegatedTaskResultReceived;
             WsClient.OnAgentPush   += OnAgentPushReceived;  // Phase 3: 心跳触发的主动推送
             
             // 从服务定位器获取AudioRecorder引用
@@ -161,7 +161,7 @@ namespace VsensAgent.UI
             WsClient.OnClarificationRequest -= OnClarificationRequestReceived;
             WsClient.OnProposalReady -= OnProposalReadyReceived;
             WsClient.OnJobLifecycle -= OnJobLifecycleReceived;
-            WsClient.OnDataAnalysisResult -= OnDataAnalysisResultReceived;
+            WsClient.OnDelegatedTaskResult -= OnDelegatedTaskResultReceived;
             WsClient.OnAgentPush   -= OnAgentPushReceived;  // Phase 3
             
             if (sendButton != null)
@@ -1005,14 +1005,14 @@ namespace VsensAgent.UI
             AddSystemMessage(FormatJobLifecycle(job));
         }
 
-        private void OnDataAnalysisResultReceived(DataAnalysisResultMessage result)
+        private void OnDelegatedTaskResultReceived(DelegatedTaskResultMessage result)
         {
             if (result == null)
             {
                 return;
             }
 
-            AddAgentMessage(FormatDataAnalysisResult(result));
+            AddAgentMessage(FormatDelegatedTaskResult(result));
         }
 
         private bool TrySendPendingInteraction(string messageContent)
@@ -1316,21 +1316,24 @@ namespace VsensAgent.UI
             }
         }
 
-        private string FormatDataAnalysisResult(DataAnalysisResultMessage result)
+        private string FormatDelegatedTaskResult(DelegatedTaskResultMessage result)
         {
             var lines = new List<string>();
             if (!string.IsNullOrWhiteSpace(result.reply))
             {
                 lines.Add(result.reply);
             }
-            else if (!string.IsNullOrWhiteSpace(result.summary))
+            if (result.artifacts != null && result.artifacts.Length > 0)
             {
-                lines.Add(result.summary);
-            }
-
-            if (result.recording_keys != null && result.recording_keys.Length > 0)
-            {
-                lines.Add($"Recordings: {string.Join(", ", result.recording_keys)}");
+                lines.Add("Artifacts:");
+                foreach (var artifact in result.artifacts)
+                {
+                    if (artifact == null || string.IsNullOrWhiteSpace(artifact.path))
+                    {
+                        continue;
+                    }
+                    lines.Add($"- {artifact.kind}: {artifact.path}");
+                }
             }
 
             return string.Join("\n", lines);
