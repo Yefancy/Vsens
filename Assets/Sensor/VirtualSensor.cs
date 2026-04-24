@@ -178,6 +178,7 @@ namespace Sensor
         private readonly List<SensorData> _sensorData = new();
         public List<SensorData> Data => _sensorData;
         private bool isRecording;
+        public bool IsRecording => isRecording;
         public SensorAttachable sensorAttachable;
         public event Action<SensorData, bool> onDataAppended;
 

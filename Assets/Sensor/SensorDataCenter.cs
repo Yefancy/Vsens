@@ -65,6 +65,7 @@ namespace Sensor
             isRecording = true;
             sensors.Values.ToList().ForEach(sensorList => sensorList.ForEach(sensor =>
             {
+                if (!sensor.IsActive) return;
                 sensor.ClearData();
                 sensor.ClearSmoothCache();
                 sensor.StartRecording();
@@ -79,6 +80,7 @@ namespace Sensor
             {
                 foreach (var sensor in sensorDataPair.Value)
                 {
+                    if (!sensor.IsActive || !sensor.IsRecording) continue;
                     sensor.StopRecording();
                     var sensorData = sensor.Data;
                     if (sensorData.Count == 0) continue;
@@ -109,6 +111,7 @@ namespace Sensor
             // prepare for simulation
             foreach (var sensor in sensors)
             {
+                if (!sensor.IsActive) continue;
                 sensor.ClearData();
                 sensor.ClearSmoothCache();
                 sensor.StartRecording();

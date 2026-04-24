@@ -1,0 +1,12 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/VsensAgent/UI/ui_styles.uss?fileID=7433441132597879392&amp;guid=be6a69310c2bfbd4baa8d5a79bbf913f&amp;type=3#ui_styles"/>
+    <ui:VisualElement name="chat-panel" style="flex-grow: 1; width: 26%; padding-top: 3px; padding-right: 3px; padding-bottom: 3px; padding-left: 3px;">
+        <ui:VisualElement name="top" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0.39); padding-top: 10px; padding-right: 10px; padding-bottom: 10px; padding-left: 10px;">
+            <ui:ScrollView name="ScrollView" vertical-scroller-visibility="Auto" style="width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.82); border-top-left-radius: 10px; border-bottom-left-radius: 10px;"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="bottom" style="flex-grow: 0; flex-shrink: 0; background-color: rgba(0, 0, 0, 0.39); margin-top: 5px; padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px; flex-wrap: nowrap; flex-direction: row; margin-bottom: 5px;">
+            <ui:TextField label="" multiline="true" value="" name="TextField" style="max-height: 200px; flex-shrink: 1; flex-grow: 1; font-size: 20px;"/>
+            <ui:Button text="" name="SendButton" enabled="true" style="aspect-ratio: 1; width: 40px; height: 40px; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; background-color: rgba(0, 0, 0, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

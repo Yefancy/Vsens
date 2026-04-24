@@ -15,20 +15,11 @@ namespace VsensAgent.Tests.Editor.UI
         {
             ServiceLocator.Clear();
             var root = new GameObject("ChatWindow", typeof(RectTransform));
-            var messageScrollArea = new GameObject("MessageScrollArea", typeof(RectTransform), typeof(ScrollRect));
-            var inputArea = new GameObject("InputArea", typeof(RectTransform));
-            var inputFieldGo = new GameObject("TextInputField", typeof(RectTransform), typeof(TMP_InputField));
             GameObject target = null;
 
             try
             {
-                messageScrollArea.transform.SetParent(root.transform, false);
-                inputArea.transform.SetParent(root.transform, false);
-                inputFieldGo.transform.SetParent(inputArea.transform, false);
-
                 var chatUi = root.AddComponent<ChatUIManager>();
-                chatUi.messageScrollRect = messageScrollArea.GetComponent<ScrollRect>();
-                chatUi.textInputField = inputFieldGo.GetComponent<TMP_InputField>();
 
                 var history = root.AddComponent<SceneActionHistory>();
                 var view = root.AddComponent<OperationHistoryTabView>();
@@ -52,8 +43,6 @@ namespace VsensAgent.Tests.Editor.UI
                 var text = row.GetComponentInChildren<TextMeshProUGUI>();
                 Assert.That(text, Is.Not.Null, "Action row text was not created.");
                 Assert.That(text.text, Does.Contain("user set_transform Movable"));
-                Assert.That(messageScrollArea.activeSelf, Is.False);
-                Assert.That(inputArea.activeSelf, Is.False);
             }
             finally
             {

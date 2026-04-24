@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.alexiush.uaddmd": "https://github.com/Alexiush/UAddMd.git",
     "com.convalise.unity-material-symbols": "https://github.com/convalise/unity-material-symbols.git?path=/src/UnityMaterialSymbols/Assets/MaterialSymbols",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.monitor1394.xcharts": "https://github.com/XCharts-Team/XCharts.git",

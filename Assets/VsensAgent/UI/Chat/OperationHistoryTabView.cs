@@ -10,8 +10,6 @@ namespace VsensAgent.UI
     public sealed class OperationHistoryTabView : MonoBehaviour
     {
         [SerializeField] private ChatUIManager chatUiManager;
-        [SerializeField] private ScrollRect messageScrollRect;
-        [SerializeField] private GameObject inputArea;
         [SerializeField] private SceneActionHistory sceneActionHistory;
         [SerializeField] private RectTransform tabBar;
         [SerializeField] private Button chatTabButton;
@@ -90,10 +88,6 @@ namespace VsensAgent.UI
         private void ResolveReferences()
         {
             chatUiManager ??= GetComponent<ChatUIManager>() ?? GetComponentInParent<ChatUIManager>();
-            messageScrollRect ??= chatUiManager != null ? chatUiManager.messageScrollRect : GetComponentInChildren<ScrollRect>(true);
-            inputArea ??= chatUiManager != null && chatUiManager.textInputField != null
-                ? chatUiManager.textInputField.transform.parent.gameObject
-                : transform.Find("InputArea")?.gameObject;
             sceneActionHistory ??= GetComponentInParent<SceneActionHistory>() ??
                                    GetComponentInChildren<SceneActionHistory>(true) ??
                                    (ServiceLocator.IsRegistered<SceneActionHistory>()
@@ -449,15 +443,7 @@ namespace VsensAgent.UI
 
         private void ApplyViewState()
         {
-            if (messageScrollRect != null)
-            {
-                messageScrollRect.gameObject.SetActive(!showingActions);
-            }
-
-            if (inputArea != null)
-            {
-                inputArea.SetActive(!showingActions);
-            }
+            chatUiManager?.SetChatContentVisible(!showingActions);
 
             if (actionScrollRect != null)
             {
