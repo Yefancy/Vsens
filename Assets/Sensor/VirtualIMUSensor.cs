@@ -10,7 +10,7 @@ namespace Sensor
     public class VirtualIMUSensor : VirtualSensor
     {
 
-        public static readonly ISensorDefinition DEFINITION = ISensorDefinition.create("IMU", "ex,ey,ez,ax,ay,az,lx,ly,lz,x,y,z");
+        public static readonly ISensorDefinition DEFINITION = ISensorDefinition.create("IMU", "euler_x,euler_y,euler_z,world_acc_x,world_acc_y,world_acc_z,local_acc_x,local_acc_y,local_acc_z,world_x,world_y,world_z");
     
         public struct IMUSensorData : ISensorData
         {
