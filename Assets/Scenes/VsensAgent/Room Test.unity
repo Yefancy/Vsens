@@ -8406,6 +8406,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3961469376666052334, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1484435392}
+    - targetCorrespondingSourceObject: {fileID: 5769256720353580741, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1868125952}
+    - targetCorrespondingSourceObject: {fileID: 5769256720353580741, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1868125951}
     - targetCorrespondingSourceObject: {fileID: 5367844878590239239, guid: fc69750e99aa04343889e924cba5b705, type: 3}
       insertIndex: -1
       addedObject: {fileID: 988196281}
@@ -21121,6 +21127,52 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1841165525}
   m_CullTransparentMesh: 1
+--- !u!1 &1868125946 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5769256720353580741, guid: fc69750e99aa04343889e924cba5b705, type: 3}
+  m_PrefabInstance: {fileID: 716733178}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1868125951
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868125946}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.64553404, y: 0.22973382, z: 0.9760318}
+  m_Center: {x: 0.0050808988, y: 0.121648416, z: -0.0000029007592}
+--- !u!114 &1868125952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868125946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43cb9f5bf8f2b42229d3a82fa5e65e3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectDescriber
+  _boxCollider: {fileID: 1868125951}
+  objectName: Sink
+  jsonOutput: "{\n  \"position\" : [\n    1.957,\n    0.85,\n    7.177\n  ],\n  \"size\"
+    : [\n    0.571,\n    0.391,\n    0.732\n  ],\n  \"rotation\" : [\n    0,\n   
+    180,\n    0\n  ],\n  \"properties\" : [\n  ],\n  \"scale\" : [\n    0.75,\n   
+    0.75,\n    0.75\n  ]\n}"
+  movable: 0
+  ObjectRenderer: {fileID: 0}
 --- !u!1 &1872429460
 GameObject:
   m_ObjectHideFlags: 0
