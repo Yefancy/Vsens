@@ -517,6 +517,69 @@ namespace VsensAgent.VirtualObject.Sensor
             return candidate;
         }
 
+        public string EnsureSensorObjectName(VirtualSensor sensor, string requestedSensorId = null)
+        {
+            if (sensor == null)
+            {
+                return string.Empty;
+            }
+
+            var sensorType = sensor.SensorDefinition()?.getSensorName();
+            var desiredName = string.IsNullOrWhiteSpace(requestedSensorId)
+                ? sensor.gameObject.name
+                : requestedSensorId.Trim();
+
+            if (ShouldGenerateSensorName(sensor, desiredName))
+            {
+                desiredName = GenerateSensorObjectName(sensorType);
+            }
+            else if (!IsSensorObjectNameAvailable(sensor, desiredName))
+            {
+                Debug.LogWarning($"[SensorManager] Sensor name '{desiredName}' is already in use. Generating a unique id instead.");
+                desiredName = GenerateSensorObjectName(sensorType);
+            }
+
+            sensor.gameObject.name = desiredName;
+            var describer = sensor.GetComponent<SensorObjectDescriber>();
+            if (describer != null)
+            {
+                describer.SyncObjectNameFromSensor();
+            }
+
+            return desiredName;
+        }
+
+        private static bool ShouldGenerateSensorName(VirtualSensor sensor, string currentName)
+        {
+            if (sensor == null || string.IsNullOrWhiteSpace(currentName))
+            {
+                return true;
+            }
+
+            var sensorType = sensor.SensorDefinition()?.getSensorName();
+            if (string.Equals(currentName, sensorType, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return currentName.Contains("(Clone)") ||
+                   currentName.EndsWith("Prefab", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(currentName, "SensorPrefab", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSensorObjectNameAvailable(VirtualSensor sensor, string sensorName)
+        {
+            if (sensor == null || string.IsNullOrWhiteSpace(sensorName))
+            {
+                return false;
+            }
+
+            return FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                .All(candidate => candidate == null ||
+                                  candidate == sensor ||
+                                  !string.Equals(candidate.name, sensorName, StringComparison.OrdinalIgnoreCase));
+        }
+
         public bool HasSensor(string sensorName)
         {
             PruneRegisteredSensors();
@@ -578,8 +641,10 @@ namespace VsensAgent.VirtualObject.Sensor
                 
                 Debug.Log($"[SensorManager] ✅ Found matching sensor prefab, creating instance...");
                 var created = Instantiate(prefab, parent);
-                ResolveSensorDataCenter().RegisterSensor(created);
+                ResolveSensorDataCenter()?.RegisterSensor(created);
                 created.prefab = prefab.gameObject;
+                created.isPreview = false;
+                EnsureSensorObjectName(created);
                 
                 string parentInfo = parent != null ? parent.name : "Global (null parent)";
                 Debug.Log($"[SensorManager] ✅ Successfully created sensor '{sensorName}' on '{parentInfo}'");

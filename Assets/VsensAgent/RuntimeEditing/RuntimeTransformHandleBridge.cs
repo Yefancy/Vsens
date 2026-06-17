@@ -181,8 +181,14 @@ namespace VsensAgent.RuntimeEditing
             ApplyHandleType(_activeHandle);
         }
 
+        public void ResetConfigurationFailure()
+        {
+            _configurationFailed = false;
+        }
+
         private void OnSelectionChanged(string _)
         {
+            ResetConfigurationFailure();
             RefreshHandleBinding();
         }
 

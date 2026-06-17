@@ -802,8 +802,8 @@ namespace VsensAgent
 
                     var requestedSensorId = !string.IsNullOrWhiteSpace(ctrl.target)
                         ? ctrl.target.Trim()
-                        : VsensAgentSensorManager.Instance.GenerateSensorObjectName(sensorType);
-                    sensorObj.name = requestedSensorId;
+                        : null;
+                    VsensAgentSensorManager.Instance.EnsureSensorObjectName(virtualSensor, requestedSensorId);
                     
                     Debug.Log($"[ControlManager] ✅ Created new sensor: {sensorObj.name} (GameObject valid: {sensorObj != null})");
                 }

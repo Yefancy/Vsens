@@ -123,6 +123,7 @@ namespace VsensAgent.UI
         /// </summary>
         public void RefreshSensorList()
         {
+            ResolveSensorManager();
             if (sensorManager == null || itemContainer == null)
             {
                 if (itemContainer == null)
@@ -135,7 +136,6 @@ namespace VsensAgent.UI
             // 获取场景中所有的VirtualSensor
             var allSensors = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
                 .Where(s => s != null && s.gameObject.activeInHierarchy && !s.isPreview)
-                .Where(s => s.GetComponent<SensorObjectDescriber>()?.IsInited ?? false)
                 .ToArray();
             
             if (showDebugInfo)
@@ -149,7 +149,8 @@ namespace VsensAgent.UI
             foreach (var sensor in allSensors)
             {
                 if (sensor == null) continue;
-                
+
+                sensorManager?.EnsureSensorObjectName(sensor);
                 string sensorName = sensor.name;
                 currentSensorNames.Add(sensorName);
                 
@@ -226,6 +227,19 @@ namespace VsensAgent.UI
             {
                 Debug.Log($"[SensorMonitorManager] ➕ Created UI item for sensor: {sensor.name}");
             }
+        }
+
+        private void ResolveSensorManager()
+        {
+            if (sensorManager != null)
+            {
+                return;
+            }
+
+            sensorManager = VsensAgentSensorManager.Instance
+                ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                    ? ServiceLocator.Get<VsensAgentSensorManager>()
+                    : FindFirstObjectByType<VsensAgentSensorManager>());
         }
 
         /// <summary>

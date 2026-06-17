@@ -59,6 +59,15 @@ namespace VsensAgent.RuntimeEditing
             {
                 ClearSelection();
             }
+            else
+            {
+                var bridge = GetComponent<RuntimeTransformHandleBridge>();
+                if (bridge != null)
+                {
+                    bridge.ResetConfigurationFailure();
+                    bridge.RefreshHandleBinding();
+                }
+            }
         }
 
         public Transform GetSelectedTransform()

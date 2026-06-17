@@ -2,15 +2,13 @@ using System.Collections.Generic;
 using Sensor;
 using SimpleJSON;
 using UnityEngine;
-using System;
+using VsensAgent.Core;
+using VsensAgent.VirtualObject.Sensor;
 
 public class SensorObjectDescriber : ObjectDescriber
 {
     [SerializeField] private VirtualSensor _sensor;
-    
-    // 用于生成唯一序号的静态计数器
-    private static Dictionary<string, int> sensorCounters = new Dictionary<string, int>();
-    
+
     public VirtualSensor Sesnor => _sensor;
     private bool IsInit;
     public bool IsInited => IsInit;
@@ -39,47 +37,33 @@ public class SensorObjectDescriber : ObjectDescriber
     /// </summary>
     private void SetupSensorName()
     {
-        string sensorType = _sensor.SensorDefinition().getSensorName();
-        if (HasExplicitSensorName(gameObject.name, sensorType))
+        var sensorManager = VsensAgentSensorManager.Instance
+            ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                ? ServiceLocator.Get<VsensAgentSensorManager>()
+                : FindFirstObjectByType<VsensAgentSensorManager>());
+        if (sensorManager != null)
         {
-            SetObjectName(gameObject.name);
-            Debug.Log($"[SensorObjectDescriber] Preserved sensor name: {gameObject.name}");
-            IsInit = true;
+            sensorManager.EnsureSensorObjectName(_sensor);
             return;
         }
-        
-        // 获取并递增该类型传感器的计数器
-        if (!sensorCounters.ContainsKey(sensorType))
-        {
-            sensorCounters[sensorType] = 0;
-        }
-        sensorCounters[sensorType]++;
-        
-        // 设置objectName为"传感器类型-序号"格式
-        string sensorName = $"{sensorType}-{sensorCounters[sensorType]:00}";
-        
-        SetObjectName(sensorName);
-        
-        // 同时设置GameObject的名称
-        gameObject.name = sensorName;
-        
-        Debug.Log($"[SensorObjectDescriber] Set sensor name to: {sensorName}");
-        IsInit = true;
+
+        SyncObjectNameFromSensor();
     }
 
-    private static bool HasExplicitSensorName(string candidate, string sensorType)
+    public void SyncObjectNameFromSensor()
     {
-        if (string.IsNullOrWhiteSpace(candidate))
+        if (_sensor == null)
         {
-            return false;
+            _sensor = GetComponent<VirtualSensor>();
         }
 
-        if (candidate.Contains("(Clone)") || candidate.EndsWith("Prefab", StringComparison.OrdinalIgnoreCase))
+        if (_sensor == null)
         {
-            return false;
+            return;
         }
 
-        return !string.Equals(candidate, sensorType, StringComparison.OrdinalIgnoreCase);
+        SetObjectName(gameObject.name);
+        IsInit = true;
     }
 
     private void SetObjectName(string sensorName)

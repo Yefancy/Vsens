@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using Sensor;
 using TransformHandles;
@@ -463,6 +464,65 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
                 if (bridge.ActiveHandle != null)
                 {
                     Object.DestroyImmediate(bridge.ActiveHandle.gameObject);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                var manager = Object.FindFirstObjectByType<TransformHandleManager>();
+                if (manager != null)
+                {
+                    Object.DestroyImmediate(manager.gameObject);
+                }
+
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEditMode_ReenteringEditMode_AllowsHandleBridgeToRecoverAfterConfigurationFailure()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RuntimeEditHandleRecoveryRoot");
+            var cameraGo = new GameObject("RuntimeEditHandleRecoveryCamera");
+
+            try
+            {
+                var camera = cameraGo.AddComponent<Camera>();
+                camera.tag = "MainCamera";
+                camera.transform.position = new Vector3(0f, 2f, -4f);
+                camera.transform.LookAt(Vector3.zero);
+
+                root.AddComponent<SceneRegistry>();
+                var controller = root.AddComponent<RuntimeEditModeController>();
+                controller.OverrideRuntimeCameraForTests(camera);
+                controller.SetEditMode(true);
+
+                var sensorObject = new GameObject("IMU-Recovered");
+                sensorObject.AddComponent<TestEditableSensor>();
+
+                var bridge = root.GetComponent<RuntimeTransformHandleBridge>();
+                Assert.That(bridge, Is.Not.Null);
+
+                typeof(RuntimeTransformHandleBridge)
+                    .GetField("_configurationFailed", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(bridge, true);
+
+                controller.SetEditMode(false);
+                controller.SetEditMode(true);
+
+                Assert.That(controller.TrySelectEditable("IMU-Recovered"), Is.True);
+                bridge.RefreshHandleBinding();
+
+                var handle = bridge.ActiveHandle ?? Object.FindFirstObjectByType<Handle>();
+                Assert.That(handle, Is.Not.Null);
+                Assert.That(handle.target, Is.EqualTo(sensorObject.transform));
+
+                Object.DestroyImmediate(sensorObject);
+                if (handle != null)
+                {
+                    Object.DestroyImmediate(handle.gameObject);
                 }
             }
             finally

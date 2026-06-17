@@ -6,6 +6,9 @@ using UnityEngine.UI;
 using VsensAgent.Core;
 using VsensAgent.SceneApi.V2;
 using VsensAgent.VirtualObject.Sensor;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace VsensAgent.UI.Sensor
 {
@@ -189,7 +192,7 @@ namespace VsensAgent.UI.Sensor
             if (previewInstance.TryGetComponent<VirtualSensor>(out var sensor))
             {
                 sensor.isPreview = true;
-                Destroy(sensor);
+                DestroyUnityObject(sensor);
             }
 
             previewInstance.name = $"{sensorPrefab.gameObject.name}_Preview";
@@ -218,14 +221,7 @@ namespace VsensAgent.UI.Sensor
                 return;
             }
 
-            if (Application.isPlaying)
-            {
-                Destroy(previewInstance);
-            }
-            else
-            {
-                DestroyImmediate(previewInstance);
-            }
+            DestroyUnityObject(previewInstance);
 
             previewInstance = null;
         }
@@ -254,13 +250,34 @@ namespace VsensAgent.UI.Sensor
 
             if (createdSensor != null)
             {
+                createdSensor.isPreview = false;
+                sensorManager?.EnsureSensorObjectName(createdSensor);
                 return createdSensor;
             }
 
             createdSensor = Instantiate(sensorPrefab);
             createdSensor.prefab = sensorPrefab.gameObject;
+            createdSensor.isPreview = false;
+            sensorManager?.EnsureSensorObjectName(createdSensor);
             SensorDataCenter.Instance?.RegisterSensor(createdSensor);
             return createdSensor;
+        }
+
+        private static void DestroyUnityObject(Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying || !EditorApplication.isPlaying)
+            {
+                DestroyImmediate(target);
+                return;
+            }
+#endif
+            Destroy(target);
         }
 
         private void EnsureDependencies()
