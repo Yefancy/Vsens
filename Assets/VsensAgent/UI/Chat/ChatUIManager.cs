@@ -805,18 +805,40 @@ namespace VsensAgent.UI
                 _chatPanelView.SetPlaceholder(placeholder);
         }
 
-        private string FormatJobLifecycle(JobLifecycleMessage job)
+        public static string FormatJobLifecycle(JobLifecycleMessage job)
         {
+            var message = job.payload?["message"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                var label = string.Equals(job.job_kind, "experiment.run", StringComparison.OrdinalIgnoreCase)
+                    ? "Experiment"
+                    : "Job";
+                return job.type switch
+                {
+                    "job.started" => $"{label} started: {message}",
+                    "job.completed" => $"{label} completed: {message}",
+                    "job.cancelled" => string.IsNullOrWhiteSpace(job.reason)
+                        ? $"{label} cancelled: {message}"
+                        : $"{label} cancelled: {message} - {job.reason}",
+                    _ => string.IsNullOrWhiteSpace(job.reason)
+                        ? $"{label} status: {message}"
+                        : $"{label} status: {message}: {job.reason}"
+                };
+            }
+
+            var shortJobId = string.IsNullOrWhiteSpace(job.job_id) || job.job_id.Length <= 8
+                ? job.job_id
+                : job.job_id.Substring(0, 8);
             return job.type switch
             {
-                "job.started" => $"Job started: {job.job_kind} ({job.job_id})",
-                "job.completed" => $"Job completed: {job.job_kind} ({job.job_id})",
+                "job.started" => $"Job started: {job.job_kind} ({shortJobId})",
+                "job.completed" => $"Job completed: {job.job_kind} ({shortJobId})",
                 "job.cancelled" => string.IsNullOrWhiteSpace(job.reason)
-                    ? $"Job cancelled: {job.job_kind} ({job.job_id})"
-                    : $"Job cancelled: {job.job_kind} ({job.job_id}) - {job.reason}",
+                    ? $"Job cancelled: {job.job_kind} ({shortJobId})"
+                    : $"Job cancelled: {job.job_kind} ({shortJobId}) - {job.reason}",
                 _ => string.IsNullOrWhiteSpace(job.reason)
-                    ? $"Job status: {job.job_kind} ({job.job_id}) - {job.status}"
-                    : $"Job status: {job.job_kind} ({job.job_id}) - {job.status}: {job.reason}"
+                    ? $"Job status: {job.job_kind} ({shortJobId}) - {job.status}"
+                    : $"Job status: {job.job_kind} ({shortJobId}) - {job.status}: {job.reason}"
             };
         }
 

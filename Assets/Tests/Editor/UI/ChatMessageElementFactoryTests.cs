@@ -54,6 +54,35 @@ namespace VsensAgent.Tests.Editor.UI
         }
 
         [Test]
+        public void CreateInteractionOptionsElement_ConfiguresLongOptionTextToWrapWithinButton()
+        {
+            var optionsElement = ChatMessageElementFactory.CreateInteractionOptionsElement(
+                new[]
+                {
+                    new ChatInteractionOptionData(
+                        "long_option",
+                        "Analyze the latest recording and compare whether the cooking phase or the dish washing phase better matches the current HAR collection target",
+                        "Use this when the user wants a detailed comparison with metrics, plots, and a recommendation.")
+                },
+                allowMultiple: true,
+                _ => { });
+
+            var option = optionsElement.Root.Q<Button>("chat-option-long_option");
+            var label = option.Q<Label>(className: "chat-option-label");
+            var description = option.Q<Label>(className: "chat-option-description");
+
+            Assert.That(option.style.flexDirection.value, Is.EqualTo(FlexDirection.Column));
+            Assert.That(option.style.alignItems.value, Is.EqualTo(Align.Stretch));
+            Assert.That(option.style.width.value.value, Is.EqualTo(100f));
+            Assert.That(option.style.width.value.unit, Is.EqualTo(LengthUnit.Percent));
+            Assert.That(option.style.flexShrink.value, Is.EqualTo(1f));
+            Assert.That(label.style.whiteSpace.value, Is.EqualTo(WhiteSpace.Normal));
+            Assert.That(label.style.flexShrink.value, Is.EqualTo(1f));
+            Assert.That(description.style.whiteSpace.value, Is.EqualTo(WhiteSpace.Normal));
+            Assert.That(description.style.flexShrink.value, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void CreateAttachmentListElement_RendersHeaderAndButtons()
         {
             var opened = string.Empty;

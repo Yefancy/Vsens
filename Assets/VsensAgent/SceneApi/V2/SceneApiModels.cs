@@ -110,6 +110,7 @@ namespace VsensAgent.SceneApi.V2
         public float motion_progress;
         public bool is_playing;
         public string pose_authority;
+        public List<AvatarAttachmentPointQueryModel> attachment_points = new List<AvatarAttachmentPointQueryModel>();
     }
 
     [Serializable]
@@ -130,6 +131,24 @@ namespace VsensAgent.SceneApi.V2
         public Vector3Data world_position;
         public Vector3Data world_rotation;
         public string description;
+    }
+
+    [Serializable]
+    public class SensorQueryModel
+    {
+        public string sensor_id;
+        public string sensor_type;
+        public Vector3Data position;
+        public Vector3Data rotation;
+        public string parent_object_id;
+        public string parent_name;
+        public string attach_mode;
+        public string avatar_id;
+        public string joint_name;
+        public Vector3Data local_position;
+        public Vector3Data local_rotation;
+        public bool show_visualization;
+        public bool show_data_graph;
     }
 
     [Serializable]
@@ -239,6 +258,20 @@ namespace VsensAgent.SceneApi.V2
         public long duration_ms;
         public List<ActionErrorItemV2> errors = new List<ActionErrorItemV2>();
         public string trace_id;
+        public List<SensorActionResultV2> action_results = new List<SensorActionResultV2>();
+    }
+
+    [Serializable]
+    public class SensorActionResultV2
+    {
+        public int action_index;
+        public string sensor_id;
+        public string sensor_type;
+        public bool created;
+        public bool updated;
+        public string attach_mode;
+        public string avatar_id;
+        public string joint_name;
     }
 
     public static class SceneApiErrorCodes

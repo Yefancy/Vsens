@@ -11,8 +11,6 @@ namespace Sensor
 {
     public class SensorDataCenter : MonoBehaviour
     {
-        private static int AUTOMATIC_ID;
-
         private static SensorDataCenter INSTANCE;
         public static SensorDataCenter Instance => INSTANCE;
     
@@ -29,6 +27,12 @@ namespace Sensor
         public bool IsSimulating => isSimulating;
         private bool isRecording;
         public bool IsRecording => isRecording;
+        public string CurrentPhaseLabel { get; private set; } = string.Empty;
+
+        public void SetRecordingPhase(string phaseLabel)
+        {
+            CurrentPhaseLabel = phaseLabel ?? string.Empty;
+        }
 
         public void Start()
         {
@@ -43,7 +47,6 @@ namespace Sensor
         {
             if (sensors.TryGetValue(sensor.SensorDefinition(), out var sensorList))
             {
-                sensor.name = $"{sensor.SensorDefinition().getSensorName()}-{AUTOMATIC_ID++}";
                 sensorList.Add(sensor);
             }
             else
@@ -63,6 +66,7 @@ namespace Sensor
         public void StartRecording()
         {
             isRecording = true;
+            CurrentPhaseLabel = string.Empty;
             sensors.Values.ToList().ForEach(sensorList => sensorList.ForEach(sensor =>
             {
                 if (!sensor.IsActive) return;
@@ -75,6 +79,7 @@ namespace Sensor
         public Dictionary<VirtualSensor, List<SensorData>> StopRecording()
         {
             isRecording = false;
+            CurrentPhaseLabel = string.Empty;
             var result = new Dictionary<VirtualSensor, List<SensorData>>();
             foreach (var sensorDataPair in sensors)
             {

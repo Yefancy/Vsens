@@ -38,17 +38,25 @@ namespace VsensAgent.UI
                         name = $"chat-option-{option.id}"
                     };
                     button.AddToClassList("chat-option");
+                    button.style.flexDirection = FlexDirection.Column;
+                    button.style.alignItems = Align.Stretch;
+                    button.style.width = Length.Percent(100);
+                    button.style.flexShrink = 1f;
                     button.userData = (Action)(() => OnOptionClicked(option.id));
                     button.RegisterCallback<ClickEvent>(_ => OnOptionClicked(option.id));
 
                     var label = new Label(option.label ?? string.Empty);
                     label.AddToClassList("chat-option-label");
+                    label.style.whiteSpace = WhiteSpace.Normal;
+                    label.style.flexShrink = 1f;
                     button.Add(label);
 
                     if (!string.IsNullOrWhiteSpace(option.description))
                     {
                         var description = new Label(option.description);
                         description.AddToClassList("chat-option-description");
+                        description.style.whiteSpace = WhiteSpace.Normal;
+                        description.style.flexShrink = 1f;
                         button.Add(description);
                     }
 

@@ -203,6 +203,7 @@ namespace Sensor
             {
                 time = time,
                 sensorID = name,
+                phase = sensorDataCenter?.CurrentPhaseLabel ?? string.Empty,
                 data = data
             };
 

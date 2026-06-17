@@ -45,6 +45,17 @@ namespace VsensAgent.Network.Protocol
         public string scene_snapshot;
         public bool request_audio;
     }
+
+    [Serializable]
+    public class ObjectSelectionReplyRequest
+    {
+        public string type = "object_selection.reply";
+        public string selection_id;
+        public string selected_object_id;
+        public string selected_alias;
+        public float[] world_position;
+        public bool cancelled;
+    }
     
     /// <summary>
     /// 重置请求 - 清空对话历史（不清除LanceDB情节记忆）

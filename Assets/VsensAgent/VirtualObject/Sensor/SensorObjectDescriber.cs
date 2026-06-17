@@ -40,6 +40,13 @@ public class SensorObjectDescriber : ObjectDescriber
     private void SetupSensorName()
     {
         string sensorType = _sensor.SensorDefinition().getSensorName();
+        if (HasExplicitSensorName(gameObject.name, sensorType))
+        {
+            SetObjectName(gameObject.name);
+            Debug.Log($"[SensorObjectDescriber] Preserved sensor name: {gameObject.name}");
+            IsInit = true;
+            return;
+        }
         
         // 获取并递增该类型传感器的计数器
         if (!sensorCounters.ContainsKey(sensorType))
@@ -51,19 +58,38 @@ public class SensorObjectDescriber : ObjectDescriber
         // 设置objectName为"传感器类型-序号"格式
         string sensorName = $"{sensorType}-{sensorCounters[sensorType]:00}";
         
-        // 直接设置objectName字段
-        var objectNameField = typeof(ObjectDescriber).GetField("objectName", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        if (objectNameField != null)
-        {
-            objectNameField.SetValue(this, sensorName);
-        }
+        SetObjectName(sensorName);
         
         // 同时设置GameObject的名称
         gameObject.name = sensorName;
         
         Debug.Log($"[SensorObjectDescriber] Set sensor name to: {sensorName}");
         IsInit = true;
+    }
+
+    private static bool HasExplicitSensorName(string candidate, string sensorType)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        if (candidate.Contains("(Clone)") || candidate.EndsWith("Prefab", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !string.Equals(candidate, sensorType, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SetObjectName(string sensorName)
+    {
+        var objectNameField = typeof(ObjectDescriber).GetField("objectName", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (objectNameField != null)
+        {
+            objectNameField.SetValue(this, sensorName);
+        }
     }
     
     public override JSONObject GetDescription()

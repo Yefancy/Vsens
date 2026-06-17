@@ -21,6 +21,7 @@ namespace VsensAgent
         [SerializeField] private SceneRegistry sceneRegistry;
         [SerializeField] private AvatarRuntimeManager avatarRuntimeManager;
         [SerializeField] private SceneActionHistory sceneActionHistory;
+        private SensorActionResultV2 lastSensorActionResult;
         void OnEnable()
         {
             WsClient.OnControl += HandleControlBatch; // 统一处理批量控制
@@ -80,6 +81,43 @@ namespace VsensAgent
                         return false;
                     }
                 }
+
+                var operation = ParseStringParameter(ctrl.parameters, "operation", "create_or_update");
+                if (operation != "create" && operation != "update" && operation != "create_or_update")
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                    errorMessage = "set_sensor operation must be create, update, or create_or_update.";
+                    return false;
+                }
+
+                if (operation == "update")
+                {
+                    if (string.IsNullOrWhiteSpace(ctrl.target))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "set_sensor operation=update requires target sensor object name.";
+                        return false;
+                    }
+
+                    var existing = GameObject.Find(ctrl.target);
+                    if (existing == null || existing.GetComponent<VirtualSensor>() == null)
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.TARGET_NOT_FOUND;
+                        errorMessage = $"Sensor '{ctrl.target}' not found for update.";
+                        return false;
+                    }
+                }
+
+                if (operation == "create" && !string.IsNullOrWhiteSpace(ctrl.target))
+                {
+                    var existing = GameObject.Find(ctrl.target);
+                    if (existing != null && existing.GetComponent<VirtualSensor>() != null)
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                        errorMessage = $"Sensor '{ctrl.target}' already exists.";
+                        return false;
+                    }
+                }
                 return true;
             }
 
@@ -114,6 +152,28 @@ namespace VsensAgent
 
             if (ctrl.action == "delegate_task")
             {
+                return true;
+            }
+
+            if (IsRecordingAction(ctrl.action))
+            {
+                ResolveSensorManager();
+                if (sensorManager == null)
+                {
+                    errorCode = SceneApi.V2.SceneApiErrorCodes.CONSTRAINT_VIOLATION;
+                    errorMessage = "VsensAgentSensorManager not found.";
+                    return false;
+                }
+                if (ctrl.action == "mark_recording_phase")
+                {
+                    var phaseLabel = ParseStringParameter(ctrl.parameters, "phase_label", string.Empty);
+                    if (string.IsNullOrWhiteSpace(phaseLabel))
+                    {
+                        errorCode = SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM;
+                        errorMessage = "mark_recording_phase requires phase_label.";
+                        return false;
+                    }
+                }
                 return true;
             }
 
@@ -178,6 +238,7 @@ namespace VsensAgent
 
         public bool TryExecuteControlAction(ControlObject ctrl, out string errorCode, out string errorMessage)
         {
+            lastSensorActionResult = null;
             if (!TryValidateControlAction(ctrl, out errorCode, out errorMessage))
             {
                 return false;
@@ -199,6 +260,13 @@ namespace VsensAgent
                 errorMessage = ex.Message;
                 return false;
             }
+        }
+
+        public SensorActionResultV2 ConsumeLastSensorActionResult()
+        {
+            var result = lastSensorActionResult;
+            lastSensorActionResult = null;
+            return result;
         }
 
         private void HandleControlBatch(ControlObject[] controlActions)
@@ -262,6 +330,12 @@ namespace VsensAgent
             if (ctrl.action == "delegate_task")
             {
                 HandleDelegateTaskAction(ctrl);
+                return;
+            }
+
+            if (IsRecordingAction(ctrl.action))
+            {
+                HandleRecordingAction(ctrl);
                 return;
             }
 
@@ -597,12 +671,25 @@ namespace VsensAgent
             }
 
             var sensorName = ctrl != null ? ctrl.target : string.Empty;
+            var sensorObj = GameObject.Find(sensorName);
+            var sensor = sensorObj != null ? sensorObj.GetComponent<VirtualSensor>() : null;
+            var sensorType = sensor != null ? sensor.SensorDefinition().getSensorName() : string.Empty;
             if (!sensorManager.TryRemoveSensor(sensorName, out var error))
             {
                 Debug.LogWarning($"[ControlManager] ⚠️ Failed to remove sensor '{sensorName}': {error}");
                 return;
             }
 
+            lastSensorActionResult = new SensorActionResultV2
+            {
+                sensor_id = sensorName,
+                sensor_type = sensorType,
+                created = false,
+                updated = false,
+                attach_mode = "removed",
+                avatar_id = string.Empty,
+                joint_name = string.Empty
+            };
             ClearEditSelection(sensorName);
             RegisterMutation("control.local", sensorName, "remove_sensor");
             Debug.Log($"[ControlManager] 🗑️ Removed sensor: {sensorName}");
@@ -626,6 +713,7 @@ namespace VsensAgent
                 }
 
                 string sensorType = ParseStringFromParameter(ctrl.parameters["sensor_type"]);
+                string operation = ParseStringParameter(ctrl.parameters, "operation", "create_or_update");
                 if (string.IsNullOrEmpty(sensorType))
                 {
                     Debug.LogError("[ControlManager] ❌ sensor_type parameter cannot be empty");
@@ -711,6 +799,11 @@ namespace VsensAgent
                         Debug.LogError("[ControlManager] ❌ Created VirtualSensor has null gameObject!");
                         return;
                     }
+
+                    var requestedSensorId = !string.IsNullOrWhiteSpace(ctrl.target)
+                        ? ctrl.target.Trim()
+                        : VsensAgentSensorManager.Instance.GenerateSensorObjectName(sensorType);
+                    sensorObj.name = requestedSensorId;
                     
                     Debug.Log($"[ControlManager] ✅ Created new sensor: {sensorObj.name} (GameObject valid: {sensorObj != null})");
                 }
@@ -752,6 +845,12 @@ namespace VsensAgent
                             SceneTransformSnapshot.Capture(sensorObj.name, sensorObj.transform),
                             ctrl);
                     }
+
+                    lastSensorActionResult = BuildSensorActionResult(
+                        sensorObj,
+                        ctrl.parameters,
+                        createdNewSensor,
+                        !createdNewSensor || transformChanged || sensorSpecificChanged);
                 }
                 else
                 {
@@ -778,6 +877,25 @@ namespace VsensAgent
             }
         }
 
+        private SensorActionResultV2 BuildSensorActionResult(
+            GameObject sensorObj,
+            Dictionary<string, object> parameters,
+            bool created,
+            bool updated)
+        {
+            var sensor = sensorObj != null ? sensorObj.GetComponent<VirtualSensor>() : null;
+            return new SensorActionResultV2
+            {
+                sensor_id = sensorObj != null ? sensorObj.name : string.Empty,
+                sensor_type = sensor != null ? sensor.SensorDefinition().getSensorName() : string.Empty,
+                created = created,
+                updated = updated && !created,
+                attach_mode = ParseStringParameter(parameters, "attach_mode", sensorObj != null && sensorObj.transform.parent != null ? "object" : "world"),
+                avatar_id = ParseStringParameter(parameters, "avatar_id", string.Empty),
+                joint_name = ParseStringParameter(parameters, "joint_name", string.Empty)
+            };
+        }
+
         private void HandleDelegateTaskAction(ControlObject ctrl)
         {
             string taskType = ParseStringParameter(ctrl.parameters, "task_type", "analysis");
@@ -801,6 +919,38 @@ namespace VsensAgent
                 selector: string.IsNullOrWhiteSpace(selector) ? "recent_n" : selector,
                 recentN: recentN,
                 timestampLabel: string.IsNullOrWhiteSpace(timestampLabel) ? null : timestampLabel);
+        }
+
+        private void HandleRecordingAction(ControlObject ctrl)
+        {
+            ResolveSensorManager();
+            if (sensorManager == null)
+            {
+                Debug.LogWarning("[ControlManager] ⚠️ Cannot handle recording action: VsensAgentSensorManager not found.");
+                return;
+            }
+
+            switch (ctrl.action)
+            {
+                case "start_sensor_recording":
+                    sensorManager.StartSensorRecording(
+                        ParseStringParameter(ctrl.parameters, "recording_label", string.Empty),
+                        ParseStringParameter(ctrl.parameters, "goal", string.Empty),
+                        ParseStringParameter(ctrl.parameters, "initial_phase", string.Empty));
+                    RegisterMutation("control.local", "sensor_recording", ctrl.action);
+                    break;
+                case "mark_recording_phase":
+                    sensorManager.MarkRecordingPhase(
+                        ParseStringParameter(ctrl.parameters, "phase_label", string.Empty),
+                        ParseStringParameter(ctrl.parameters, "note", string.Empty));
+                    RegisterMutation("control.local", "sensor_recording", ctrl.action);
+                    break;
+                case "stop_sensor_recording":
+                    sensorManager.StopSensorRecordingAndExportForAgent(
+                        ParseBoolParameter(ctrl.parameters, "upload_snapshot", true));
+                    RegisterMutation("control.local", "sensor_recording", ctrl.action);
+                    break;
+            }
         }
 
         /// <summary>
@@ -1150,6 +1300,19 @@ namespace VsensAgent
                 case "pause_avatar_motion":
                 case "stop_avatar_motion":
                 case "clear_avatar_motion":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsRecordingAction(string action)
+        {
+            switch (action)
+            {
+                case "start_sensor_recording":
+                case "mark_recording_phase":
+                case "stop_sensor_recording":
                     return true;
                 default:
                     return false;

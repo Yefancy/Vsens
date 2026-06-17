@@ -176,6 +176,12 @@ namespace VsensAgent.SceneApi.V2
                     return report;
                 }
 
+                var sensorResult = _controlManager.ConsumeLastSensorActionResult();
+                if (sensorResult != null)
+                {
+                    sensorResult.action_index = i;
+                    report.action_results.Add(sensorResult);
+                }
                 report.applied_actions.Add(i);
             }
 
@@ -206,12 +212,20 @@ namespace VsensAgent.SceneApi.V2
             }
 
             var targetName = ResolveTargetName(cmd.target_id);
+            if (string.IsNullOrWhiteSpace(targetName) && IsSensorAction(cmd.action_type))
+            {
+                targetName = cmd.target_id;
+            }
             if (string.IsNullOrWhiteSpace(targetName) && IsAvatarAction(cmd.action_type))
             {
                 targetName = ResolveAvatarTargetName(cmd.parameters);
             }
 
-            if (string.IsNullOrWhiteSpace(targetName) && cmd.action_type != "set_sensor" && !IsAvatarAction(cmd.action_type))
+            if (string.IsNullOrWhiteSpace(targetName) &&
+                cmd.action_type != "set_sensor" &&
+                cmd.action_type != "remove_sensor" &&
+                !IsAvatarAction(cmd.action_type) &&
+                !IsRecordingAction(cmd.action_type))
             {
                 error = $"Cannot resolve target_id '{cmd.target_id}'";
                 return false;
@@ -229,6 +243,11 @@ namespace VsensAgent.SceneApi.V2
             return true;
         }
 
+        private static bool IsSensorAction(string actionType)
+        {
+            return actionType == "set_sensor" || actionType == "remove_sensor";
+        }
+
         private static bool IsAvatarAction(string actionType)
         {
             switch (actionType)
@@ -241,6 +260,19 @@ namespace VsensAgent.SceneApi.V2
                 case "pause_avatar_motion":
                 case "stop_avatar_motion":
                 case "clear_avatar_motion":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsRecordingAction(string actionType)
+        {
+            switch (actionType)
+            {
+                case "start_sensor_recording":
+                case "mark_recording_phase":
+                case "stop_sensor_recording":
                     return true;
                 default:
                     return false;

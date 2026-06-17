@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sensor;
 using UnityEngine;
 
 namespace VsensAgent.SceneApi.V2
@@ -193,19 +194,83 @@ namespace VsensAgent.SceneApi.V2
             };
         }
 
-        public object QueryAvatarAttachmentPoints(string avatarId)
+        public object QuerySensors(string sensorType = "")
         {
-            var points = _avatarRuntimeManager != null
-                ? _avatarRuntimeManager.GetAttachmentPointQueryModels(avatarId)
-                : new List<AvatarAttachmentPointQueryModel>();
+            var sensors = UnityEngine.Object.FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                .Where(sensor => sensor != null && sensor.gameObject.activeInHierarchy && !sensor.isPreview);
+            if (!string.IsNullOrWhiteSpace(sensorType))
+            {
+                sensors = sensors.Where(sensor => string.Equals(
+                    sensor.SensorDefinition().getSensorName(),
+                    sensorType,
+                    StringComparison.OrdinalIgnoreCase));
+            }
+
+            var models = sensors
+                .Select(BuildSensorModel)
+                .OrderBy(model => model.sensor_id, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             return new
             {
                 type = "scene.query_response",
-                method = "scene.query_avatar_attachment_points",
+                method = "scene.query_sensors",
                 scene_version = _registry.CurrentVersion,
-                avatar_id = avatarId,
-                attachment_points = points
+                sensors = models
             };
+        }
+
+        private SensorQueryModel BuildSensorModel(VirtualSensor sensor)
+        {
+            var transform = sensor.transform;
+            var model = new SensorQueryModel
+            {
+                sensor_id = sensor.name,
+                sensor_type = sensor.SensorDefinition().getSensorName(),
+                position = ToData(transform.position),
+                rotation = ToData(transform.eulerAngles),
+                local_position = ToData(transform.localPosition),
+                local_rotation = ToData(transform.localEulerAngles),
+                parent_name = transform.parent != null ? transform.parent.name : string.Empty,
+                parent_object_id = string.Empty,
+                attach_mode = transform.parent != null ? "object" : "world",
+                avatar_id = string.Empty,
+                joint_name = string.Empty,
+                show_visualization = sensor.ShowPreview,
+                show_data_graph = sensor.ShowGraph
+            };
+
+            var parentDescriber = transform.parent != null
+                ? transform.parent.GetComponentInParent<ObjectDescriber>()
+                : null;
+            if (parentDescriber != null)
+            {
+                model.parent_object_id = parentDescriber.GetObjectName();
+            }
+
+            if (_avatarRuntimeManager != null && transform.parent != null)
+            {
+                foreach (var avatar in _avatarRuntimeManager.GetAvatarQueryModels(_registry))
+                {
+                    foreach (var point in avatar.attachment_points)
+                    {
+                        if (_avatarRuntimeManager.TryResolveAttachmentPointTransform(
+                                avatar.avatar_id,
+                                point.joint_name,
+                                out var attachmentTransform,
+                                out _) &&
+                            attachmentTransform == transform.parent)
+                        {
+                            model.attach_mode = "avatar_joint";
+                            model.avatar_id = avatar.avatar_id;
+                            model.joint_name = point.joint_name;
+                            return model;
+                        }
+                    }
+                }
+            }
+
+            return model;
         }
 
         public object FindSensorPlacements(string sensorType, List<string> targetIds, PlacementConstraints constraints)

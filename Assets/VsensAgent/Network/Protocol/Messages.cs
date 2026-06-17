@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace VsensAgent.Network.Protocol
 {
@@ -119,6 +120,17 @@ namespace VsensAgent.Network.Protocol
     }
 
     [Serializable]
+    public class ObjectSelectionRequestMessage
+    {
+        public string type;
+        public string selection_id;
+        public string prompt;
+        public string mode;
+        public string[] candidate_aliases;
+        public bool allow_cancel;
+    }
+
+    [Serializable]
     public class JobLifecycleMessage
     {
         public string type;
@@ -126,6 +138,7 @@ namespace VsensAgent.Network.Protocol
         public string job_kind;
         public string status;
         public string reason;
+        public JObject payload;
     }
 
     [Serializable]

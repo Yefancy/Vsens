@@ -58,54 +58,14 @@ namespace VsensAgent.Tests.Editor.SceneApi
                 Assert.That(avatars.Count, Is.EqualTo(1));
                 Assert.That(avatars[0].avatar_id, Is.EqualTo("avatar_main"));
                 Assert.That(avatars[0].pose_authority, Is.EqualTo("agent"));
+                Assert.That(avatars[0].attachment_points, Is.Not.Null);
+                Assert.That(avatars[0].attachment_points.Count, Is.GreaterThanOrEqualTo(7));
+                Assert.That(avatars[0].attachment_points.Exists(p => p.joint_name == "left_wrist"), Is.True);
+                Assert.That(avatars[0].attachment_points.Exists(p => p.joint_name == "right_wrist"), Is.True);
+                Assert.That(avatars[0].attachment_points.Exists(p => p.joint_name == "head"), Is.True);
 
                 var snapshot = registry.BuildSnapshot(includeRelations: false);
                 Assert.That(snapshot.objects.Exists(o => o.alias == "avatar_main"), Is.True);
-            }
-            finally
-            {
-                Object.DestroyImmediate(floor);
-                Object.DestroyImmediate(prefab);
-                Object.DestroyImmediate(root);
-                ServiceLocator.Clear();
-            }
-        }
-
-        [Test]
-        public void QueryAvatarAttachmentPoints_ReturnsSemanticBodyPointsForManagedAvatar()
-        {
-            ServiceLocator.Clear();
-            var root = new GameObject("AvatarAttachmentPointRoot");
-            var prefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
-            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "KitchenFloor";
-            floor.transform.position = new Vector3(0f, -0.05f, 0f);
-            floor.transform.localScale = new Vector3(8f, 0.1f, 8f);
-            floor.AddComponent<ObjectDescriber>();
-
-            try
-            {
-                var registry = root.AddComponent<SceneRegistry>();
-                var runtime = root.AddComponent<AvatarRuntimeManager>();
-                runtime.ConfigureDefaultPrefab(prefab);
-
-                Assert.That(runtime.TrySpawnAvatar(
-                    "avatar_main",
-                    "smplx_male",
-                    Vector3.zero,
-                    Vector3.zero,
-                    out var spawnError), Is.True, spawnError);
-
-                var queryService = new SceneQueryService(registry, runtime);
-                var response = ToObject(queryService.QueryAvatarAttachmentPoints("avatar_main"));
-                var points = response["attachment_points"]!.ToObject<List<AvatarAttachmentPointQueryModel>>();
-
-                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.query_avatar_attachment_points"));
-                Assert.That(points, Is.Not.Null);
-                Assert.That(points.Count, Is.GreaterThanOrEqualTo(7));
-                Assert.That(points.Exists(p => p.joint_name == "left_wrist"), Is.True);
-                Assert.That(points.Exists(p => p.joint_name == "right_wrist"), Is.True);
-                Assert.That(points.Exists(p => p.joint_name == "head"), Is.True);
             }
             finally
             {
@@ -194,6 +154,150 @@ namespace VsensAgent.Tests.Editor.SceneApi
 
                 Assert.That(controlManager.TryExecuteControlAction(ctrl, out var errorCode, out var errorMessage), Is.True, $"{errorCode}: {errorMessage}");
                 Assert.That(sensorObject == null, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QuerySensors_ReturnsAvatarJointAttachmentMetadata()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("QuerySensorsRoot");
+            var prefab = AvatarSceneApiTestHelpers.CreateAttachmentAwareAvatarPrefab();
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var runtime = root.AddComponent<AvatarRuntimeManager>();
+                runtime.ConfigureDefaultPrefab(prefab);
+                Assert.That(runtime.TrySpawnAvatar("avatar_main", "smplx_male", Vector3.zero, Vector3.zero, out var spawnError), Is.True, spawnError);
+                Assert.That(runtime.TryResolveAttachmentPointTransform("avatar_main", "left_wrist", out var leftWrist, out var resolveError), Is.True, resolveError);
+
+                var sensorObject = new GameObject("IMU-01");
+                var sensor = sensorObject.AddComponent<TestVirtualSensor>();
+                sensorObject.AddComponent<SensorObjectDescriber>();
+                sensorObject.transform.SetParent(leftWrist, false);
+                sensorObject.transform.localPosition = Vector3.zero;
+                sensorObject.transform.localRotation = Quaternion.identity;
+
+                var queryService = new SceneQueryService(registry, runtime);
+                var response = ToObject(queryService.QuerySensors("IMU"));
+                var sensors = response["sensors"]!.ToObject<List<SensorQueryModel>>();
+
+                Assert.That(response.Value<string>("method"), Is.EqualTo("scene.query_sensors"));
+                Assert.That(sensors.Count, Is.EqualTo(1));
+                Assert.That(sensors[0].sensor_id, Is.EqualTo("IMU-01"));
+                Assert.That(sensors[0].sensor_type, Is.EqualTo("IMU"));
+                Assert.That(sensors[0].attach_mode, Is.EqualTo("avatar_joint"));
+                Assert.That(sensors[0].avatar_id, Is.EqualTo("avatar_main"));
+                Assert.That(sensors[0].joint_name, Is.EqualTo("left_wrist"));
+
+                Object.DestroyImmediate(sensorObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(prefab);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ExecuteActions_SetSensorUpdateMissingTarget_FailsWithoutCreatingSensor()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("SetSensorUpdateMissingRoot");
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var controlManager = root.AddComponent<ControlManager>();
+                var executor = new SceneTransactionExecutor(registry, controlManager);
+                var request = new ActionBatchRequestV2
+                {
+                    request_id = "req_update_missing_sensor",
+                    scene_version = registry.CurrentVersion,
+                    strict = true,
+                    actions = new List<ActionCommandV2>
+                    {
+                        new ActionCommandV2
+                        {
+                            target_id = "IMU-Missing",
+                            action_type = "set_sensor",
+                            parameters = new Dictionary<string, object>
+                            {
+                                ["sensor_type"] = "IMU",
+                                ["operation"] = "update",
+                            }
+                        }
+                    }
+                };
+
+                var response = executor.Execute(request);
+                var sensors = Object.FindObjectsByType<Sensor.VirtualSensor>(FindObjectsSortMode.None);
+
+                Assert.That(response.status, Is.EqualTo("failed"));
+                Assert.That(response.errors.Count, Is.GreaterThanOrEqualTo(1));
+                Assert.That(sensors.Length, Is.EqualTo(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void ExecuteActions_SetSensorUpdateExisting_ReturnsActionResultWithoutCreatingSensor()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("SetSensorUpdateExistingRoot");
+
+            try
+            {
+                var registry = root.AddComponent<SceneRegistry>();
+                var controlManager = root.AddComponent<ControlManager>();
+                var executor = new SceneTransactionExecutor(registry, controlManager);
+                var sensorObject = new GameObject("IMU-01");
+                sensorObject.transform.SetParent(root.transform, false);
+                sensorObject.AddComponent<TestVirtualSensor>();
+                sensorObject.AddComponent<SensorObjectDescriber>();
+
+                var request = new ActionBatchRequestV2
+                {
+                    request_id = "req_update_existing_sensor",
+                    scene_version = registry.CurrentVersion,
+                    strict = true,
+                    actions = new List<ActionCommandV2>
+                    {
+                        new ActionCommandV2
+                        {
+                            target_id = "IMU-01",
+                            action_type = "set_sensor",
+                            parameters = new Dictionary<string, object>
+                            {
+                                ["sensor_type"] = "IMU",
+                                ["operation"] = "update",
+                                ["position"] = new JArray(1f, 2f, 3f),
+                            }
+                        }
+                    }
+                };
+
+                var response = executor.Execute(request);
+                var sensors = Object.FindObjectsByType<Sensor.VirtualSensor>(FindObjectsSortMode.None);
+
+                Assert.That(response.status, Is.EqualTo("success"));
+                Assert.That(sensors.Length, Is.EqualTo(1));
+                Assert.That(sensorObject.transform.position, Is.EqualTo(new Vector3(1f, 2f, 3f)).Using(Vector3EqualityComparer.Instance));
+                Assert.That(response.action_results.Count, Is.EqualTo(1));
+                Assert.That(response.action_results[0].sensor_id, Is.EqualTo("IMU-01"));
+                Assert.That(response.action_results[0].created, Is.False);
+                Assert.That(response.action_results[0].updated, Is.True);
             }
             finally
             {

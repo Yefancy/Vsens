@@ -1,8 +1,10 @@
 using NUnit.Framework;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
 using VsensAgent.Core;
+using VsensAgent.Network.Protocol;
 using VsensAgent.UI;
 
 namespace VsensAgent.Tests.Editor.UI
@@ -47,6 +49,39 @@ namespace VsensAgent.Tests.Editor.UI
                 Object.DestroyImmediate(root);
                 ServiceLocator.Clear();
             }
+        }
+
+        [Test]
+        public void ChatUIManager_FormatJobLifecycle_UsesPayloadMessageWhenAvailable()
+        {
+            var message = ChatUIManager.FormatJobLifecycle(new JobLifecycleMessage
+            {
+                type = "job.status",
+                job_id = "926608a1d89142218a5800f1a9e27816",
+                job_kind = "experiment.run",
+                status = "running",
+                payload = JObject.FromObject(new
+                {
+                    message = "Recording phase cooking repeat 2 for 15s"
+                })
+            });
+
+            Assert.That(message, Is.EqualTo("Experiment status: Recording phase cooking repeat 2 for 15s"));
+            Assert.That(message, Does.Not.Contain("926608a1"));
+        }
+
+        [Test]
+        public void ChatUIManager_FormatJobLifecycle_TruncatesOpaqueJobIdFallback()
+        {
+            var message = ChatUIManager.FormatJobLifecycle(new JobLifecycleMessage
+            {
+                type = "job.status",
+                job_id = "926608a1d89142218a5800f1a9e27816",
+                job_kind = "experiment.run",
+                status = "running"
+            });
+
+            Assert.That(message, Is.EqualTo("Job status: experiment.run (926608a1) - running"));
         }
     }
 }

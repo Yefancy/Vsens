@@ -5,6 +5,7 @@ using UnityEngine;
 using VsensAgent.Core;
 using VsensAgent.Network;
 using VsensAgent;
+using VsensAgent.VirtualObject.Sensor;
 
 namespace VsensAgent.SceneApi.V2
 {
@@ -95,9 +96,10 @@ namespace VsensAgent.SceneApi.V2
                         node.Value<string>("zone_id") ?? string.Empty,
                         node.Value<bool?>("mountable_only") ?? true),
                     "scene.query_avatars" => _queryService.QueryAvatars(),
-                    "scene.query_avatar_attachment_points" => _queryService.QueryAvatarAttachmentPoints(
-                        node.Value<string>("avatar_id") ?? string.Empty),
                     "scene.query_motions" => _queryService.QueryMotions(),
+                    "scene.query_sensors" => _queryService.QuerySensors(
+                        node.Value<string>("sensor_type") ?? string.Empty),
+                    "scene.query_recording_status" => HandleQueryRecordingStatus(),
                     "scene.query_avatar_candidates" => _validationService.QueryAvatarCandidates(
                         node.Value<string>("target_object_id") ?? string.Empty,
                         node.Value<string>("target_alias") ?? string.Empty,
@@ -167,6 +169,27 @@ namespace VsensAgent.SceneApi.V2
                 node.Value<string>("sensor_type") ?? "DISTANCE",
                 node["target_ids"]?.ToObject<List<string>>() ?? new List<string>(),
                 constraints);
+        }
+
+        private object HandleQueryRecordingStatus()
+        {
+            var sensorManager = VsensAgentSensorManager.Instance
+                ?? (ServiceLocator.IsRegistered<VsensAgentSensorManager>()
+                    ? ServiceLocator.Get<VsensAgentSensorManager>()
+                    : FindFirstObjectByType<VsensAgentSensorManager>());
+
+            return new
+            {
+                type = "scene.query_response",
+                method = "scene.query_recording_status",
+                recording = new
+                {
+                    is_recording = sensorManager != null && sensorManager.IsRecording,
+                    active_phase = sensorManager != null ? sensorManager.CurrentRecordingPhase : string.Empty,
+                    elapsed_s = sensorManager != null ? sensorManager.RecordingDurationSeconds : 0f,
+                    active_sensors = sensorManager != null ? sensorManager.GetRegisteredSensorNames().ToArray() : Array.Empty<string>()
+                }
+            };
         }
 
         private object HandleValidatePlacement(JObject node)

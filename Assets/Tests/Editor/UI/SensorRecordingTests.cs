@@ -6,6 +6,8 @@ using SimpleJSON;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using VsensAgent;
+using VsensAgent.Network.Protocol;
 using VsensAgent.UI;
 using VsensAgent.VirtualObject.Sensor;
 
@@ -44,7 +46,7 @@ namespace VsensAgent.Tests.Editor.UI
                 var files = Directory.GetFiles(result.directoryPath, "*.csv");
                 Assert.That(files.Length, Is.EqualTo(1));
                 var csv = File.ReadAllText(files[0]);
-                Assert.That(csv, Does.Contain("tag,time,distance"));
+                Assert.That(csv, Does.Contain("tag,time,phase,distance"));
                 Assert.That(csv, Does.Contain("DistanceSensor"));
 
                 Object.DestroyImmediate(sensorObject);
@@ -56,6 +58,179 @@ namespace VsensAgent.Tests.Editor.UI
                     Directory.Delete(exportRoot, true);
                 }
 
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void StopSensorRecordingAndExport_WritesPhaseColumnAndMetadata()
+        {
+            var root = new GameObject("SensorRecordingPhaseRoot");
+            var exportRoot = Path.Combine(Path.GetTempPath(), $"sensor_recording_phase_{System.Guid.NewGuid():N}");
+
+            try
+            {
+                var dataCenter = root.AddComponent<SensorDataCenter>();
+                dataCenter.Start();
+
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                manager.SetExportDirectoryResolver(() => exportRoot);
+
+                var sensorObject = new GameObject("DistanceSensor");
+                sensorObject.transform.SetParent(root.transform, false);
+                var sensor = sensorObject.AddComponent<TestRecordingSensor>();
+                dataCenter.RegisterSensor(sensor);
+
+                Assert.That(manager.StartSensorRecording("cook_vs_wash", "distinguish cooking from washing", "cooking"), Is.True);
+                sensor.EmitSample(0.1f, 1.5f);
+                Assert.That(manager.MarkRecordingPhase("washing_dishes", "move to sink"), Is.True);
+                sensor.EmitSample(0.2f, 3.0f);
+
+                var result = manager.StopSensorRecordingAndExport();
+
+                Assert.That(result.saved, Is.True);
+                var csvPath = Directory.GetFiles(result.directoryPath, "*.csv").Single();
+                var csv = File.ReadAllText(csvPath);
+                Assert.That(csv, Does.Contain("tag,time,phase,distance"));
+                Assert.That(csv, Does.Contain("DistanceSensor,0.1,cooking,1.500"));
+                Assert.That(csv, Does.Contain("DistanceSensor,0.2,washing_dishes,3.000"));
+
+                var metadataPath = Path.Combine(result.directoryPath, "recording_metadata.json");
+                Assert.That(File.Exists(metadataPath), Is.True);
+                var metadata = File.ReadAllText(metadataPath);
+                Assert.That(metadata, Does.Contain("\"recording_label\":\"cook_vs_wash\""));
+                Assert.That(metadata, Does.Contain("\"phase_label\":\"cooking\""));
+                Assert.That(metadata, Does.Contain("\"phase_label\":\"washing_dishes\""));
+
+                Object.DestroyImmediate(sensorObject);
+            }
+            finally
+            {
+                if (Directory.Exists(exportRoot))
+                {
+                    Directory.Delete(exportRoot, true);
+                }
+
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void MarkRecordingPhase_ReturnsFalseWhenNotRecording()
+        {
+            var root = new GameObject("SensorRecordingPhaseGuardRoot");
+
+            try
+            {
+                root.AddComponent<SensorDataCenter>().Start();
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+
+                Assert.That(manager.MarkRecordingPhase("open"), Is.False);
+                Assert.That(manager.CurrentRecordingPhase, Is.EqualTo(string.Empty));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void ControlManager_RecordingActions_StartMarkAndStopRecording()
+        {
+            var root = new GameObject("RecordingActionRoot");
+            var exportRoot = Path.Combine(Path.GetTempPath(), $"sensor_recording_action_{System.Guid.NewGuid():N}");
+
+            try
+            {
+                var dataCenter = root.AddComponent<SensorDataCenter>();
+                dataCenter.Start();
+
+                var manager = root.AddComponent<VsensAgentSensorManager>();
+                manager.SetExportDirectoryResolver(() => exportRoot);
+                manager.SetRecordingSnapshotSender(_ => { });
+
+                var controlManager = root.AddComponent<ControlManager>();
+
+                var sensorObject = new GameObject("DistanceSensor");
+                sensorObject.transform.SetParent(root.transform, false);
+                var sensor = sensorObject.AddComponent<TestRecordingSensor>();
+                dataCenter.RegisterSensor(sensor);
+
+                Assert.That(controlManager.TryExecuteControlAction(new ControlObject
+                {
+                    action = "start_sensor_recording",
+                    parameters = new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        {"recording_label", "cook_vs_wash"},
+                        {"goal", "distinguish cooking from washing"},
+                        {"initial_phase", "cooking"}
+                    }
+                }, out var startErrorCode, out var startErrorMessage), Is.True, $"{startErrorCode}: {startErrorMessage}");
+
+                Assert.That(manager.IsRecording, Is.True);
+                Assert.That(manager.CurrentRecordingPhase, Is.EqualTo("cooking"));
+                sensor.EmitSample(0.1f, 1.5f);
+
+                Assert.That(controlManager.TryExecuteControlAction(new ControlObject
+                {
+                    action = "mark_recording_phase",
+                    parameters = new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        {"phase_label", "washing_dishes"}
+                    }
+                }, out var markErrorCode, out var markErrorMessage), Is.True, $"{markErrorCode}: {markErrorMessage}");
+
+                Assert.That(manager.CurrentRecordingPhase, Is.EqualTo("washing_dishes"));
+                sensor.EmitSample(0.2f, 3.0f);
+
+                Assert.That(controlManager.TryExecuteControlAction(new ControlObject
+                {
+                    action = "stop_sensor_recording",
+                    parameters = new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        {"upload_snapshot", false}
+                    }
+                }, out var stopErrorCode, out var stopErrorMessage), Is.True, $"{stopErrorCode}: {stopErrorMessage}");
+
+                Assert.That(manager.IsRecording, Is.False);
+                Assert.That(Directory.GetFiles(exportRoot, "*.csv", SearchOption.AllDirectories).Length, Is.EqualTo(1));
+
+                Object.DestroyImmediate(sensorObject);
+            }
+            finally
+            {
+                if (Directory.Exists(exportRoot))
+                {
+                    Directory.Delete(exportRoot, true);
+                }
+
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void ControlManager_RejectsMarkRecordingPhaseWithoutLabel()
+        {
+            var root = new GameObject("RecordingActionValidationRoot");
+
+            try
+            {
+                root.AddComponent<SensorDataCenter>().Start();
+                root.AddComponent<VsensAgentSensorManager>();
+                var controlManager = root.AddComponent<ControlManager>();
+
+                var ok = controlManager.TryValidateControlAction(new ControlObject
+                {
+                    action = "mark_recording_phase",
+                    parameters = new System.Collections.Generic.Dictionary<string, object>()
+                }, out var errorCode, out var errorMessage);
+
+                Assert.That(ok, Is.False);
+                Assert.That(errorCode, Is.EqualTo(VsensAgent.SceneApi.V2.SceneApiErrorCodes.INVALID_PARAM));
+                Assert.That(errorMessage, Does.Contain("phase_label"));
+            }
+            finally
+            {
                 Object.DestroyImmediate(root);
             }
         }
@@ -200,7 +375,8 @@ namespace VsensAgent.Tests.Editor.UI
                 Assert.That(sentPayload, Is.Not.Null);
                 var request = sentPayload as VsensAgent.Network.Protocol.SensorRecordingSnapshotUploadRequest;
                 Assert.That(request, Is.Not.Null);
-                Assert.That(request.files, Has.Length.EqualTo(1));
+                Assert.That(request.files.Select(file => file.file_name), Does.Contain("recording_metadata.json"));
+                Assert.That(request.files.Any(file => file.file_name.EndsWith(".csv")), Is.True);
 
                 Object.DestroyImmediate(sensorObject);
                 Object.DestroyImmediate(monitor.recordingButton.gameObject);
@@ -318,10 +494,18 @@ namespace VsensAgent.Tests.Editor.UI
             try
             {
                 root.AddComponent<SensorDataCenter>().Start();
-                root.AddComponent<VsensAgentSensorManager>();
+                var manager = root.AddComponent<VsensAgentSensorManager>();
 
                 var sensorObject = new GameObject("DISTANCE-UiDelete");
-                sensorObject.AddComponent<TestRecordingSensor>();
+                var sensor = sensorObject.AddComponent<TestRecordingSensor>();
+                var describer = sensorObject.AddComponent<SensorObjectDescriber>();
+                typeof(SensorObjectDescriber)
+                    .GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    ?.Invoke(describer, null);
+                typeof(SensorObjectDescriber)
+                    .GetMethod("Start", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    ?.Invoke(describer, null);
+                manager.RegisterSensor(sensor);
 
                 var monitor = monitorRoot.AddComponent<MonitorManager>();
                 monitor.itemContainer = itemContainer;

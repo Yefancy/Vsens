@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 using Sensor;
 using SimpleFileBrowser;
 using UnityEngine;
@@ -31,6 +32,15 @@ namespace VsensAgent.VirtualObject.Sensor
             public int exportedFileCount { get; }
         }
 
+        [Serializable]
+        public struct RecordingPhaseMetadata
+        {
+            public string phase_label;
+            public string note;
+            public float start_s;
+            public float? end_s;
+        }
+
         public static VsensAgentSensorManager Instance { get; private set; }
 
         [SerializeField] private List<VirtualSensor> _registeredSensors = new List<VirtualSensor>();
@@ -43,8 +53,13 @@ namespace VsensAgent.VirtualObject.Sensor
         private Func<string> _exportDirectoryResolver;
         private WsClient _wsClient;
         private Action<object> _recordingSnapshotSender;
+        private string _recordingLabel = string.Empty;
+        private string _recordingGoal = string.Empty;
+        private string _currentPhaseLabel = string.Empty;
+        private readonly List<RecordingPhaseMetadata> _recordingPhases = new List<RecordingPhaseMetadata>();
 
         public bool IsRecording => _isRecording;
+        public string CurrentRecordingPhase => _currentPhaseLabel;
         public float RecordingDurationSeconds => _isRecording ? Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime) : 0f;
 
         private void Awake() 
@@ -82,6 +97,11 @@ namespace VsensAgent.VirtualObject.Sensor
 
         public bool StartSensorRecording()
         {
+            return StartSensorRecording(string.Empty, string.Empty, string.Empty);
+        }
+
+        public bool StartSensorRecording(string recordingLabel, string goal, string initialPhase)
+        {
             var dataCenter = ResolveSensorDataCenter();
             if (dataCenter == null)
             {
@@ -92,7 +112,48 @@ namespace VsensAgent.VirtualObject.Sensor
             dataCenter.StartRecording();
             _isRecording = true;
             _recordingStartRealtime = Time.realtimeSinceStartup;
+            _recordingLabel = recordingLabel ?? string.Empty;
+            _recordingGoal = goal ?? string.Empty;
+            _recordingPhases.Clear();
+            _currentPhaseLabel = string.Empty;
+            if (!string.IsNullOrWhiteSpace(initialPhase))
+            {
+                MarkRecordingPhase(initialPhase, "initial phase");
+            }
             Debug.Log("[VsensAgentSensorManager] ⏺️ Started sensor recording.");
+            return true;
+        }
+
+        public bool MarkRecordingPhase(string phaseLabel, string note = "")
+        {
+            if (!_isRecording)
+            {
+                Debug.LogWarning("[VsensAgentSensorManager] ⚠️ Cannot mark recording phase while not recording.");
+                return false;
+            }
+
+            var normalizedLabel = string.IsNullOrWhiteSpace(phaseLabel) ? "unlabeled" : phaseLabel.Trim();
+            var now = RecordingDurationSeconds;
+            if (_recordingPhases.Count > 0)
+            {
+                var previous = _recordingPhases[_recordingPhases.Count - 1];
+                if (!previous.end_s.HasValue)
+                {
+                    previous.end_s = now;
+                    _recordingPhases[_recordingPhases.Count - 1] = previous;
+                }
+            }
+
+            _currentPhaseLabel = normalizedLabel;
+            ResolveSensorDataCenter()?.SetRecordingPhase(normalizedLabel);
+            _recordingPhases.Add(new RecordingPhaseMetadata
+            {
+                phase_label = normalizedLabel,
+                note = note ?? string.Empty,
+                start_s = now,
+                end_s = null,
+            });
+            Debug.Log($"[VsensAgentSensorManager] 🏷️ Recording phase marked: {normalizedLabel}");
             return true;
         }
 
@@ -157,6 +218,27 @@ namespace VsensAgent.VirtualObject.Sensor
             return ExportCapturedData(capturedData, configuredBaseDirectory);
         }
 
+        public RecordingExportResult StopSensorRecordingAndExportForAgent(bool uploadSnapshot)
+        {
+            if (!TryStopSensorRecording(out var capturedData, out var immediateResult))
+            {
+                return immediateResult;
+            }
+
+            var configuredBaseDirectory = ResolveConfiguredExportBaseDirectory();
+            if (configuredBaseDirectory == null)
+            {
+                configuredBaseDirectory = Path.Combine(Application.persistentDataPath, "VsensRecordings");
+            }
+
+            var result = ExportCapturedData(capturedData, configuredBaseDirectory);
+            if (uploadSnapshot && result.saved)
+            {
+                TryUploadRecordingSnapshot(result);
+            }
+            return result;
+        }
+
         private bool TryStopSensorRecording(out Dictionary<VirtualSensor, List<SensorData>> capturedData, out RecordingExportResult result)
         {
             capturedData = null;
@@ -172,6 +254,16 @@ namespace VsensAgent.VirtualObject.Sensor
 
             capturedData = dataCenter.StopRecording();
             _isRecording = false;
+            _currentPhaseLabel = string.Empty;
+            if (_recordingPhases.Count > 0)
+            {
+                var previous = _recordingPhases[_recordingPhases.Count - 1];
+                if (!previous.end_s.HasValue)
+                {
+                    previous.end_s = Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime);
+                    _recordingPhases[_recordingPhases.Count - 1] = previous;
+                }
+            }
 
             if (capturedData == null || capturedData.Count == 0)
             {
@@ -208,7 +300,7 @@ namespace VsensAgent.VirtualObject.Sensor
                 var safeSensorType = SanitizeFileName(sensor.SensorDefinition().getSensorName());
                 var filePath = Path.Combine(targetDirectory, $"{safeSensorName}_{safeSensorType}.csv");
                 using var writer = new StreamWriter(filePath);
-                writer.WriteLine($"tag,time,{sensor.SensorDefinition().getCsvHeader()}");
+                writer.WriteLine($"tag,time,phase,{sensor.SensorDefinition().getCsvHeader()}");
                 foreach (var sample in pair.Value)
                 {
                     writer.WriteLine(sample.ToCsvLine());
@@ -217,8 +309,32 @@ namespace VsensAgent.VirtualObject.Sensor
                 exportedFiles++;
             }
 
+            WriteRecordingMetadata(targetDirectory, capturedData.Keys);
+
             Debug.Log($"[VsensAgentSensorManager] 💾 Exported {exportedFiles} sensor file(s) to {targetDirectory}");
             return new RecordingExportResult(exportedFiles > 0, false, targetDirectory, exportedFiles);
+        }
+
+        private void WriteRecordingMetadata(string targetDirectory, IEnumerable<VirtualSensor> sensors)
+        {
+            var metadata = new
+            {
+                recording_label = _recordingLabel,
+                goal = _recordingGoal,
+                exported_at_utc = DateTime.UtcNow.ToString("o"),
+                duration_s = Mathf.Max(0f, Time.realtimeSinceStartup - _recordingStartRealtime),
+                phases = _recordingPhases,
+                sensors = sensors
+                    .Where(sensor => sensor != null)
+                    .Select(sensor => new
+                    {
+                        sensor_id = sensor.name,
+                        sensor_type = sensor.SensorDefinition().getSensorName()
+                    })
+                    .ToArray()
+            };
+            var metadataPath = Path.Combine(targetDirectory, "recording_metadata.json");
+            File.WriteAllText(metadataPath, JsonConvert.SerializeObject(metadata, Formatting.None));
         }
 
         public void RegisterSensor(VirtualSensor sensor)
@@ -322,10 +438,11 @@ namespace VsensAgent.VirtualObject.Sensor
                 return false;
             }
 
-            var csvFiles = Directory.GetFiles(exportResult.directoryPath, "*.csv")
+            var uploadFiles = Directory.GetFiles(exportResult.directoryPath, "*.csv")
+                .Concat(Directory.GetFiles(exportResult.directoryPath, "recording_metadata.json"))
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            if (csvFiles.Length == 0)
+            if (uploadFiles.Length == 0)
             {
                 Debug.LogWarning($"[VsensAgentSensorManager] ⚠️ No CSV files found for recording snapshot upload in {exportResult.directoryPath}");
                 return false;
@@ -335,7 +452,7 @@ namespace VsensAgent.VirtualObject.Sensor
             {
                 timestamp_label = Path.GetFileName(exportResult.directoryPath),
                 local_export_directory = exportResult.directoryPath,
-                files = csvFiles.Select(BuildRecordingSnapshotUploadFile).ToArray(),
+                files = uploadFiles.Select(BuildRecordingSnapshotUploadFile).ToArray(),
             };
             return true;
         }
@@ -375,6 +492,29 @@ namespace VsensAgent.VirtualObject.Sensor
         {
             PruneRegisteredSensors();
             return _registeredSensors.Select(sensor => sensor.SensorDefinition().getSensorName()).ToList();
+        }
+
+        public string GenerateSensorObjectName(string sensorType)
+        {
+            var normalizedType = string.IsNullOrWhiteSpace(sensorType) ? "SENSOR" : sensorType.Trim().ToUpperInvariant();
+            var existing = FindObjectsByType<VirtualSensor>(FindObjectsSortMode.None)
+                .Where(sensor => sensor != null && string.Equals(
+                    sensor.SensorDefinition().getSensorName(),
+                    normalizedType,
+                    StringComparison.OrdinalIgnoreCase))
+                .Select(sensor => sensor.name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var index = 1;
+            string candidate;
+            do
+            {
+                candidate = $"{normalizedType}-{index:00}";
+                index++;
+            }
+            while (existing.Contains(candidate));
+
+            return candidate;
         }
 
         public bool HasSensor(string sensorName)

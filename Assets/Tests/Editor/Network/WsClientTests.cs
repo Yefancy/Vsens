@@ -50,7 +50,7 @@ namespace VsensAgent.Tests.Editor.Network
         }
 
         [Test]
-        public void HandleMessage_RoutesSceneQueryAvatarAttachmentPointsToSceneApiRequest()
+        public void HandleMessage_RoutesSceneQuerySensorsToSceneApiRequest()
         {
             var go = new GameObject("WsClientTests");
             string routedJson = null;
@@ -63,14 +63,72 @@ namespace VsensAgent.Tests.Editor.Network
 
                 ResolveHandleMessage().Invoke(client, new object[]
                 {
-                    "{\"type\":\"scene.query_avatar_attachment_points\",\"avatar_id\":\"avatar_main\",\"request_id\":\"qry_attach_1\"}"
+                    "{\"type\":\"scene.query_sensors\",\"sensor_type\":\"IMU\",\"request_id\":\"qry_sensor_1\"}"
                 });
 
-                Assert.That(routedJson, Is.EqualTo("{\"type\":\"scene.query_avatar_attachment_points\",\"avatar_id\":\"avatar_main\",\"request_id\":\"qry_attach_1\"}"));
+                Assert.That(routedJson, Is.EqualTo("{\"type\":\"scene.query_sensors\",\"sensor_type\":\"IMU\",\"request_id\":\"qry_sensor_1\"}"));
             }
             finally
             {
                 WsClient.OnSceneApiRequest -= handler;
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void HandleMessage_DoesNotRouteLegacyAvatarBodyPointQuery()
+        {
+            var go = new GameObject("WsClientTests");
+            string routedJson = null;
+            System.Action<string> handler = payload => routedJson = payload;
+
+            try
+            {
+                var client = go.AddComponent<WsClient>();
+                WsClient.OnSceneApiRequest += handler;
+
+                var legacyType = "scene.query_avatar" + "_attachment_points";
+                ResolveHandleMessage().Invoke(client, new object[]
+                {
+                    "{\"type\":\"" + legacyType + "\",\"avatar_id\":\"avatar_main\",\"request_id\":\"qry_attach_1\"}"
+                });
+
+                Assert.That(routedJson, Is.Null);
+            }
+            finally
+            {
+                WsClient.OnSceneApiRequest -= handler;
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void HandleMessage_RoutesObjectSelectionRequest()
+        {
+            var go = new GameObject("WsClientTests");
+            ObjectSelectionRequestMessage routed = null;
+            System.Action<ObjectSelectionRequestMessage> handler = payload => routed = payload;
+
+            try
+            {
+                var client = go.AddComponent<WsClient>();
+                WsClient.OnObjectSelectionRequest += handler;
+
+                ResolveHandleMessage().Invoke(client, new object[]
+                {
+                    "{\"type\":\"object_selection.request\",\"selection_id\":\"sel_1\",\"prompt\":\"Select stove\",\"mode\":\"object\",\"candidate_aliases\":[\"Stove\"],\"allow_cancel\":true}"
+                });
+
+                Assert.That(routed, Is.Not.Null);
+                Assert.That(routed.selection_id, Is.EqualTo("sel_1"));
+                Assert.That(routed.prompt, Is.EqualTo("Select stove"));
+                Assert.That(routed.mode, Is.EqualTo("object"));
+                Assert.That(routed.candidate_aliases, Is.EqualTo(new[] { "Stove" }));
+                Assert.That(routed.allow_cancel, Is.True);
+            }
+            finally
+            {
+                WsClient.OnObjectSelectionRequest -= handler;
                 Object.DestroyImmediate(go);
             }
         }

@@ -587,6 +587,7 @@ namespace VsensAgent.SceneApi.V2
                 motion_progress = _playbackDriver != null ? _playbackDriver.NormalizedProgress : 0f,
                 is_playing = _playbackDriver != null && _playbackDriver.IsPlaying,
                 pose_authority = _poseAuthority,
+                attachment_points = GetAttachmentPointQueryModels(_avatarObject.name),
             });
 
             return result;

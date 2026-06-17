@@ -11,6 +11,7 @@ using VsensAgent.Core;
 using VsensAgent.SceneHistory;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using VsensAgent.RuntimeEditing;
 
 namespace VsensAgent.Network
 {
@@ -52,6 +53,7 @@ namespace VsensAgent.Network
         public static event Action<ConversationReplyMessage> OnConversationReply;
         public static event Action<ClarificationRequestMessage> OnClarificationRequest;
         public static event Action<ProposalReadyMessage> OnProposalReady;
+        public static event Action<ObjectSelectionRequestMessage> OnObjectSelectionRequest;
         public static event Action<JobLifecycleMessage> OnJobLifecycle;
         public static event Action<DelegatedTaskResultMessage> OnDelegatedTaskResult;
         public static event Action<DelegatedTaskArtifactsSnapshotMessage> OnDelegatedTaskArtifactsSnapshot;
@@ -329,6 +331,20 @@ namespace VsensAgent.Network
 
                         break;
 
+                    case "object_selection.request":
+                        var selectionMsg = JsonConvert.DeserializeObject<ObjectSelectionRequestMessage>(json);
+                        if (selectionMsg == null)
+                        {
+                            Debug.LogWarning($"[WS] Failed to deserialize object_selection.request payload: {json}");
+                            break;
+                        }
+
+                        StopThinkingAnimation();
+                        SafeInvoke(() => OnObjectSelectionRequest?.Invoke(selectionMsg),
+                            "object_selection.request.OnObjectSelectionRequest", json);
+                        EnsureObjectSelectionController()?.BeginSelection(selectionMsg);
+                        break;
+
                     case "agent_behavior":
                         var behaviorMsg = JsonConvert.DeserializeObject<AgentBehavior>(json);
                         OnAgentBehavior?.Invoke(behaviorMsg);
@@ -351,8 +367,8 @@ namespace VsensAgent.Network
                     case "scene.query_relations":
                     case "scene.query_surfaces":
                     case "scene.query_avatars":
-                    case "scene.query_avatar_attachment_points":
                     case "scene.query_motions":
+                    case "scene.query_sensors":
                     case "scene.query_avatar_candidates":
                     case "scene.validate_avatar_placement":
                     case "scene.capture_validation_views":
@@ -742,6 +758,23 @@ namespace VsensAgent.Network
 
         public static bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
 
+        private static ObjectSelectionController EnsureObjectSelectionController()
+        {
+            if (ServiceLocator.IsRegistered<ObjectSelectionController>())
+            {
+                return ServiceLocator.Get<ObjectSelectionController>();
+            }
+
+            var existing = FindFirstObjectByType<ObjectSelectionController>();
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var go = new GameObject("ObjectSelectionController");
+            return go.AddComponent<ObjectSelectionController>();
+        }
+
         public static void SendMessage(object payload)
         {
             if (websocket == null || websocket.State != WebSocketState.Open)
@@ -751,6 +784,11 @@ namespace VsensAgent.Network
             }
 
             websocket.SendText(JsonConvert.SerializeObject(payload));
+        }
+
+        public static void SendObjectSelectionReply(ObjectSelectionReplyRequest payload)
+        {
+            SendMessage(payload);
         }
 
         public static void SendSceneActionLog(SceneActionRecord record, string sceneName = null)

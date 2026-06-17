@@ -12,11 +12,12 @@ namespace Sensor
     {
         public float time;
         public string sensorID;
+        public string phase;
         public ISensorData data;
         
         public string ToCsvLine()
         {
-            return $"{sensorID},{time},{data.ToCsvLine()}";
+            return $"{sensorID},{time},{phase},{data.ToCsvLine()}";
         }
         
         public JSONNode serialize()
@@ -24,6 +25,7 @@ namespace Sensor
             var json = new JSONObject();
             json["time"] = time;
             json["sensorID"] = sensorID;
+            json["phase"] = phase ?? string.Empty;
             json["data"] = data.serialize();
             return json;
         }
