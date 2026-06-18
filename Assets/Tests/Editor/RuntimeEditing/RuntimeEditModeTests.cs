@@ -362,6 +362,79 @@ namespace VsensAgent.Tests.Editor.RuntimeEditing
         }
 
         [Test]
+        public void RuntimeTransformHandleAssets_LoadsHandlePrefabsFromResources()
+        {
+            var assets = Resources.Load<RuntimeTransformHandleAssetSet>("VsensAgent/RuntimeTransformHandleAssets");
+
+            Assert.That(assets, Is.Not.Null);
+            Assert.That(assets.TransformHandlePrefab, Is.Not.Null);
+            Assert.That(assets.TransformHandlePrefab.GetComponent<Handle>(), Is.Not.Null);
+            Assert.That(assets.GhostPrefab, Is.Not.Null);
+        }
+
+        [Test]
+        public void RuntimeEditMode_SelectingSensor_ConfiguresEmptyManagerFromRuntimeResources()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("RuntimeEditSensorRuntimeAssetsRoot");
+            var cameraGo = new GameObject("RuntimeEditRuntimeAssetsCamera");
+
+            try
+            {
+                var camera = cameraGo.AddComponent<Camera>();
+                camera.tag = "MainCamera";
+                camera.transform.position = new Vector3(0f, 2f, -4f);
+                camera.transform.LookAt(Vector3.zero);
+
+                root.AddComponent<SceneRegistry>();
+                var controller = root.AddComponent<RuntimeEditModeController>();
+                controller.OverrideRuntimeCameraForTests(camera);
+                controller.SetEditMode(true);
+
+                var manager = TransformHandleManager.Instance;
+                Assert.That(manager, Is.Not.Null);
+                typeof(TransformHandleManager)
+                    .GetField("transformHandlePrefab", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(manager, null);
+                typeof(TransformHandleManager)
+                    .GetField("ghostPrefab", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.SetValue(manager, null);
+
+                var sensorObject = new GameObject("IMU-RuntimeAssets");
+                sensorObject.AddComponent<TestEditableSensor>();
+
+                Assert.That(controller.TrySelectEditable("IMU-RuntimeAssets"), Is.True);
+
+                var bridge = root.GetComponent<RuntimeTransformHandleBridge>();
+                Assert.That(bridge, Is.Not.Null);
+                bridge.RefreshHandleBinding();
+
+                var handle = bridge.ActiveHandle ?? Object.FindFirstObjectByType<Handle>();
+                Assert.That(handle, Is.Not.Null);
+                Assert.That(handle.target, Is.EqualTo(sensorObject.transform));
+                Assert.That(handle.GetComponentsInChildren<MeshRenderer>(true).Length, Is.GreaterThan(0));
+
+                Object.DestroyImmediate(sensorObject);
+                if (handle != null)
+                {
+                    Object.DestroyImmediate(handle.gameObject);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraGo);
+                var manager = Object.FindFirstObjectByType<TransformHandleManager>();
+                if (manager != null)
+                {
+                    Object.DestroyImmediate(manager.gameObject);
+                }
+
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
         public void RuntimeEditMode_SelectingAvatar_CreatesRuntimeTransformHandle()
         {
             ServiceLocator.Clear();

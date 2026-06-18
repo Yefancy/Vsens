@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 using Sensor;
 using TransformHandles;
@@ -15,12 +14,14 @@ namespace VsensAgent.RuntimeEditing
     public class RuntimeTransformHandleBridge : MonoBehaviour
     {
         private const float DefaultAutoScaleSizeInPixels = 180f;
+        private const string RuntimeAssetsResourcePath = "VsensAgent/RuntimeTransformHandleAssets";
 
         [SerializeField] private RuntimeEditModeController controller;
         [SerializeField] private Camera handleCamera;
         [SerializeField] private bool enableAutoScale = true;
         [SerializeField] private float autoScaleSizeInPixels = DefaultAutoScaleSizeInPixels;
         [SerializeField] private float handleScaleMultiplier = 1.1f;
+        [SerializeField] private bool logHandleCreation;
 
         private TransformHandleManager _handleManager;
         private Handle _activeHandle;
@@ -168,6 +169,10 @@ namespace VsensAgent.RuntimeEditing
             _activeHandle = handle;
             _activeObjectId = selectedObjectId;
             _activeTarget = target;
+            if (logHandleCreation)
+            {
+                Debug.Log($"[RuntimeTransformHandleBridge] Created {handle.type} handle for '{selectedObjectId}' using camera '{ResolveCamera()?.name ?? "none"}'.");
+            }
         }
 
         public void SetHandleType(HandleType handleType)
@@ -386,11 +391,60 @@ namespace VsensAgent.RuntimeEditing
 
         private bool ConfigureHandleManager(TransformHandleManager manager)
         {
+            if (!TryConfigureRuntimePrefabs(manager, out var prefabError))
+            {
 #if UNITY_EDITOR
+                if (!TryConfigureEditorFallbackPrefabs(manager, out var editorFallbackError))
+                {
+                    Debug.LogError($"[RuntimeTransformHandleBridge] Runtime transform handle prefabs are unavailable. {prefabError} Editor fallback also failed: {editorFallbackError}");
+                    return false;
+                }
+#else
+                Debug.LogError($"[RuntimeTransformHandleBridge] Runtime transform handle prefabs are unavailable. {prefabError} Mac/Player builds require Resources asset '{RuntimeAssetsResourcePath}' with valid prefabs.");
+                return false;
+#endif
+            }
+
+            EnsureRuntimeSettings();
+            SetPrivateField(manager, "settings", _runtimeSettings);
+            SetPrivateField(manager, "layerMask", (LayerMask)(~0));
+            SetPrivateField(manager, "handleLayerName", string.Empty);
+            return true;
+        }
+
+        private static bool TryConfigureRuntimePrefabs(TransformHandleManager manager, out string error)
+        {
+            if (manager == null)
+            {
+                error = "TransformHandleManager is null.";
+                return false;
+            }
+
+            var assets = Resources.Load<RuntimeTransformHandleAssetSet>(RuntimeAssetsResourcePath);
+            if (assets == null)
+            {
+                error = $"Resources.Load<{nameof(RuntimeTransformHandleAssetSet)}>(\"{RuntimeAssetsResourcePath}\") returned null.";
+                return false;
+            }
+
+            if (!assets.IsValid(out error))
+            {
+                return false;
+            }
+
+            SetPrivateField(manager, "transformHandlePrefab", assets.TransformHandlePrefab);
+            SetPrivateField(manager, "ghostPrefab", assets.GhostPrefab);
+            error = null;
+            return true;
+        }
+
+#if UNITY_EDITOR
+        private static bool TryConfigureEditorFallbackPrefabs(TransformHandleManager manager, out string error)
+        {
             var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(TransformHandleManager).Assembly);
             if (packageInfo == null)
             {
-                Debug.LogError("[RuntimeTransformHandleBridge] Could not locate transform handles package info.");
+                error = "Could not locate transform handles package info.";
                 return false;
             }
 
@@ -403,19 +457,16 @@ namespace VsensAgent.RuntimeEditing
 
             if (handlePrefab == null || ghostPrefab == null)
             {
-                Debug.LogError($"[RuntimeTransformHandleBridge] Failed to load handle prefabs. handle='{handlePrefabPath}', ghost='{ghostPrefabPath}'");
+                error = $"Failed to load handle prefabs. handle='{handlePrefabPath}', ghost='{ghostPrefabPath}'.";
                 return false;
             }
 
             SetPrivateField(manager, "transformHandlePrefab", handlePrefab);
             SetPrivateField(manager, "ghostPrefab", ghostPrefab);
-#endif
-            EnsureRuntimeSettings();
-            SetPrivateField(manager, "settings", _runtimeSettings);
-            SetPrivateField(manager, "layerMask", (LayerMask)(~0));
-            SetPrivateField(manager, "handleLayerName", string.Empty);
+            error = null;
             return true;
         }
+#endif
 
         private void EnsureRuntimeSettings()
         {
