@@ -147,13 +147,15 @@ namespace VsensAgent
             }
 
             // 处理WASD移动（基于相机朝向的3D移动）
-            Vector3 direction = Vector3.zero;
-            if (Input.GetKey(KeyCode.W)) direction += transform.forward;
-            if (Input.GetKey(KeyCode.S)) direction -= transform.forward;
-            if (Input.GetKey(KeyCode.A)) direction -= transform.right;
-            if (Input.GetKey(KeyCode.D)) direction += transform.right;
-            if (Input.GetKey(KeyCode.Space)) direction += Vector3.up;
-            if (Input.GetKey(KeyCode.LeftShift)) direction -= Vector3.up;
+            Vector3 direction = BuildFirstPersonMovementDirection(
+                transform.forward,
+                transform.right,
+                Input.GetKey(KeyCode.W),
+                Input.GetKey(KeyCode.S),
+                Input.GetKey(KeyCode.A),
+                Input.GetKey(KeyCode.D),
+                IsAscendPressed(),
+                IsDescendPressed());
 
             if (direction != Vector3.zero)
             {
@@ -176,19 +178,18 @@ namespace VsensAgent
                 savedGodViewYaw += mouseX;
             }
 
-            // 处理WASD平面移动（移动目标点）
-            Vector3 forward = new Vector3(Mathf.Sin(savedGodViewYaw * Mathf.Deg2Rad), 0, Mathf.Cos(savedGodViewYaw * Mathf.Deg2Rad));
-            Vector3 right = new Vector3(forward.z, 0, -forward.x);
-            
-            Vector3 movement = Vector3.zero;
-            if (Input.GetKey(KeyCode.W)) movement += forward;
-            if (Input.GetKey(KeyCode.S)) movement -= forward;
-            if (Input.GetKey(KeyCode.A)) movement -= right;
-            if (Input.GetKey(KeyCode.D)) movement += right;
+            // 处理WASD + Space/Shift移动（移动目标点）
+            Vector3 movement = BuildGodViewMovement(
+                savedGodViewYaw,
+                Input.GetKey(KeyCode.W),
+                Input.GetKey(KeyCode.S),
+                Input.GetKey(KeyCode.A),
+                Input.GetKey(KeyCode.D),
+                IsAscendPressed(),
+                IsDescendPressed());
 
             if (movement != Vector3.zero)
             {
-                // 移动目标点（只在XZ平面）
                 godViewTargetPoint += movement.normalized * godViewMovementSpeed * Time.deltaTime;
             }
             
@@ -367,6 +368,74 @@ namespace VsensAgent
         public CameraMode GetCurrentMode()
         {
             return currentMode;
+        }
+
+        public static bool IsAscendKey(KeyCode key)
+        {
+            return key == KeyCode.Space;
+        }
+
+        public static bool IsDescendKey(KeyCode key)
+        {
+            return key == KeyCode.C || key == KeyCode.LeftShift || key == KeyCode.RightShift;
+        }
+
+        public static Vector3 BuildFirstPersonMovementDirection(
+            Vector3 forward,
+            Vector3 right,
+            bool moveForward,
+            bool moveBackward,
+            bool moveLeft,
+            bool moveRight,
+            bool ascend,
+            bool descend)
+        {
+            Vector3 direction = Vector3.zero;
+            if (moveForward) direction += forward;
+            if (moveBackward) direction -= forward;
+            if (moveLeft) direction -= right;
+            if (moveRight) direction += right;
+            if (ascend) direction += Vector3.up;
+            if (descend) direction -= Vector3.up;
+            return direction;
+        }
+
+        public static Vector3 BuildGodViewMovement(
+            float yaw,
+            bool moveForward,
+            bool moveBackward,
+            bool moveLeft,
+            bool moveRight,
+            bool ascend,
+            bool descend)
+        {
+            Vector3 forward = new Vector3(Mathf.Sin(yaw * Mathf.Deg2Rad), 0, Mathf.Cos(yaw * Mathf.Deg2Rad));
+            Vector3 right = new Vector3(forward.z, 0, -forward.x);
+            return BuildFirstPersonMovementDirection(
+                forward,
+                right,
+                moveForward,
+                moveBackward,
+                moveLeft,
+                moveRight,
+                ascend,
+                descend);
+        }
+
+        private static bool IsAscendPressed()
+        {
+            return Input.GetKey(KeyCode.Space);
+        }
+
+        private static bool IsDescendPressed()
+        {
+            if (Input.GetKey(KeyCode.C))
+                return true;
+
+            return Input.GetKey(KeyCode.LeftShift) ||
+                   Input.GetKey(KeyCode.RightShift) ||
+                   Input.GetKey("left shift") ||
+                   Input.GetKey("right shift");
         }
         
         /// <summary>

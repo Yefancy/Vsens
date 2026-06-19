@@ -402,12 +402,32 @@ namespace VsensAgent.UI
             if (ResolveRuntimeEditModeController(createIfMissing: false)?.IsEditModeEnabled == true)
                 return;
 
-            bool isMovementKeyPressed = Input.GetKey(KeyCode.W) ||
-                                        Input.GetKey(KeyCode.A) ||
-                                        Input.GetKey(KeyCode.S) ||
-                                        Input.GetKey(KeyCode.D);
-            if (!isMovementKeyPressed)
+            if (!IsAnyCameraMovementKeyPressedForAutoFocus())
                 FocusInputField();
+        }
+
+        private static bool IsAnyCameraMovementKeyPressedForAutoFocus()
+        {
+            return Input.GetKey(KeyCode.W) ||
+                   Input.GetKey(KeyCode.A) ||
+                   Input.GetKey(KeyCode.S) ||
+                   Input.GetKey(KeyCode.D) ||
+                   Input.GetKey(KeyCode.Space) ||
+                   Input.GetKey(KeyCode.C) ||
+                   Input.GetKey(KeyCode.LeftShift) ||
+                   Input.GetKey(KeyCode.RightShift);
+        }
+
+        public static bool IsCameraMovementKeyForAutoFocus(KeyCode key)
+        {
+            return key == KeyCode.W ||
+                   key == KeyCode.A ||
+                   key == KeyCode.S ||
+                   key == KeyCode.D ||
+                   key == KeyCode.Space ||
+                   key == KeyCode.C ||
+                   key == KeyCode.LeftShift ||
+                   key == KeyCode.RightShift;
         }
 
         public bool IsInputFocused()

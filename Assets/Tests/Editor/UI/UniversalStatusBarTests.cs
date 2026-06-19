@@ -83,5 +83,18 @@ namespace VsensAgent.Tests.Editor.UI
 
             Assert.That(message, Is.EqualTo("Job status: experiment.run (926608a1) - running"));
         }
+
+        [TestCase(KeyCode.W)]
+        [TestCase(KeyCode.A)]
+        [TestCase(KeyCode.S)]
+        [TestCase(KeyCode.D)]
+        [TestCase(KeyCode.Space)]
+        [TestCase(KeyCode.C)]
+        [TestCase(KeyCode.LeftShift)]
+        [TestCase(KeyCode.RightShift)]
+        public void ChatUIManager_IsCameraMovementKeyForAutoFocus_IncludesFlightControls(KeyCode key)
+        {
+            Assert.That(ChatUIManager.IsCameraMovementKeyForAutoFocus(key), Is.True);
+        }
     }
 }
