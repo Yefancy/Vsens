@@ -77,6 +77,93 @@ namespace VsensAgent.Tests.Editor.SceneApi
         }
 
         [Test]
+        public void QueryObjects_NoFiltersReturnsAllObjects()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("SceneQueryObjectsRoot");
+            var registry = root.AddComponent<SceneRegistry>();
+            var coffeeMaker = new GameObject("CoffeeMaker");
+            var door = new GameObject("Door_A");
+
+            try
+            {
+                coffeeMaker.AddComponent<BoxCollider>();
+                coffeeMaker.AddComponent<ObjectDescriber>();
+                door.AddComponent<BoxCollider>();
+                door.AddComponent<ObjectDescriber>();
+
+                var queryService = new SceneQueryService(registry);
+                var response = ToObject(queryService.QueryObjects(
+                    new List<string>(),
+                    new List<string>(),
+                    new List<string>(),
+                    string.Empty));
+                var objects = response["objects"]!.ToObject<List<SceneObjectModel>>();
+
+                Assert.That(objects.Exists(o => o.alias == "CoffeeMaker"), Is.True);
+                Assert.That(objects.Exists(o => o.alias == "Door_A"), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(door);
+                Object.DestroyImmediate(coffeeMaker);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
+        public void QueryObjects_AliasUsesExactThenFuzzyContainsMatching()
+        {
+            ServiceLocator.Clear();
+            var root = new GameObject("SceneQueryObjectsRoot");
+            var registry = root.AddComponent<SceneRegistry>();
+            var coffeeMaker = new GameObject("CoffeeMaker");
+            var doorA = new GameObject("Door_A");
+            var doorB = new GameObject("Door_B");
+
+            try
+            {
+                coffeeMaker.AddComponent<BoxCollider>();
+                coffeeMaker.AddComponent<ObjectDescriber>();
+                doorA.AddComponent<BoxCollider>();
+                doorA.AddComponent<ObjectDescriber>();
+                doorB.AddComponent<BoxCollider>();
+                doorB.AddComponent<ObjectDescriber>();
+
+                var queryService = new SceneQueryService(registry);
+                var doorResponse = ToObject(queryService.QueryObjects(
+                    new List<string>(),
+                    new List<string> { "Door" },
+                    new List<string>(),
+                    string.Empty));
+                var doorObjects = doorResponse["objects"]!.ToObject<List<SceneObjectModel>>();
+
+                Assert.That(doorObjects.Exists(o => o.alias == "Door_A"), Is.True);
+                Assert.That(doorObjects.Exists(o => o.alias == "Door_B"), Is.True);
+                Assert.That(doorObjects.Exists(o => o.alias == "CoffeeMaker"), Is.False);
+
+                var coffeeResponse = ToObject(queryService.QueryObjects(
+                    new List<string>(),
+                    new List<string> { "CoffeeMaker" },
+                    new List<string>(),
+                    string.Empty));
+                var coffeeObjects = coffeeResponse["objects"]!.ToObject<List<SceneObjectModel>>();
+
+                Assert.That(coffeeObjects.Count, Is.EqualTo(1));
+                Assert.That(coffeeObjects[0].alias, Is.EqualTo("CoffeeMaker"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(doorB);
+                Object.DestroyImmediate(doorA);
+                Object.DestroyImmediate(coffeeMaker);
+                Object.DestroyImmediate(root);
+                ServiceLocator.Clear();
+            }
+        }
+
+        [Test]
         public void SetSensor_WithAvatarJointAttachment_ParentsSensorToResolvedJoint()
         {
             ServiceLocator.Clear();

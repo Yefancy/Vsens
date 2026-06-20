@@ -51,8 +51,8 @@ namespace VsensAgent.SceneApi.V2
 
             if (aliases != null && aliases.Count > 0)
             {
-                var aliasSet = new HashSet<string>(aliases);
-                result = result.Where(o => aliasSet.Contains(o.alias));
+                var aliasFiltered = FilterByAliasExactThenFuzzy(result, aliases);
+                result = aliasFiltered;
             }
 
             if (tags != null && tags.Count > 0)
@@ -87,6 +87,51 @@ namespace VsensAgent.SceneApi.V2
                 scene_version = snapshot.scene_version,
                 objects = result.ToList()
             };
+        }
+
+        private static IEnumerable<SceneObjectModel> FilterByAliasExactThenFuzzy(
+            IEnumerable<SceneObjectModel> objects,
+            List<string> aliases)
+        {
+            var candidates = objects.ToList();
+            var aliasSet = new HashSet<string>(
+                aliases.Where(alias => !string.IsNullOrWhiteSpace(alias)),
+                StringComparer.OrdinalIgnoreCase);
+            if (aliasSet.Count == 0)
+            {
+                return candidates;
+            }
+
+            var exact = candidates
+                .Where(o => aliasSet.Contains(o.alias ?? string.Empty))
+                .ToList();
+            if (exact.Count > 0)
+            {
+                return exact;
+            }
+
+            return candidates.Where(o => AliasMatchesFuzzy(o.alias, aliasSet)).ToList();
+        }
+
+        private static bool AliasMatchesFuzzy(string objectAlias, HashSet<string> requestedAliases)
+        {
+            if (string.IsNullOrWhiteSpace(objectAlias))
+            {
+                return false;
+            }
+
+            var normalizedObjectAlias = objectAlias.ToLowerInvariant();
+            foreach (var requestedAlias in requestedAliases)
+            {
+                var normalizedRequestedAlias = requestedAlias.ToLowerInvariant();
+                if (normalizedObjectAlias.Contains(normalizedRequestedAlias) ||
+                    normalizedRequestedAlias.Contains(normalizedObjectAlias))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public object QueryRelations(string objectId, List<string> relationTypes, float? radius)
