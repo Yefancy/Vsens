@@ -19789,7 +19789,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VsensAgent.Network.HeartbeatManager
   heartbeatInterval: 10
-  enableHeartbeat: 1
+  enableHeartbeat: 0
   pauseWhenAgentBusy: 1
 --- !u!114 &1739722869
 MonoBehaviour:
