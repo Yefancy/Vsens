@@ -25618,7 +25618,7 @@ PrefabInstance:
     - target: {fileID: 7835952939788947458, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: cameraTarget
       value: 
-      objectReference: {fileID: 2106958229}
+      objectReference: {fileID: 1622217752}
     - target: {fileID: 7835952939788947458, guid: 4f7ad6326a10c4fefad1d9050c7f5012, type: 3}
       propertyPath: normalColor.b
       value: 0.8207547
