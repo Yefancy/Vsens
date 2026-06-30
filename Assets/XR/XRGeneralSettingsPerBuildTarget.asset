@@ -14,9 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_LoaderManagerInstance: {fileID: -2803941196337476319}
   m_InitManagerOnStart: 1
-  m_XRManager: {fileID: -2803941196337476319}
-  m_ProviderIntialized: 1
-  m_ProviderStarted: 0
 --- !u!114 &-2803941196337476319
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32,7 +29,8 @@ MonoBehaviour:
   m_RequiresSettingsUpdate: 0
   m_AutomaticLoading: 0
   m_AutomaticRunning: 0
-  m_Loaders: []
+  m_Loaders:
+  - {fileID: 11400000, guid: 2f6bc451dd0a92b4bb11447bf5797544, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -63,9 +61,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_LoaderManagerInstance: {fileID: 1191752899058387448}
   m_InitManagerOnStart: 1
-  m_XRManager: {fileID: 0}
-  m_ProviderIntialized: 0
-  m_ProviderStarted: 0
 --- !u!114 &1191752899058387448
 MonoBehaviour:
   m_ObjectHideFlags: 0
